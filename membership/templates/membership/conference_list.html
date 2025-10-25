@@ -1,0 +1,50 @@
+{% extends 'membership/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    {% if active_conference %}
+        <div class="card mb-5">
+            <div class="card-body">
+                <h2 class="card-title">Current Conference</h2>
+                <div class="alert alert-info">
+                    <h3>{{ active_conference.title }}</h3>
+                    <p class="lead">{{ active_conference.theme }}</p>
+                    <hr>
+                    <p><strong>Date:</strong> {{ active_conference.start_date|date:"F d" }} - {{ active_conference.end_date|date:"F d, Y" }}</p>
+                    <p><strong>Venue:</strong> {{ active_conference.venue }}</p>
+                    {% if active_conference.is_open_for_registration %}
+                        <a href="{% url 'conference_detail' active_conference.pk %}" class="btn btn-primary">View Details & Register</a>
+                    {% else %}
+                        <button class="btn btn-secondary" disabled>Registration Closed</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if past_conferences %}
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title">Past Conferences</h3>
+                <div class="list-group">
+                    {% for conference in past_conferences %}
+                        <a href="{% url 'conference_detail' conference.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ conference.title }}</h5>
+                                <small>{{ conference.start_date|date:"F Y" }}</small>
+                            </div>
+                            <p class="mb-1">{{ conference.theme }}</p>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if not active_conference and not past_conferences %}
+        <div class="alert alert-info">
+            No conferences are currently scheduled.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

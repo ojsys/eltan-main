@@ -1,0 +1,164 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News & Updates - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+</head>
+<body>
+    <!-- Navigation -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <p class="subtitle">Latest Updates</p>
+            <h1>Stay Updated with ELTAN News</h1>
+            <p class="description">
+                Keep yourself informed with the latest news, announcements, and updates from the English Language Teachers' Association of Nigeria.
+            </p>
+        </div>
+    </section>
+
+    <!-- Newsletter CTA -->
+    <section class="content-container" style="padding-top: 2rem; padding-bottom: 1rem;">
+        <div style="background: linear-gradient(135deg, #E67918 0%, #1565C0 100%); padding: 2rem; border-radius: 20px; text-align: center; color: white;">
+            <h3 style="font-size: 1.75rem; margin-bottom: 1rem; font-weight: 700;">Access Our Newsletter Archive</h3>
+            <p style="margin-bottom: 1.5rem; font-size: 1.125rem; opacity: 0.95;">Read past newsletters and stay connected with ELTAN's activities and achievements.</p>
+            <a href="{% url 'newsletter_list' %}" class="btn-modern" style="background: white; color: #E67918; display: inline-flex;">
+                <span class="material-icons" style="font-size: 20px;">library_books</span>
+                <span>View Newsletter Archive</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- News Articles Section -->
+    <section class="content-container">
+        {% if news %}
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                {% for story in news %}
+                <div class="card-modern" style="display: flex; flex-direction: column; lg:flex-direction: row;">
+                    <div style="flex: 1;">
+                        {% if story.featured_img %}
+                            <img src="{{ story.featured_img.url }}" alt="{{ story.headline }}" style="height: 100%; min-height: 300px; object-fit: cover;">
+                        {% else %}
+                            <div style="height: 300px; background: linear-gradient(135deg, #1565C0 0%, #E67918 100%); display: flex; align-items: center; justify-content: center;">
+                                <span class="material-icons" style="font-size: 80px; color: white;">article</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body" style="flex: 1.5;">
+                        <div style="margin-bottom: 1rem;">
+                            <span class="card-label">Latest</span>
+                        </div>
+
+                        <h2 class="card-title">{{ story.headline }}</h2>
+
+                        <div class="card-meta">
+                            <div class="meta-item">
+                                <span class="material-icons" style="font-size: 18px;">person</span>
+                                <span>{{ story.author }}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="material-icons" style="font-size: 18px;">calendar_today</span>
+                                <span>{{ story.date_added|date:"F d, Y" }}</span>
+                            </div>
+                        </div>
+
+                        <p class="card-text">{{ story.short_desc }}</p>
+
+                        <div style="margin-top: 1.5rem;">
+                            <a href="{% url 'news_detail' story.id %}" class="btn-modern btn-primary-modern">
+                                <span>Read Full Article</span>
+                                <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert-modern alert-info">
+                <span class="material-icons" style="font-size: 24px;">info</span>
+                <div>
+                    <strong>No News Articles Yet</strong>
+                    <p style="margin-top: 0.25rem;">There are no news articles at the moment. Check back later for the latest updates from ELTAN!</p>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Subscribe Section -->
+    <section style="background: #F5F5F5; padding: 4rem 1rem; margin-top: 4rem;">
+        <div class="content-container">
+            <div class="section-divider">
+                <h2>Stay Connected with ELTAN</h2>
+                <p>Follow us on social media for real-time updates and community engagement</p>
+                <div class="divider-line"></div>
+            </div>
+
+            <div class="grid-3" style="margin-top: 3rem;">
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: #3b5998; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <i class="fab fa-facebook-f" style="font-size: 40px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Facebook</h3>
+                    <p style="color: #616161; line-height: 1.7; margin-bottom: 1.5rem;">Join our community on Facebook for daily updates and discussions.</p>
+                    <a href="https://web.facebook.com/eltanigeria" target="_blank" class="btn-modern btn-outline-modern">
+                        <span>Follow Us</span>
+                        <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                    </a>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: #FF0000; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <i class="fab fa-youtube" style="font-size: 40px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">YouTube</h3>
+                    <p style="color: #616161; line-height: 1.7; margin-bottom: 1.5rem;">Watch conference recordings, workshops, and educational content.</p>
+                    <a href="https://www.youtube.com/@eltanigeria" target="_blank" class="btn-modern btn-outline-modern">
+                        <span>Subscribe</span>
+                        <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                    </a>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: #0088cc; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <i class="fab fa-telegram" style="font-size: 40px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Telegram</h3>
+                    <p style="color: #616161; line-height: 1.7; margin-bottom: 1.5rem;">Join our Telegram group for instant announcements and networking.</p>
+                    <a href="https://t.me/+eL42B0Gbv2UwMjI0" target="_blank" class="btn-modern btn-outline-modern">
+                        <span>Join Group</span>
+                        <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- Mobile Menu Script -->
+    {% include 'partials/mobile_menu_script.html' %}
+</body>
+</html>

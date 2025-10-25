@@ -1,0 +1,48 @@
+{% load static %}
+<nav class="modern-nav" id="mainNav">
+  <div class="nav-container">
+    <a href="{% url 'home' %}" class="nav-logo">
+      <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo">
+      <span>ELTAN</span>
+    </a>
+
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
+      <li><a href="{% url 'about' %}" class="nav-link">About</a></li>
+      <li><a href="{% url 'events' %}" class="nav-link">Events</a></li>
+      <li><a href="{% url 'news' %}" class="nav-link">News</a></li>
+      <li><a href="{% url 'sigs' %}" class="nav-link">SIGs</a></li>
+      <li><a href="{% url 'resource' %}" class="nav-link">Resources</a></li>
+    </ul>
+
+    <div class="nav-cta">
+      {% if user.is_authenticated %}
+        <a href="{% url 'dash' %}" class="btn btn-nav-ghost">Dashboard</a>
+        <a href="{% url 'logout' %}" class="btn btn-nav-primary">Logout</a>
+      {% else %}
+        <a href="{% url 'login' %}" class="btn btn-nav-ghost">Login</a>
+        <a href="{% url 'register' %}" class="btn btn-nav-primary">Join Now</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<script>
+  // Mobile nav toggle
+  (function(){
+    const toggle = document.getElementById('navToggle');
+    const links = document.getElementById('navLinks');
+    if (toggle && links){
+      toggle.addEventListener('click', function(){
+        this.classList.toggle('active');
+        links.classList.toggle('active');
+      });
+    }
+  })();
+</script>

@@ -1,0 +1,51 @@
+{% extends 'membership/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="mb-4">ELTAN Newsletters</h1>
+
+    {% if newsletters_by_year %}
+        {% for year, newsletters in newsletters_by_year.items %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">{{ year }} Newsletters</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Title</th>
+                                    <th>Size</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for newsletter in newsletters %}
+                                    <tr>
+                                        <td>{{ newsletter.get_month_display }}</td>
+                                        <td>{{ newsletter.title }}</td>
+                                        <td>{{ newsletter.file_size }}</td>
+                                        <td>
+                                            <a href="{% url 'download_newsletter' newsletter.pk %}" 
+                                               class="btn btn-primary btn-sm">
+                                                <i class="bi bi-download me-1"></i>Download
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No newsletters are available at the moment.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,528 @@
+{% extends 'membership/base.html' %}
+{% load static %}
+
+{% block title %}
+    {{ title }}
+{% endblock title %}
+{% block content %}
+<style>
+    .landing .card {
+        min-height: 40rem !important;
+    }
+
+    
+    .features{
+        padding-top: 90px !important;
+        
+    }
+    .features > div {
+        height: 25rem !important;
+    }
+    .features2 > div {
+        height: 25rem !important;
+    }
+    
+    /* Hero Slider Styles */
+    .hero-slider-container {
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        height: 70vh;
+        max-height: 500px;
+    }
+    
+    .hero-slide {
+        position: relative;
+        height: 70vh;
+        min-height: 500px;
+        overflow: hidden;
+    }
+    
+    .slide-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 70%;
+        background-size: cover;
+        background-position: top center;
+        background-repeat: no-repeat;
+        z-index: 1;
+    }
+    
+    .slide-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 70%;
+        background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.4));
+        display: flex;
+        align-items: center;
+        z-index: 2;
+    }
+    
+    .slide-content {
+        color: white;
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+        margin-bottom:50px;
+        padding: 20px;
+        z-index: 3;
+    }
+    
+    .slide-content-wrapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1001; 
+        display: flex;
+        align-items: center;
+    }
+    
+    .slide-content h1 {
+        font-size: 3.5rem;
+        font-weight: 700;
+        color:white;
+        margin-bottom: 1.5rem;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.8s forwards;
+    }
+    
+    .slide-content p {
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.8s 0.3s forwards;
+        
+    }
+    
+    .btn-eltan {
+        background-color: #E67918;
+        color: white;
+        padding: 12px 30px;
+        font-size: 1.1rem;
+        border: none;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.8s 0.6s forwards;
+        z-index: 1000;
+    }
+    
+    .btn-eltan:hover {
+        background-color: #d36816;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    /* Navigation Styles */
+    .owl-nav {
+        position: absolute;
+        top: 50%;
+        width: 100%;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+    
+    .owl-prev,
+    .owl-next {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        background: rgba(230, 121, 24, 0.9) !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        color: white !important;
+        font-size: 24px !important;
+        transition: all 0.3s ease;
+        pointer-events: auto;
+    }
+    
+    .owl-prev {
+        left: 20px;
+    }
+    
+    .owl-next {
+        right: 20px;
+    }
+    
+    .owl-prev:hover,
+    .owl-next:hover {
+        background: #E67918 !important;
+        transform: scale(1.1);
+    }
+    
+    /* Dots Navigation */
+    .owl-dots {
+        position: absolute;
+        bottom: 20px;
+        width: 100%;
+        height: 20px;
+        margin-right: 0px;
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+    }
+    
+    .owl-dot {
+        width: 10px;
+        height: 10px;
+        background: rgba(255, 255, 255, 0.5) !important;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+    
+    .owl-dot.active {
+        background: #E67918 !important;
+        transform: scale(1.2);
+    }
+    
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .slide-content h1 {
+            font-size: 2.5rem;
+        }
+        
+        .slide-content p {
+            font-size: 1.1rem;
+        }
+        
+        .owl-nav {
+            display: none;
+        }
+        
+        .owl-dots {
+        top:0px;
+        }
+    }
+    @media (min-width: 992px) {
+    .owl-carousel .owl-dots {
+        position: absolute;
+        top: 0;
+        right: 0;
+        margin-top: 0;
+        margin-right: 0px;
+    }
+}
+
+</style>
+
+<div class="container mt-5 mb-5">
+    
+    <section class="ftco-section">
+			<div class="container">
+				<div class="row">
+					<div class="col-md-12 text-center">
+						
+					</div>
+					<div class="col-md-12">
+                        <!-- Hero Slider Section -->
+                        <div class="hero-slider-container">
+                            <div class="owl-carousel hero-slider">
+                                <div class="hero-slide">
+                                    <div class="slide-image" style="background-image: url({% static 'images/eltan_conf.jpg' %});"></div>
+                                    <div class="slide-overlay"></div>
+                                    <div class="slide-content-wrapper">
+                                        <div class="container">
+                                            <div class="slide-content">
+                                                <!--<h1>ELTAN 14th Annual Conference</h1>-->
+                                                <p>Want to join us at the Conference?</p>
+                                                {% for conference in conferences %}
+                                                <a href="{% url 'conference_detail' conference.pk %}" class="btn btn-eltan">REGISTER NOW</a>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="hero-slide">
+                                    <div class="slide-image" style="background-image: url({% static 'images/eltan_three.jpeg' %});"></div>
+                                    <div class="slide-overlay"></div>
+                                    <div class="slide-content-wrapper">
+                                        <div class="container">
+                                            <div class="slide-content">
+                                                <h1>Welcome to ELTAN</h1>
+                                                <p>Join us in fostering excellence in English language teaching and learning across Nigeria.</p>
+                                                <a href="{% url 'register' %}" class="btn btn-eltan">JOIN NOW</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="hero-slide">
+                                    <div class="slide-image" style="background-image: url({% static 'images/eltan_two.jpeg' %});"></div>
+                                    <div class="slide-overlay"></div>
+                                    <div class="slide-content-wrapper">
+                                        <div class="container">
+                                            <div class="slide-content">
+                                                <h1>Welcome to ELTAN</h1>
+                                                <p>Join us in fostering excellence in English language teaching and learning across Nigeria.</p>
+                                                <a href="{% url 'register' %}" class="btn btn-eltan">JOIN NOW</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="hero-slide">
+                                    <div class="slide-image" style="background-image: url({% static 'images/eltan_six.jpeg' %});"></div>
+                                    <div class="slide-overlay"></div>
+                                    <div class="slide-content-wrapper">
+                                        <div class="container">
+                                            <div class="slide-content">
+                                                <h1>Welcome to ELTAN</h1>
+                                                <p>Join us in fostering excellence in English language teaching and learning across Nigeria.</p>
+                                                <a href="{% url 'register' %}" class="btn btn-eltan">JOIN NOW</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="hero-slide">
+                                    <div class="slide-image" style="background-image: url({% static 'images/eltan_group.jpeg' %});"></div>
+                                    <div class="slide-overlay"></div>
+                                    <div class="slide-content-wrapper">
+                                        <div class="container">
+                                            <div class="slide-content">
+                                                <h1>Welcome to ELTAN</h1>
+                                                <p>Join us in fostering excellence in English language teaching and learning across Nigeria.</p>
+                                                <a href="{% url 'register' %}" class="btn btn-eltan">JOIN NOW</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Repeat for other slides with different images -->
+                            </div>
+                        </div>
+                    </div>
+				</div>
+			</div>
+	</section>
+    
+
+    <div class="row mt-5 banner">
+        <h3 class="text-center mt-5 mb-3">Upcoming Events</h3>
+        <div class="col-md-12 mt-5">
+            {% for conference in conferences %}
+            <div class="card bg-light p-3 mb-4">
+                <div class="row gy-3 gy-md-0 align-items-md-center">
+                    <div class="col-md-5">
+                        {% if conference.image %}
+                            <img src="{{ conference.image.url }}" class="img-fluid rounded-start" alt="{{ conference.title }}">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-7">
+                        <div class="card-body p-0">
+                            <h2 class="card-title h3 mb-3"><span style="color: chocolate;">Title:</span> {{ conference.title }}</h2>
+                            <h2 class="card-title h4 mb-3"><span style="color: chocolate;">Theme:</span> {{ conference.theme }}</h2>
+                            <h2 class="card-title h4 mb-3"><span style="color: chocolate;">Date:</span> {{ conference.start_date|date:"F d" }} - {{ conference.end_date|date:"F d, Y" }}</h2>
+                            <h2 class="card-title h4 mb-3"><span style="color: chocolate;">Location:</span> {{ conference.venue }}</h2>
+                            <p class="card-text lead">{{ conference.description|truncatewords:50 }}</p>
+                            {% if conference.is_open_for_registration %}
+                                <a class="btn btn-warning p-3" href="{% url 'conference_detail' conference.pk %}">Register Now</a>
+                            {% else %}
+                                <button class="btn btn-secondary p-3" disabled>Registration Closed</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+    
+            
+    
+            {% if not conferences %}
+            <div class="alert alert-info text-center">
+                No upcoming events at the moment. Check back later!
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <!-- Features 1 -->
+    <div class="row mt-5">
+        <div class="col-md-6 mb-3 mb-sm-3">
+          <div class="card text-white" style="background-color: #023656; padding: 30px !important;">
+            <div class="card-body">
+              <h5 class="card-title mb-3" style="font-size: 2em;">Conference & Exhibition</h5>
+              <p class="card-text">Find out more about the ELTAN National <br> Conference & Workshop</p>
+              <a href="{% url 'events' %}" class="btn btn-primary" style=" border:none; background-color: #E67918; padding:10px 15px; border-radius: 0;">REGISTER NOW</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3 mb-sm-3">
+          <div class="card text-white" style="background-color: #023656; padding: 30px !important;">
+            <div class="card-body">
+              <h5 class="card-title" style="font-size: 2em;">Volunteer Positions</h5>
+              <p class="card-text">Want to be part of what ELTAN is doing? You can register to become a volunteer.</p>
+              <a href="{% url 'register' %}" class="btn btn-primary" style=" border:none; background-color: #E67918; padding:10px 15px; border-radius: 0;">REGISTER NOW</a>
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <div class="row mt-5 mb-9">
+      <div class="col-md-6 mb-3 mb-sm-3">
+        <div class="card text-white" style="background-color: #996600; padding: 30px !important;">
+          <div class="card-body">
+            <h5 class="card-title" style="font-size: 2em;">Special Interest Groups</h5>
+            <p class="card-text">Get to know our Special Interest Groups and ensure you join one.</p>
+            <a href="{% url 'register' %}" class="btn btn-primary" style=" border:none; background-color: #E67918; padding:10px 15px; border-radius: 0;">REGISTER NOW</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3 mb-sm-3">
+        <div class="card text-white" style="background-color: #996600; padding: 30px !important;">
+          <div class="card-body">
+            <h5 class="card-title" style="font-size: 2em;">Jobs & Careers</h5>
+            <p class="card-text">Explore diverse career opportunities to shape the future of education.</p>
+            <a href="{% url 'register' %}" class="btn btn-primary" style=" border:none; background-color: #E67918; padding:10px 15px; border-radius: 0;">REGISTER NOW</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+
+
+</div>
+
+<div class="container mt-5">
+    <div class="row mt-5">
+        <div class="card mb-3">
+          <div class="row no-gutters">
+            <div class="col-md-4">
+              <img src="{% static 'images/prelim_img.jpg' %}" class="card-img mh-100" alt="Teacher Image">
+            </div>
+            <div class="col-md-8">
+              <div class="card-body">
+                <h3 class="card-title mt-5 mb-5">PRELIM Resources</h3>
+                <p class="card-text fs-6">
+                    Partnered Remote Language Improvement (PRELIM) Project is a teacher development and language course delivered by the Edinburgh College, 
+                    London in collaboration with British Council, IATEFL, EnglishUK, International House, and ELTAN. </p>
+                <p class="card-text fs-6">Here, you will find some resources for teaching 
+                    Grades, 7, 8 and 9 (that is, Junior Secondary 1, 2 and 3) the language skills of Writing and Listening. 
+                    Click on download to access the FREE resources including lesson plans, teaching aids and templates for creating new teaching contents.
+                </p>
+                <a href="{% url 'resource' %}" class="btn btn-primary" style=" border:none; background-color: #E67918; padding:10px 15px; border-radius: 0;">Click Here To Download</a>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Partners Section -  -->
+<section class="mt-9 py-5 py-md-5 py-xl-8">
+  <div class="container">
+    <div class="row justify-content-md-center">
+      <div class="col-12 col-md-10 col-lg-8 col-xl-7 col-xxl-6">
+        <h3 class="fs-6 text-secondary mb-2 text-uppercase text-center"></h3>
+        <h3 class="mb-4 text-center">Our Partners</h3>
+        <p class="fs-5 text-secondary mb-5 text-center"></p>
+        <hr class="w-50 mx-auto mb-5 mb-xl-9 border-dark-subtle">
+      </div>
+    </div>
+  </div>
+
+  <div class="container overflow-hidden">
+    <div class="row gy-4">
+      <div class="col-6 col-md-4 col-xl-4 text-center">
+        <div class="text-secondary bg-light px-4 py-3 px-md-6 py-md-4 px-lg-8 py-lg-5">
+          <img class="" src="{% static 'logos/british_council_logo.png' %}" width=120 />
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-4 text-center">
+        <div class="text-secondary bg-light px-4 py-3 px-md-6 py-md-4 px-lg-8 py-lg-5">
+          <img class="" src="{% static 'logos/edinburg_logo.png' %}" width=120 />
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-4 text-center">
+        <div class="text-secondary bg-light px-4 py-3 px-md-6 py-md-4 px-lg-8 py-lg-5">
+          <img class="" src="{% static 'logos/africa_elta.png' %}" width=120 />
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-xl-4 text-center">
+        <div class="text-secondary bg-light px-4 py-3 px-md-6 py-md-4 px-lg-8 py-lg-5">
+          <img class="" src="{% static 'logos/iatefl.png' %}" width=120 />
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</section>
+
+
+
+<section class="vh-60 mt-5" style="background-color: #eee; margin-top: 100px !important;">
+    <div class="container py-5 h-100 mt-5">
+      <div class="row d-flex justify-content-center align-items-center h-100">
+        <div class="col col-lg-9 col-xl-7">
+          <div class="card" style="border-radius: 15px;">
+            <div class="card-body p-5">
+  
+              <!-- <div class="text-center mb-4 pb-2">
+                <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-quotes/bulb.webp"
+                  alt="Bulb" width="100">
+              </div> -->
+  
+              <figure class="text-center mb-0">
+                <blockquote class="blockquote">
+                  <p class="pb-3">
+                    <i class="fas fa-quote-left fa-xs text-primary"></i>
+                    <span class="lead font-italic" style="font-size: 30px;">Many of life's failures are people who did not realize how
+                      close they were to success when they gave up.</span>
+                    <i class="fas fa-quote-right fa-xs text-primary"></i>
+                  </p>
+                </blockquote>
+                <figcaption class="blockquote-footer mb-0">
+                  Thomas Edison
+                </figcaption>
+              </figure>
+  
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container mt-5 pt-5">
+    <div class="row"></div>
+  </section>
+
+
+<script>
+$(document).ready(function(){
+    $('.hero-slider').owlCarousel({
+        items: 1,
+        loop: true,
+        margin: 0,
+        nav: false,
+        dots: true,
+        autoplay: true,
+        autoplayTimeout: 6000,
+        autoplayHoverPause: true,
+        smartSpeed: 1000,
+        
+        animateIn: 'fadeIn',
+        animateOut: 'fadeOut',
+        onInitialized: function() {
+            $('.owl-dot').attr('aria-label', 'Slider Navigation');
+        }
+    });
+});
+</script>
+
+{% endblock content %}

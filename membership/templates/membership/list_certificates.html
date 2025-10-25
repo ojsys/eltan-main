@@ -1,0 +1,197 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Certificates - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+</head>
+<body>
+    <!-- Navigation -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <p class="subtitle">My Account</p>
+            <h1>My ELTAN Certificates</h1>
+            <p class="description">
+                View and download your ELTAN membership certificates
+            </p>
+        </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="content-container">
+        {% if current_subscription %}
+        <!-- Current Subscription Card -->
+        <div class="card-modern" style="border-left: 4px solid #E67918; background: linear-gradient(135deg, rgba(230, 121, 24, 0.05) 0%, rgba(255, 255, 255, 1) 100%);">
+            <div class="card-body">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #E67918 0%, #FF9147 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 28px; color: white;">workspace_premium</span>
+                    </div>
+                    <div>
+                        <h2 class="card-title" style="margin-bottom: 0.25rem;">Current Active Subscription</h2>
+                        <p style="color: #616161; margin: 0;">ELTAN Year {{ current_subscription.eltan_year }}</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <p style="color: #757575; font-size: 0.875rem; margin-bottom: 0.25rem;">Valid Until</p>
+                        <p style="font-weight: 600; color: #1A1A1A; margin: 0;">{{ current_subscription.end_date|date:"F d, Y" }}</p>
+                    </div>
+                    <div>
+                        <p style="color: #757575; font-size: 0.875rem; margin-bottom: 0.25rem;">State Chapter</p>
+                        <p style="font-weight: 600; color: #1A1A1A; margin: 0;">{{ current_subscription.state_chapter }}</p>
+                    </div>
+                    <div>
+                        <p style="color: #757575; font-size: 0.875rem; margin-bottom: 0.25rem;">Membership Type</p>
+                        <p style="font-weight: 600; color: #1A1A1A; margin: 0;">{{ current_subscription.membership_type }}</p>
+                    </div>
+                    <div>
+                        <p style="color: #757575; font-size: 0.875rem; margin-bottom: 0.25rem;">Payment Status</p>
+                        <span class="card-label" style="{% if current_subscription.payment_status == 'paid' %}background: #D4EDDA; color: #155724;{% else %}background: #FFF3CD; color: #856404;{% endif %}">
+                            {{ current_subscription.payment_status|title }}
+                        </span>
+                    </div>
+                </div>
+
+                <a href="{% url 'generate_certificate' current_subscription.id %}" class="btn-modern btn-primary-modern">
+                    <span class="material-icons" style="font-size: 20px;">download</span>
+                    <span>Download Current Certificate</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if past_subscriptions %}
+        <!-- Previous Certificates Section -->
+        <div class="section-divider" style="margin: 3rem 0 2rem 0;">
+            <h2>Previous Certificates</h2>
+            <p>View and download certificates from past ELTAN years</p>
+            <div class="divider-line"></div>
+        </div>
+
+        <!-- Subscribe for Missing Years -->
+        {% if missing_eltan_years %}
+        <div class="card-modern" style="background: #F5F5F5; margin-bottom: 2rem;">
+            <div class="card-body">
+                <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">Subscribe for Previous ELTAN Years</h3>
+                <p style="color: #616161; margin-bottom: 1.5rem;">You can subscribe for past ELTAN Years (up to 5 years prior) if needed.</p>
+
+                <div style="display: grid; gap: 0.75rem;">
+                    {% for year in missing_eltan_years %}
+                    <a href="{% url 'subscribe_past_year' year|stringformat:'s'|cut:'/'|add:'-' %}"
+                       style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; background: white; border-radius: 12px; text-decoration: none; color: #1A1A1A; border: 1px solid #E0E0E0; transition: all 0.25s ease-in-out;">
+                        <span style="font-weight: 500;">Subscribe for ELTAN Year {{ year }}</span>
+                        <span class="material-icons" style="color: #E67918;">arrow_forward</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Past Subscriptions Accordion -->
+        <div style="display: grid; gap: 1rem;">
+            {% for subscription in past_subscriptions %}
+            <div class="card-modern">
+                <div class="card-body">
+                    <details style="cursor: pointer;">
+                        <summary style="display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 1.125rem; list-style: none;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <span class="material-icons" style="color: #E67918;">description</span>
+                                <span>ELTAN Year {{ subscription.eltan_year }}</span>
+                            </div>
+                            <span class="material-icons accordion-icon" style="transition: transform 0.3s ease;">expand_more</span>
+                        </summary>
+
+                        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #E0E0E0;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                                <div>
+                                    <p style="color: #757575; font-size: 0.875rem; margin-bottom: 0.25rem;">Period</p>
+                                    <p style="font-weight: 500; margin: 0;">{{ subscription.start_date|date:"M d, Y" }} - {{ subscription.end_date|date:"M d, Y" }}</p>
+                                </div>
+                                <div>
+                                    <p style="color: #757575; font-size: 0.875rem; margin-bottom: 0.25rem;">State Chapter</p>
+                                    <p style="font-weight: 500; margin: 0;">{{ subscription.state_chapter }}</p>
+                                </div>
+                                <div>
+                                    <p style="color: #757575; font-size: 0.875rem; margin-bottom: 0.25rem;">Membership Type</p>
+                                    <p style="font-weight: 500; margin: 0;">{{ subscription.membership_type }}</p>
+                                </div>
+                                <div>
+                                    <p style="color: #757575; font-size: 0.875rem; margin-bottom: 0.25rem;">Payment Status</p>
+                                    <span class="card-label" style="{% if subscription.payment_status == 'paid' %}background: #D4EDDA; color: #155724;{% else %}background: #FFF3CD; color: #856404;{% endif %}">
+                                        {{ subscription.payment_status|title }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {% if subscription.payment_status == 'paid' %}
+                                <a href="{% url 'generate_certificate' subscription.id %}" class="btn-modern btn-outline-modern">
+                                    <span class="material-icons" style="font-size: 20px;">download</span>
+                                    <span>Download Certificate</span>
+                                </a>
+                            {% else %}
+                                <a href="{% url 'complete_subscription_payment' subscription.id %}" class="btn-modern btn-primary-modern">
+                                    <span class="material-icons" style="font-size: 20px;">payment</span>
+                                    <span>Complete Payment</span>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </details>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if not current_subscription and not past_subscriptions %}
+        <!-- Empty State -->
+        <div class="alert-modern alert-warning">
+            <span class="material-icons" style="font-size: 28px;">info</span>
+            <div>
+                <strong>No Certificates Available</strong>
+                <p style="margin-top: 0.5rem;">You don't have any certificates available. Please ensure your membership is active.</p>
+                <a href="{% url 'subscribe' %}" class="btn-modern btn-primary-modern" style="margin-top: 1rem;">
+                    <span>Subscribe Now</span>
+                    <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- Mobile Menu Script -->
+    {% include 'partials/mobile_menu_script.html' %}
+
+    <style>
+        details[open] summary .accordion-icon {
+            transform: rotate(180deg);
+        }
+    </style>
+</body>
+</html>

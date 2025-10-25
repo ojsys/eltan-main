@@ -1,0 +1,82 @@
+{% load static %}
+<footer class="site-footer" id="contact">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo" style="width: 80px; border-radius: 12px;">
+                </div>
+                <p class="footer-description">
+                    {% if site_settings.site_description %}
+                        {{ site_settings.site_description }}
+                    {% else %}
+                        English Language Teachers' Association of Nigeria - Advancing education excellence nationwide.
+                    {% endif %}
+                </p>
+                <div class="footer-social">
+                    {% if social_links %}
+                        {% for link in social_links %}
+                            {% if link.is_active %}
+                                <a href="{{ link.url }}" class="social-pill" target="_blank" rel="noopener">{{ link.platform|title }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <a href="https://web.facebook.com/eltanigeria" class="social-pill" target="_blank" rel="noopener">Facebook</a>
+                        <a href="https://www.youtube.com/@eltanigeria" class="social-pill" target="_blank" rel="noopener">YouTube</a>
+                        <a href="https://t.me/+eL42B0Gbv2UwMjI0" class="social-pill" target="_blank" rel="noopener">Telegram</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="footer-col">
+                <h4 class="footer-title">Explore</h4>
+                <ul class="footer-links">
+                    <li><a href="{% url 'about' %}">About</a></li>
+                    <li><a href="{% url 'events' %}">Events</a></li>
+                    <li><a href="{% url 'news' %}">News</a></li>
+                    <li><a href="{% url 'sigs' %}">Special Interest Groups</a></li>
+                    <li><a href="{% url 'resource' %}">Resources</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4 class="footer-title">Membership</h4>
+                <ul class="footer-links">
+                    <li><a href="{% url 'register' %}">Join ELTAN</a></li>
+                    {% if user.is_authenticated %}
+                        <li><a href="{% url 'dash' %}">Dashboard</a></li>
+                    {% else %}
+                        <li><a href="{% url 'login' %}">Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4 class="footer-title">Contact</h4>
+                <ul class="footer-links">
+                    {% if site_settings.contact_email %}
+                        <li><a href="mailto:{{ site_settings.contact_email }}">{{ site_settings.contact_email }}</a></li>
+                    {% else %}
+                        <li><a href="mailto:info@eltanigeria.org">info@eltanigeria.org</a></li>
+                    {% endif %}
+                    {% if site_settings.contact_phone %}
+                        <li><a href="tel:{{ site_settings.contact_phone }}">{{ site_settings.contact_phone }}</a></li>
+                    {% else %}
+                        <li><a href="tel:+2347060777753">+234 706 077 7753</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <div class="container footer-bottom-inner">
+            <p>© {% now "Y" %} {% if site_settings.site_name %}{{ site_settings.site_name }}{% else %}English Language Teachers Association of Nigeria (ELTAN){% endif %}. All rights reserved.</p>
+            <div class="footer-bottom-links">
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+                <a href="#contact">Contact</a>
+            </div>
+        </div>
+    </div>
+</footer>
+

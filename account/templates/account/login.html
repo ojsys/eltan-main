@@ -1,0 +1,177 @@
+{% load static %}
+{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/auth-modern.css' %}" rel="stylesheet">
+</head>
+<body>
+    <!-- Back to Home -->
+    <a href="{% url 'home' %}" class="back-home">
+        <span class="material-icons">arrow_back</span>
+        Back to Home
+    </a>
+
+    <div class="auth-container">
+        <div class="auth-wrapper">
+            <!-- Left Side - Form -->
+            <div class="auth-form-side">
+                <div class="auth-logo">
+                    <a href="{% url 'home' %}">
+                        <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo">
+                    </a>
+                </div>
+
+                <div class="auth-header">
+                    <h1 class="auth-title">Welcome Back!</h1>
+                    <p class="auth-subtitle">Sign in to access your ELTAN member dashboard</p>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            <span class="material-icons">
+                                {% if message.tags == 'success' %}check_circle
+                                {% elif message.tags == 'error' %}error
+                                {% else %}info{% endif %}
+                            </span>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" action="" class="auth-form">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">
+                            <span class="material-icons">email</span>
+                            Email Address
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="form-error">
+                                <span class="material-icons">error</span>
+                                {{ form.username.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">
+                            <span class="material-icons">lock</span>
+                            Password
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="form-error">
+                                <span class="material-icons">error</span>
+                                {{ form.password.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="remember" name="remember">
+                        <label for="remember">Remember me</label>
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        Sign In
+                        <span class="material-icons">arrow_forward</span>
+                    </button>
+
+                    <div class="auth-links">
+                        <a href="{% url 'password_reset' %}" class="auth-link">
+                            Forgot your password? <strong>Reset it here</strong>
+                        </a>
+                        <a href="{% url 'register' %}" class="auth-link">
+                            Don't have an account? <strong>Sign up now</strong>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Side - Illustration -->
+            <div class="auth-illustration-side">
+                <div class="illustration-content">
+                    <div class="illustration-icon">
+                        <span class="material-icons">school</span>
+                    </div>
+
+                    <h2 class="illustration-title">Join Nigeria's Premier English Language Teachers Association</h2>
+                    <p class="illustration-text">
+                        Access exclusive resources, professional development opportunities, and connect with educators nationwide
+                    </p>
+
+                    <div class="illustration-features">
+                        <div class="illustration-feature">
+                            <span class="material-icons">event_available</span>
+                            <div class="illustration-feature-text">
+                                Attend annual conferences and workshops
+                            </div>
+                        </div>
+                        <div class="illustration-feature">
+                            <span class="material-icons">library_books</span>
+                            <div class="illustration-feature-text">
+                                Access FREE PRELIM teaching resources
+                            </div>
+                        </div>
+                        <div class="illustration-feature">
+                            <span class="material-icons">diversity_3</span>
+                            <div class="illustration-feature-text">
+                                Join Special Interest Groups
+                            </div>
+                        </div>
+                        <div class="illustration-feature">
+                            <span class="material-icons">workspace_premium</span>
+                            <div class="illustration-feature-text">
+                                Earn CPD certificates and recognition
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Form enhancement
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add placeholders if not present
+            const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]');
+            inputs.forEach(input => {
+                if (!input.getAttribute('placeholder')) {
+                    const label = document.querySelector(`label[for="${input.id}"]`);
+                    if (label) {
+                        const labelText = label.textContent.replace(/[*:]/g, '').trim();
+                        input.setAttribute('placeholder', `Enter your ${labelText.toLowerCase()}`);
+                    }
+                }
+            });
+
+            // Add loading state to submit button
+            const form = document.querySelector('.auth-form');
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            form.addEventListener('submit', function() {
+                submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
+            });
+        });
+    </script>
+</body>
+</html>

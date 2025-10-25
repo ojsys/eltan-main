@@ -1,0 +1,630 @@
+{% extends 'base/material_base.html' %}
+{% load static %}
+
+{% block title %}ELTAN - Emerging Leaders Training and Nurturing | Home{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hero Section */
+    .hero-section {
+        padding: var(--md-sys-spacing-xxl) 0;
+        background: linear-gradient(135deg, #FFF9F5 0%, #FFEEE0 100%);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 var(--md-sys-spacing-lg);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--md-sys-spacing-xxl);
+        align-items: center;
+    }
+
+    .hero-content h1 {
+        font-size: 48px;
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--md-sys-color-on-background);
+        margin-bottom: var(--md-sys-spacing-md);
+    }
+
+    .hero-content p {
+        font-size: 18px;
+        line-height: 1.6;
+        color: var(--md-sys-color-on-surface-variant);
+        margin-bottom: var(--md-sys-spacing-xl);
+    }
+
+    .hero-badge {
+        display: inline-block;
+        background-color: var(--md-sys-color-primary-container);
+        color: var(--md-sys-color-on-primary-container);
+        padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
+        border-radius: var(--md-sys-shape-corner-full);
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: var(--md-sys-spacing-md);
+    }
+
+    .hero-cta {
+        display: flex;
+        gap: var(--md-sys-spacing-md);
+        flex-wrap: wrap;
+    }
+
+    .hero-illustration {
+        position: relative;
+        min-height: 400px;
+    }
+
+    .hero-card {
+        position: absolute;
+        background: white;
+        border-radius: var(--md-sys-shape-corner-extra-large);
+        box-shadow: var(--md-sys-elevation-level3);
+        padding: var(--md-sys-spacing-lg);
+    }
+
+    .hero-card-main {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        width: 300px;
+    }
+
+    .hero-card-floating {
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+    }
+
+    /* Statistics Section */
+    .stats-section {
+        padding: var(--md-sys-spacing-xxl) 0;
+        background-color: var(--md-sys-color-background);
+    }
+
+    .stats-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 var(--md-sys-spacing-lg);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--md-sys-spacing-lg);
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: var(--md-sys-shape-corner-large);
+        padding: var(--md-sys-spacing-xl);
+        box-shadow: var(--md-sys-elevation-level2);
+        text-align: center;
+        transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--md-sys-elevation-level4);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        margin: 0 auto var(--md-sys-spacing-md);
+        background-color: var(--md-sys-color-primary-container);
+        color: var(--md-sys-color-primary);
+        border-radius: var(--md-sys-shape-corner-large);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+    }
+
+    .stat-number {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--md-sys-color-primary);
+        margin-bottom: var(--md-sys-spacing-xs);
+    }
+
+    .stat-label {
+        font-size: 16px;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* Features Section */
+    .features-section {
+        padding: var(--md-sys-spacing-xxl) 0;
+        background: linear-gradient(135deg, #F5F9FF 0%, #E3F2FD 100%);
+    }
+
+    .section-header {
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto var(--md-sys-spacing-xxl);
+        padding: 0 var(--md-sys-spacing-lg);
+    }
+
+    .section-header h2 {
+        font-size: 40px;
+        font-weight: 600;
+        margin-bottom: var(--md-sys-spacing-md);
+        color: var(--md-sys-color-on-background);
+    }
+
+    .section-header p {
+        font-size: 18px;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .features-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 var(--md-sys-spacing-lg);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--md-sys-spacing-xl);
+    }
+
+    .feature-card {
+        background: white;
+        border-radius: var(--md-sys-shape-corner-extra-large);
+        padding: var(--md-sys-spacing-xl);
+        box-shadow: var(--md-sys-elevation-level2);
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+        transform: scaleX(0);
+        transition: transform 0.3s;
+    }
+
+    .feature-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .feature-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--md-sys-elevation-level4);
+    }
+
+    .feature-illustration {
+        width: 100%;
+        height: 200px;
+        margin-bottom: var(--md-sys-spacing-md);
+        background-color: var(--md-sys-color-surface-variant);
+        border-radius: var(--md-sys-shape-corner-large);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .feature-illustration img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .feature-icon {
+        font-size: 48px;
+        color: var(--md-sys-color-primary);
+        margin-bottom: var(--md-sys-spacing-md);
+    }
+
+    .feature-card h3 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: var(--md-sys-spacing-sm);
+        color: var(--md-sys-color-on-surface);
+    }
+
+    .feature-card p {
+        color: var(--md-sys-color-on-surface-variant);
+        line-height: 1.6;
+    }
+
+    /* Partners Section */
+    .partners-section {
+        padding: var(--md-sys-spacing-xxl) 0;
+        background-color: var(--md-sys-color-surface-variant);
+    }
+
+    .partners-grid {
+        max-width: 1200px;
+        margin: var(--md-sys-spacing-xl) auto 0;
+        padding: 0 var(--md-sys-spacing-lg);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: var(--md-sys-spacing-lg);
+        align-items: center;
+    }
+
+    .partner-logo {
+        background: white;
+        padding: var(--md-sys-spacing-lg);
+        border-radius: var(--md-sys-shape-corner-medium);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100px;
+        transition: all 0.3s;
+    }
+
+    .partner-logo:hover {
+        transform: scale(1.05);
+        box-shadow: var(--md-sys-elevation-level2);
+    }
+
+    .partner-logo img {
+        max-width: 100%;
+        max-height: 60px;
+        filter: grayscale(100%);
+        opacity: 0.6;
+        transition: all 0.3s;
+    }
+
+    .partner-logo:hover img {
+        filter: grayscale(0%);
+        opacity: 1;
+    }
+
+    /* FAQ Section */
+    .faq-section {
+        padding: var(--md-sys-spacing-xxl) 0;
+        background-color: var(--md-sys-color-background);
+    }
+
+    .faq-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 var(--md-sys-spacing-lg);
+    }
+
+    .faq-item {
+        background: white;
+        border-radius: var(--md-sys-shape-corner-large);
+        margin-bottom: var(--md-sys-spacing-md);
+        box-shadow: var(--md-sys-elevation-level1);
+        overflow: hidden;
+    }
+
+    .faq-question {
+        padding: var(--md-sys-spacing-lg);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 500;
+        color: var(--md-sys-color-on-surface);
+        user-select: none;
+    }
+
+    .faq-question:hover {
+        background-color: var(--md-sys-color-surface-variant);
+    }
+
+    .faq-icon {
+        transition: transform 0.3s;
+    }
+
+    .faq-item.active .faq-icon {
+        transform: rotate(180deg);
+    }
+
+    .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        padding: 0 var(--md-sys-spacing-lg);
+        color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .faq-item.active .faq-answer {
+        max-height: 500px;
+        padding: 0 var(--md-sys-spacing-lg) var(--md-sys-spacing-lg);
+    }
+
+    /* CTA Section */
+    .cta-section {
+        padding: var(--md-sys-spacing-xxl) 0;
+        background: linear-gradient(135deg, var(--md-sys-color-primary) 0%, var(--md-sys-color-secondary) 100%);
+        color: white;
+        text-align: center;
+    }
+
+    .cta-content {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 var(--md-sys-spacing-lg);
+    }
+
+    .cta-content h2 {
+        font-size: 40px;
+        font-weight: 600;
+        margin-bottom: var(--md-sys-spacing-md);
+    }
+
+    .cta-content p {
+        font-size: 18px;
+        margin-bottom: var(--md-sys-spacing-xl);
+        opacity: 0.9;
+    }
+
+    .cta-button {
+        background: white;
+        color: var(--md-sys-color-primary);
+        padding: var(--md-sys-spacing-md) var(--md-sys-spacing-xl);
+        border-radius: var(--md-sys-shape-corner-full);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 18px;
+        display: inline-block;
+        transition: all 0.3s;
+        box-shadow: var(--md-sys-elevation-level3);
+    }
+
+    .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--md-sys-elevation-level4);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-container {
+            grid-template-columns: 1fr;
+        }
+
+        .hero-illustration {
+            min-height: 300px;
+        }
+
+        .hero-content h1 {
+            font-size: 36px;
+        }
+
+        .section-header h2 {
+            font-size: 32px;
+        }
+
+        .cta-content h2 {
+            font-size: 32px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="hero-container">
+        <div class="hero-content">
+            <span class="hero-badge">
+                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">workspace_premium</span>
+                Professional Membership Organization
+            </span>
+            <h1>You can Control All your Professional Growth through ELTAN</h1>
+            <p>Join Nigeria's premier leadership training organization. Access exclusive conferences, professional development resources, and a thriving community of emerging leaders.</p>
+            <div class="hero-cta">
+                <a href="{% url 'register' %}" class="md-button md-button-filled" style="padding: 16px 32px; font-size: 16px;">
+                    <span class="material-symbols-outlined">person_add</span>
+                    Get Started
+                </a>
+                <a href="{% url 'about' %}" class="md-button md-button-outlined" style="padding: 16px 32px; font-size: 16px;">
+                    Learn More
+                </a>
+            </div>
+        </div>
+
+        <div class="hero-illustration">
+            <!-- Main illustration card -->
+            <div class="hero-card hero-card-main hero-card-floating">
+                <img src="{% static 'illustrations/leadership.svg' %}" alt="Leadership Illustration" style="width: 100%;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="stats-section">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="material-symbols-rounded">people</span>
+            </div>
+            <div class="stat-number">500+</div>
+            <div class="stat-label">Active Members</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="material-symbols-rounded">event</span>
+            </div>
+            <div class="stat-number">12</div>
+            <div class="stat-label">Annual Events</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="material-symbols-rounded">location_city</span>
+            </div>
+            <div class="stat-number">36</div>
+            <div class="stat-label">State Chapters</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">
+                <span class="material-symbols-rounded">workspace_premium</span>
+            </div>
+            <div class="stat-number">95%</div>
+            <div class="stat-label">Satisfaction Rate</div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+    <div class="section-header">
+        <h2>Built for forward-looking professionals and achieve your goals with our professional community</h2>
+        <p>Discover the benefits that come with ELTAN membership</p>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-illustration">
+                <img src="{% static 'illustrations/conference.svg' %}" alt="Conferences">
+            </div>
+            <span class="material-symbols-outlined feature-icon">event_available</span>
+            <h3>Professional Conferences</h3>
+            <p>Attend exclusive conferences with industry leaders, gain insights, and network with peers across Nigeria.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-illustration">
+                <img src="{% static 'illustrations/training.svg' %}" alt="Training">
+            </div>
+            <span class="material-symbols-outlined feature-icon">school</span>
+            <h3>Continuous Training</h3>
+            <p>Access world-class training programs, workshops, and CPD opportunities to enhance your professional skills.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-illustration">
+                <img src="{% static 'illustrations/community.svg' %}" alt="Community">
+            </div>
+            <span class="material-symbols-outlined feature-icon">diversity_3</span>
+            <h3>Vibrant Community</h3>
+            <p>Join Special Interest Groups (SIGs), connect with like-minded professionals, and grow your network.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Partners Section -->
+<section class="partners-section">
+    <div class="section-header">
+        <h3>Our Partners and Clients</h3>
+    </div>
+    <div class="partners-grid">
+        <!-- Partner logos will be loaded dynamically -->
+        <div class="partner-logo">
+            <img src="{% static 'images/partners/partner1.png' %}" alt="Partner 1">
+        </div>
+        <div class="partner-logo">
+            <img src="{% static 'images/partners/partner2.png' %}" alt="Partner 2">
+        </div>
+        <div class="partner-logo">
+            <img src="{% static 'images/partners/partner3.png' %}" alt="Partner 3">
+        </div>
+        <div class="partner-logo">
+            <img src="{% static 'images/partners/partner4.png' %}" alt="Partner 4">
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="faq-section">
+    <div class="faq-container">
+        <div class="section-header">
+            <h2>Frequently Asked <em style="font-style: italic; color: var(--md-sys-color-primary);">Questions</em></h2>
+            <p>Have questions about our membership or services? We offer wide range of services from better to give best service in the area you can compare it.</p>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">
+                <span>How much profit can you get in 1 Month?</span>
+                <span class="material-symbols-outlined faq-icon">expand_more</span>
+            </div>
+            <div class="faq-answer">
+                <p>ELTAN membership provides ongoing value through access to exclusive conferences, training programs, networking opportunities, and professional development resources throughout the year.</p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">
+                <span>How do I get started with ELTAN membership?</span>
+                <span class="material-symbols-outlined faq-icon">expand_more</span>
+            </div>
+            <div class="faq-answer">
+                <p>Getting started is easy! Simply click the "Join Now" button, fill out the registration form, and choose your membership category. After payment verification, you'll receive your unique ELTAN number and full access to member benefits.</p>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">
+                <span>What are the membership fees?</span>
+                <span class="material-symbols-outlined faq-icon">expand_more</span>
+            </div>
+            <div class="faq-answer">
+                <p>New members pay ₦5,500 for the first year, while renewal members pay ₦3,000 annually. All payments are processed through secure bank transfer.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="cta-content">
+        <h2>Boost your professional growth today</h2>
+        <p>Join over 500 professionals who are advancing their careers with ELTAN membership. Get access to exclusive conferences, training, and a supportive community.</p>
+        <a href="{% url 'register' %}" class="cta-button">
+            <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">rocket_launch</span>
+            Get Started
+        </a>
+    </div>
+</section>
+
+<script>
+    // FAQ Accordion
+    document.querySelectorAll('.faq-question').forEach(question => {
+        question.addEventListener('click', () => {
+            const item = question.parentElement;
+            const isActive = item.classList.contains('active');
+
+            // Close all items
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+
+            // Open clicked item if it wasn't active
+            if (!isActive) {
+                item.classList.add('active');
+            }
+        });
+    });
+
+    // Add animation on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -100px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.feature-card, .stat-card').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.6s, transform 0.6s';
+        observer.observe(el);
+    });
+</script>
+{% endblock %}

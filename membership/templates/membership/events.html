@@ -1,0 +1,160 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events & Conferences - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+</head>
+<body>
+    <!-- Navigation -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <p class="subtitle">Upcoming Events</p>
+            <h1>Join ELTAN's Professional Conferences</h1>
+            <p class="description">
+                Connect with educators, attend workshops, and advance your professional development through our annual conferences and special events.
+            </p>
+        </div>
+    </section>
+
+    <!-- Events Section -->
+    <section class="content-container">
+        {% if conferences %}
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                {% for conference in conferences %}
+                <div class="card-modern" style="display: flex; flex-direction: column; lg:flex-direction: row;">
+                    <div style="flex: 1;">
+                        {% if conference.image %}
+                            <img src="{{ conference.image.url }}" alt="{{ conference.title }}" style="height: 100%; object-fit: cover;">
+                        {% else %}
+                            <div style="height: 300px; background: linear-gradient(135deg, #E67918 0%, #1565C0 100%); display: flex; align-items: center; justify-content: center;">
+                                <span class="material-icons" style="font-size: 80px; color: white;">event</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body" style="flex: 1.5;">
+                        <div style="margin-bottom: 1rem;">
+                            <span class="card-label">
+                                {% if conference.is_open_for_registration %}
+                                    Registration Open
+                                {% else %}
+                                    Registration Closed
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <h2 class="card-title">{{ conference.title }}</h2>
+
+                        <div class="card-meta">
+                            <div class="meta-item">
+                                <span class="material-icons" style="font-size: 18px;">event</span>
+                                <span>{{ conference.start_date|date:"F d" }} - {{ conference.end_date|date:"F d, Y" }}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="material-icons" style="font-size: 18px;">location_on</span>
+                                <span>{{ conference.venue }}</span>
+                            </div>
+                        </div>
+
+                        {% if conference.theme %}
+                        <div style="margin-bottom: 1rem;">
+                            <strong style="color: #E67918;">Theme:</strong>
+                            <p style="margin-top: 0.25rem; color: #616161;">{{ conference.theme }}</p>
+                        </div>
+                        {% endif %}
+
+                        <p class="card-text">{{ conference.description|truncatewords:50 }}</p>
+
+                        <div style="margin-top: 1.5rem;">
+                            {% if conference.is_open_for_registration %}
+                                <a href="{% url 'conference_detail' conference.pk %}" class="btn-modern btn-primary-modern">
+                                    <span>Register Now</span>
+                                    <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                                </a>
+                            {% else %}
+                                <button class="btn-modern btn-disabled">
+                                    <span class="material-icons" style="font-size: 18px;">block</span>
+                                    <span>Registration Closed</span>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert-modern alert-info">
+                <span class="material-icons" style="font-size: 24px;">info</span>
+                <div>
+                    <strong>No Upcoming Conferences</strong>
+                    <p style="margin-top: 0.25rem;">There are no upcoming conferences at the moment. Check back later for updates on our next professional development event!</p>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Why Attend Section -->
+    <section style="background: #F5F5F5; padding: 4rem 1rem; margin-top: 4rem;">
+        <div class="content-container">
+            <div class="section-divider">
+                <h2>Why Attend ELTAN Conferences?</h2>
+                <p>Our conferences offer unique opportunities for professional growth and networking</p>
+                <div class="divider-line"></div>
+            </div>
+
+            <div class="grid-3" style="margin-top: 3rem;">
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #E67918 0%, #FF9147 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">school</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Professional Development</h3>
+                    <p style="color: #616161; line-height: 1.7;">Earn CPD certificates and enhance your teaching credentials through specialized workshops and sessions.</p>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #1565C0 0%, #5E92F3 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">groups</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Networking</h3>
+                    <p style="color: #616161; line-height: 1.7;">Connect with fellow educators from across Nigeria and build lasting professional relationships.</p>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #00796B 0%, #26A69A 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">lightbulb</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Latest Insights</h3>
+                    <p style="color: #616161; line-height: 1.7;">Learn about cutting-edge teaching methodologies and best practices in English language education.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- Mobile Menu Script -->
+    {% include 'partials/mobile_menu_script.html' %}
+</body>
+</html>

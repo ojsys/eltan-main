@@ -1,0 +1,309 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ sig.title }} - ELTAN SIG</title>
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        .sig-hero {
+            background: linear-gradient(135deg, #E67918 0%, #FF9147 100%);
+            color: white;
+            padding: 4rem 0 3rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .sig-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('{{ sig.image.url }}') center/cover;
+            opacity: 0.15;
+            z-index: 0;
+        }
+        .sig-hero__content {
+            position: relative;
+            z-index: 1;
+        }
+        .sig-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        .sig-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 1rem 0;
+            line-height: 1.2;
+        }
+        .sig-meta {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            font-size: 1rem;
+            opacity: 0.95;
+        }
+        .sig-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sig-content {
+            padding: 3rem 0;
+        }
+        .sig-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 768px) {
+            .sig-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .sig-description {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .sig-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .sig-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .sig-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+            color: #1a1a1a;
+        }
+        .moderator-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .moderator-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #E67918 0%, #FF9147 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+        .moderator-details h4 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .moderator-details p {
+            margin: 0.25rem 0 0 0;
+            font-size: 0.875rem;
+            color: #666;
+        }
+        .members-list {
+            display: grid;
+            gap: 0.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .member-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .member-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #E67918;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+        .member-name {
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            text-decoration: none;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            transition: opacity 0.2s;
+            margin-bottom: 1rem;
+        }
+        .back-link:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    {% include 'partials/navbar.html' %}
+
+    <!-- Hero Section -->
+    <section class="sig-hero">
+        <div class="container sig-hero__content">
+            <a href="{% url 'sigs' %}" class="back-link">
+                <span class="material-icons">arrow_back</span>
+                Back to All SIGs
+            </a>
+            <div class="sig-badge">
+                <span class="material-icons" style="font-size: 18px;">
+                    {% if sig.icon %}{{ sig.icon }}{% else %}groups{% endif %}
+                </span>
+                Special Interest Group
+            </div>
+            <h1 class="sig-title">{{ sig.title }}</h1>
+            <div class="sig-meta">
+                <div class="sig-meta-item">
+                    <span class="material-icons">people</span>
+                    <span>{{ member_count }} Member{{ member_count|pluralize }}</span>
+                </div>
+                {% if sig.moderator %}
+                <div class="sig-meta-item">
+                    <span class="material-icons">admin_panel_settings</span>
+                    <span>Moderated by {{ sig.moderator.get_full_name }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="sig-content">
+        <div class="container">
+            <!-- Messages -->
+            {% if messages %}
+            <div style="margin-bottom: 2rem;">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" style="padding: 1rem; border-radius: 8px; margin-bottom: 1rem; background: {% if message.tags == 'success' %}#d4edda{% elif message.tags == 'error' %}#f8d7da{% else %}#d1ecf1{% endif %}; border-left: 4px solid {% if message.tags == 'success' %}#28a745{% elif message.tags == 'error' %}#dc3545{% else %}#17a2b8{% endif %};">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="sig-grid">
+                <!-- Description Column -->
+                <div>
+                    <div class="sig-description">
+                        <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0 0 1rem 0;">About This SIG</h2>
+                        <div class="text-body-large">
+                            {{ sig.description|safe }}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    {% if user.is_authenticated %}
+                    <div class="action-buttons">
+                        {% if is_member %}
+                            <a href="{% url 'leave_sig' sig.pk %}" class="btn btn-secondary btn-large" onclick="return confirm('Are you sure you want to leave this SIG?')">
+                                <span class="material-icons" style="font-size: 18px;">exit_to_app</span>
+                                Leave SIG
+                            </a>
+                        {% else %}
+                            <a href="{% url 'join_sig' sig.pk %}" class="btn btn-primary btn-large">
+                                <span class="material-icons" style="font-size: 18px;">group_add</span>
+                                Join This SIG
+                            </a>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="action-buttons">
+                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-large">
+                            <span class="material-icons" style="font-size: 18px;">login</span>
+                            Login to Join
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Sidebar Column -->
+                <div class="sig-sidebar">
+                    <!-- Moderator Card -->
+                    {% if sig.moderator %}
+                    <div class="sig-card">
+                        <h3>SIG Moderator</h3>
+                        <div class="moderator-info">
+                            <div class="moderator-avatar">
+                                {{ sig.moderator.first_name.0 }}{{ sig.moderator.last_name.0 }}
+                            </div>
+                            <div class="moderator-details">
+                                <h4>{{ sig.moderator.get_full_name }}</h4>
+                                <p>{{ sig.moderator.email }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Members Card -->
+                    <div class="sig-card">
+                        <h3>Members ({{ member_count }})</h3>
+                        {% if members %}
+                        <div class="members-list">
+                            {% for member in members %}
+                            <div class="member-item">
+                                <div class="member-avatar">
+                                    {{ member.first_name.0 }}{{ member.last_name.0 }}
+                                </div>
+                                <div class="member-name">{{ member.get_full_name }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p style="color: #666; margin: 0;">No members yet. Be the first to join!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {% include 'partials/footer.html' %}
+</body>
+</html>

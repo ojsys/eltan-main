@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Conference Registration Receipt</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            background-color: #fff5eb;
+            margin: 0;
+            padding: 20px;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: auto; 
+            padding: 30px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(230, 121, 24, 0.1);
+        }
+        .header { 
+            text-align: center; 
+            padding-bottom: 25px;
+            border-bottom: 2px solid #E67918;
+            margin-bottom: 25px;
+        }
+        .logo { 
+            max-width: 180px; 
+            margin-bottom: 15px;
+        }
+        .details { 
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .details p {
+            margin: 12px 0;
+            padding: 8px;
+            background-color: #fff5eb;
+            border-radius: 4px;
+        }
+        .amount {
+            font-size: 24px;
+            color: #E67918;
+            padding: 15px;
+            background-color: #fff5eb;
+            border-radius: 4px;
+            text-align: center;
+            margin: 20px 0;
+            border: 1px solid #E67918;
+        }
+        .contact-info {
+            text-align: center;
+            padding: 20px;
+            background-color: #fff5eb;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .footer { 
+            font-size: 12px; 
+            text-align: center; 
+            color: #666;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #E67918;
+        }
+        h2 {
+            color: #E67918;
+            margin: 15px 0;
+        }
+        strong {
+            color: #E67918;
+        }
+        .contact-info strong {
+            color: #E67918;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Conference Logo" class="logo" width="40">
+            <h2>ELTAN Conference Registration Receipt</h2>
+            <p style="color: #666;">Thank you for registering for {{ registration.conference.name }}</p>
+        </div>
+        <div class="details">
+            <p><strong>Name:</strong> {{ registration.first_name }} {{ registration.last_name }}</p>
+            <p><strong>Email:</strong> {{ registration.email }}</p>
+            <p><strong>Phone:</strong> {{ registration.phone }}</p>
+            <p><strong>Registration Type:</strong> 
+                {% if registration.registration_type == 'member' %}
+                    ELTAN MEMBER
+                {% elif registration.registration_type == 'non_member' %}
+                    NON ELTAN MEMBER
+                {% elif registration.registration_type == 'non_member2' %}
+                    INTERNATIONAL DELEGATE
+                {% endif %}
+            </p>
+            <div class="amount">
+                <strong>Amount Paid:</strong> ₦{{ registration.amount_paid }}
+            </div>
+            <p><strong>Payment Reference:</strong> {{ registration.payment_reference }}</p>
+            <p><strong>Date:</strong> {{ current_date|date:"F j, Y" }}</p>
+        </div>
+        <div class="contact-info">
+            <p style="margin: 0;">If you have any questions, please contact us at:</p>
+            <strong>nationalsec@eltanigeria.org</strong>
+        </div>
+        <div class="footer">
+            <p>ELTAN Conference &copy; {{ year }}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

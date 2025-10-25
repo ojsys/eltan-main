@@ -1,0 +1,91 @@
+{% extends "membership/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    Conference Registration
+{% endblock title %}
+
+{% block content %}
+<div class="container py-5 mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h3 class="mb-0">Conference Registration</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Conference Details -->
+                    <div class="mb-4">
+                        <h4>{{ conference.title }}</h4>
+                        <p class="text-muted">{{ conference.theme }}</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Date:</strong> {{ conference.start_date|date:"F d" }} - {{ conference.end_date|date:"F d, Y" }}</p>
+                                <p><strong>Venue:</strong> {{ conference.venue }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-info mb-0">
+                                    <h5 class="alert-heading">Registration Fee:</h5>
+                                    {% if registration_type == 'non_member2' %}
+                                        <p class="mb-0">₦{{ conference.international_delegate_fee }} (International Delegate Fee - $50)</p>
+                                    {% else %}
+                                        {% if is_early_bird %}
+                                            {% if registration_type == 'member' %}
+                                                <p class="mb-0">₦{{ conference.member_early_bird_fee }} (Member Early Bird Rate)</p>
+                                            {% else %}
+                                                <p class="mb-0">₦{{ conference.non_member_early_bird_fee }} (Non-Member Early Bird Rate)</p>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if registration_type == 'member' %}
+                                                <p class="mb-0">₦{{ conference.member_fee }} (Member Rate)</p>
+                                            {% else %}
+                                                <p class="mb-0">₦{{ conference.non_member_fee }} (Non-Member Rate)</p>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endif %}
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if conference.is_early_bird_active %}
+                        <div class="alert alert-warning mb-4">
+                            <i class="bi bi-clock"></i>
+                            Early Bird Registration ends on {{ conference.early_bird_end|date }}!
+                        </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="registration_type" value="{{ registration_type }}">
+                        {% crispy form %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    {% block extra_js %}
+    <script>
+        // Show/hide presenting fields based on checkbox
+        document.getElementById('id_is_presenting').addEventListener('change', function() {
+            const presentingSection = document.getElementById('presenting-section');
+            presentingSection.style.display = this.checked ? 'block' : 'none';
+        });
+    
+        // Show/hide non-member fields based on registration type
+        document.getElementById('non-member-section').style.display = 
+            '{{ registration_type }}' === 'non_member' ? 'block' : 'none';
+    
+        // Initial hide of presenting fields if not checked
+        document.addEventListener('DOMContentLoaded', function() {
+            const isPresenting = document.getElementById('id_is_presenting');
+            const presentingSection = document.getElementById('presenting-section');
+            presentingSection.style.display = isPresenting.checked ? 'block' : 'none';
+        });
+    </script>
+    {% endblock %}
+{% endblock %}

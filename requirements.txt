@@ -1,0 +1,11 @@
+# ELTAN Project Requirements
+#
+# This file is maintained for backward compatibility.
+# For new installations, use the specific requirements files:
+#
+# Development: pip install -r requirements/development.txt
+# Production:  pip install -r requirements/production.txt
+#
+# The production requirements are included below:
+
+-r requirements/production.txt

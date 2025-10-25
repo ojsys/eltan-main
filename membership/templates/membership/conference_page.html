@@ -1,0 +1,834 @@
+{% extends 'membership/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<style>
+    .conference-header {
+        background-color: #1885E6;
+    }
+    
+    .nav-pills .nav-link {
+        color: #E67918;
+    }
+    
+    .nav-pills .nav-link.active {
+        background-color: #E67918;
+        color: white;
+    }
+    
+    .btn-eltan {
+        background-color: #E67918;
+        color: white;
+        border: none;
+    }
+    
+    .btn-eltan:hover {
+        background-color: #d36816;
+        color: white;
+    }
+    
+    .btn-outline-eltan {
+        border-color: #E67918;
+        color: #E67918;
+    }
+    
+    .btn-outline-eltan:hover {
+        background-color: #E67918;
+        color: white;
+    }
+
+    .text-eltan {
+        color: #E67918;
+    }
+
+    .alert-eltan {
+        background-color: #fff3e6;
+        border-color: #E67918;
+        color: #E67918;
+    }
+</style>
+<style>
+.sub-themes {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.sub-themes h3 {
+    color: #E67918;
+    margin-bottom: 20px;
+}
+
+.themes-list {
+    padding-left: 20px;
+}
+
+.themes-list li {
+    margin-bottom: 12px;
+    line-height: 1.5;
+    color: #333;
+}
+
+.themes-list li::marker {
+    color: #E67918;
+    font-weight: bold;
+}
+.speaker-bio {
+    max-width: 800px;
+    margin: 20px auto;
+    line-height: 1.6;
+}
+
+.speaker-bio p {
+    margin-bottom: 1.2em;
+    color: #333;
+}
+
+.speaker-bio ol {
+    margin: 1em 0;
+    padding-left: 2em;
+}
+
+.speaker-bio li {
+    margin-bottom: 0.5em;
+    padding-left: 0.5em;
+}
+
+.speaker-bio a {
+    color: #E67918;
+    text-decoration: none;
+}
+
+.speaker-bio a:hover {
+    text-decoration: underline;
+}
+</style>
+
+
+<!-- Conference Header -->
+<div class="container-fluid conference-header text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="text-white">{{ conference.title }}</h1>
+                <h3 class="text-warning">{{ conference.theme }}</h3>
+                <p class="lead">
+                    {{ conference.start_date|date:"F d" }} - {{ conference.end_date|date:"F d, Y" }}
+                    <br>
+                    {{ conference.venue }}
+                </p>
+            </div>
+            {% if conference.image %}
+            <div class="col-md-4">
+                <img src="{{ conference.image.url }}" class="img-fluid rounded" alt="{{ conference.title }}">
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Tabs -->
+<div class="container mt-4">
+    <ul class="nav nav-pills nav-fill mb-4" id="conferenceTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#overview">Overview</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#call-for-papers">Call for Papers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#speakers">Speakers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#schedule">Schedule</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#sponsors">Sponsors</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#venue">Venue</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#loc-members">LOC Members</a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="conferenceTabContent">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview">
+            <div class="row">
+                <div class="col-md-8">
+                    {{ conference.description|safe }}
+                    
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h4 class="mb-0">Preamble</h4>
+                        </div>
+                        <div class="card-body">
+                            <p>
+                                In an era of rapid globalization and technological advancements, the landscape of English Language Teaching (ELT) in Nigeria is evolving. Traditional methods of instruction, while foundational, must be reimagined to meet the diverse linguistic, cultural, and technological realities of today’s learners. This conference, themed <em>"Innovative ELT Pedagogy in Nigeria,"</em> seeks to explore forward-thinking approaches that enhance language proficiency, foster critical thinking, and improve learning outcomes in classrooms across the country.
+                            </p>
+                            <div class="sub-themes">
+                                <h3>Conference Sub-themes:</h3>
+                                <ol class="themes-list">
+                                    <li>Enhancing Teacher Wellbeing for Effective ELT</li>
+                                    <li>Teachers as Behavioral Change Agents in ELT</li>
+                                    <li>Technology Integration for Innovative ELT Pedagogy</li>
+                                    <li>Culturally Responsive ELT in Multilingual Classrooms</li>
+                                    <li>Building 21st-Century Skills Through ELT</li>
+                                    <li>Gender and Inclusion in ELT Practices</li>
+                                    <li>Community Engagement Through ELT Pedagogy</li>
+                                    <li>Sustainable Policies for Innovative ELT Practices</li>
+                                    <li>Exploring Nigerian English in ELT Pedagogy</li>
+                                    <li>Teaching Syntax (Grammar) for Academic Writing Proficiency</li>
+                                    <li>Pragmatics and Communication Skills in ELT</li>
+                                    <li>Phonology Instruction for Improved Spoken English</li>
+                                    <li>Integrating Literature into ELT</li>
+                                    <li>Analyzing ELT Implications of Nigerian Linguistic Diversity</li>
+                                    <li>Collaborative Classrooms for Engaging ELT Experience</li>
+                                    <li>Introducing Innovative ELT Practices for Global Competitiveness</li>
+                                    <li>Integrating Storytelling into ELT Practices</li>
+                                    <li>ELT Practices for Improved Performance in External Examinations</li>
+                                    <li>Functional Grammar and ELT</li>
+                                    <li>Any other relevant topics in Formal Linguistics, English, and Literature relating such to English language pedagogy</li>
+                                </ol>
+                            </div>
+                            <p>
+                                Through discussions on cutting-edge methodologies, digital integration, learner-centered strategies, and context-responsive teaching practices, this gathering will bring together educators, researchers, and policymakers to reimagine ELT in Nigeria. By embracing innovation, we aim to bridge existing gaps, empower educators, and equip students with the linguistic skills necessary to thrive in an increasingly interconnected world.
+                            </p>
+                            <p>
+                                Join us as we engage in insightful conversations, share best practices, and chart a new course for English Language Teaching in Nigeria. <a style="color:blue;" href="https://forms.gle/26eaEr4b1Zm7C9pb6">Click Here To Submit Your Abstract</a>
+                            </p>
+                            <p>
+                                <strong>For further enquiries:</strong><br>Contact LOC Chairperson: <br>Maureen E. Ororho <br>Phone: +2348035924509 <br>Email: eltanconfasaba@gmail.com
+                            </p>
+                            
+                            
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Registration</h5>
+                            {% if conference.is_early_bird_active %}
+                            <div class="alert alert-info">
+                                Early Bird Rates Available!
+                                <br>
+                                Ends {{ conference.early_bird_end|date }}
+                            </div>
+                            {% endif %}
+                            
+                            <h6>Member Rates:</h6>
+                            <p>₦{{ conference.member_fee }}</p>
+                            
+                            <h6>Non-Member Rates:</h6>
+                            <p>₦{{ conference.non_member_fee }}</p>
+                            
+                            <h6>International Delegate:</h6>
+                            <p>$50</p>
+                            
+                            {% if conference.is_open_for_registration %}
+                                <div class="d-grid gap-2">
+                                    {% if user.is_authenticated %}
+                                        <a href="{% url 'conference_register' conference.pk %}?type=member" 
+                                           class="btn btn-eltan btn-lg">
+                                            Register as Member
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'login' %}?next={% url 'conference_register' conference.pk %}?type=member" 
+                                           class="btn btn-eltan btn-lg">
+                                            Register as Member
+                                        </a>
+                                    {% endif %}
+                                    
+                                    <a href="{% url 'conference_register' conference.pk %}?type=non-member" 
+                                       class="btn btn-outline-eltan btn-lg">
+                                        Register as Non-Member
+                                    </a>
+                                    
+                                    <a href="{% url 'conference_register' conference.pk %}?type=international" 
+                                       class="btn btn-primary btn-lg">
+                                        International Delegate
+                                    </a>
+                                </div>
+                            {% else %}
+                                <button class="btn btn-secondary btn-lg w-100" disabled>Registration Closed</button>
+                            {% endif %}
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call for Papers Tab -->
+        <div class="tab-pane fade" id="call-for-papers">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3>Abstract Submission Guidelines</h3>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card mt-4 mb-4">
+                                <div class="card-header">
+                                    <h4 class="mb-0">General Guidelines</h4>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-unstyled">
+                                        <li class="mb-3">• Title: 10 words maximum (Capitalize the initials of content words only)</li>
+                                        <li class="mb-3">• Abstract: 250 words maximum</li>
+                                        <li class="mb-3">• Citations: APA (7th edition) or MLA (9th edition) style</li>
+                                        <li class="mb-3">• Main text and abstract must be in Times New Roman, font size 12</li>
+                                        <li class="mb-3">• Include full name, institutional affiliation, and contact details</li>
+                                        <li class="mb-3">• Registration required per presenter</li>
+                                        <li class="mb-3">• Abstract submission deadline: May 30, 2025, by 21:00 GMT</li>
+                                        <li class="mb-3">• Abstracts not submitted by May 30, 2025, will not be considered for the printed Book of Abstracts</li>
+                                        <li class="mb-3">• <strong>All Virtual presentations will be a post-conference activity via zoom</strong></li>
+                                        <li class="mb-3">• <strong>All the PowerPoint slides for Virtual Presentations must be submitted by August 20, 2025 to eltanconfasaba@gmail.com</strong></li>
+                                        
+                                    </ul>
+                                    <p class="mt-3">
+                                        <strong>Note:</strong> The LOC will organize a session to help especially first-time presenters and anyone else who might be interested to learn how to write successful abstracts.
+                                    </p>
+                                    <p>
+                                        <strong>For further enquiries:</strong><br>Contact LOC Chairperson: <br>Maureen E. Ororho <br>Phone: +2348035924509 <br>Email: eltanconfasaba@gmail.com
+                                    </p>
+                                </div>
+                            </div>
+                            <!-- Rubric Table -->
+                            <h4 class="mb-3 mt-5">Abstract Evaluation Rubric</h4>
+                            <div class="table-responsive">
+                                <table class="table table-bordered mt-4">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Criterion</th>
+                                            <th>0</th>
+                                            <th>1</th>
+                                            <th>2</th>
+                                            <th>3</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Relevance and currency of the topic</strong></td>
+                                            <td>The topic is not current and the content of the abstract would not be of interest to either English teachers or researchers.</td>
+                                            <td>The topic is somehow current and the content of the abstract might be of interest to either English teachers or researchers.</td>
+                                            <td>The topic is current and the content of the abstract would be of definite interest to either English teachers or researchers.</td>
+                                            <td>The topic is very current and the content of the abstract would be of interest to both English teachers and researchers.</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Clarity of objectives and findings</strong></td>
+                                            <td>The objectives of the paper are not clearly stated or implied.</td>
+                                            <td>The objectives of the paper allow for a general understanding but outcomes are implied but not explicitly stated, or may be too general or broad to be achievable.</td>
+                                            <td>The objectives of the paper allow for a specific understanding of the topic and outcomes are stated or implied but may lack sufficient focus.</td>
+                                            <td>The objectives of the paper are clear and achievable within the scope of the topic and specific expected outcomes of the presentation.</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Evidence of theory-practice link</strong></td>
+                                            <td>There is no theory-practice link.</td>
+                                            <td>The abstract lacks a clear link between theory and practice.</td>
+                                            <td>There is some evidence of research/theory support.</td>
+                                            <td>There is a strong and relevant theory/research as evidence/support.</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Quality of abstract as indicator of presentation quality</strong></td>
+                                            <td>The language used in the abstract suggests that the presentation may be poor.</td>
+                                            <td>The language used in the abstract suggests that the presentation may be uneven or of moderate quality.</td>
+                                            <td>The language used in the abstract suggests that the presentation will be of an acceptable quality.</td>
+                                            <td>The abstract is well written and suggests that the presentation will be of a good quality.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                            </div>
+        
+                            <!-- Sample Abstracts Download -->
+                            <div class="mt-4">
+                                <h4>Sample Abstracts</h4>
+                                <p>Download our sample abstracts document for reference:</p>
+                                <a href="{% static 'docs/Sample_of_Abstracts.docx' %}" class="btn btn-outline-eltan">
+                                    <i class="bi bi-download"></i> Download Sample Abstracts
+                                </a>
+                            </div>
+                        </div>
+        
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h4>Submit Your Abstract</h4>
+                                    <p>Submit your abstract through our online form:</p>
+                                    <a href="{{ abstract_form_link }}" target="_blank" class="btn btn-eltan btn-lg w-100">
+                                        Submit Abstract
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <!-- Speakers Tab -->
+        <div class="tab-pane fade" id="speakers">
+            <div class="row g-4">
+                {% for speaker in speakers %}
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <img src="{{ speaker.image.url }}" class="card-img-top rounded-circle mx-auto d-block"
+                             alt="{{ speaker.name }}" 
+                             style="width: 200px; height: 200px; object-fit: cover; object-position: top;">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ speaker.name }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ speaker.title }}</h6>
+                            {% if speaker.presentation_title %}
+                            <p class="card-text text-warning">{{ speaker.presentation_title }}</p>
+                            {% endif %}
+                            <p class="card-text">
+                                {{ speaker.bio|safe|slice:":150" }}{% if speaker.bio|length > 150 %}...{% endif %}
+                            </p>
+                            {% if speaker.bio|length > 150 %}
+                            <button type="button" class="btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#bioModal{{ speaker.id }}">
+                                Read More..
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+        
+                <div class="modal fade" id="bioModal{{ speaker.id }}" tabindex="-1" aria-labelledby="bioModalLabel{{ speaker.id }}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg"> <!-- Changed to modal-lg for wider content -->
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="bioModalLabel{{ speaker.id }}">{{ speaker.name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body rich-text-content">
+                                <h6 class="text-muted mb-4">{{ speaker.title }}</h6>
+                                <div class="speaker-bio">
+                                    {{ speaker.bio|safe }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+
+
+
+        <!-- Schedule Tab -->
+        <div class="tab-pane fade" id="schedule">
+            {% regroup conference.schedule.all by date as schedule_by_date %}
+            {% for date in schedule_by_date %}
+            <h3>{{ date.grouper|date:"l, F d, Y" }}</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Session</th>
+                        <th>Location</th>
+                        <th>Speaker</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in date.list %}
+                    <tr>
+                        <td>{{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}</td>
+                        <td>
+                            <strong>{{ session.session_title }}</strong>
+                            {% if session.description %}
+                            <br>
+                            <small>{{ session.description }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ session.location }}</td>
+                        <td>{{ session.speaker.name|default:"" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endfor %}
+        </div>
+
+        <!-- Sponsors Tab -->
+        <div class="tab-pane fade" id="sponsors">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h3>Our Sponsors</h3>
+                    {% regroup sponsors by get_level_display as sponsors_by_level %}
+                    {% for level in sponsors_by_level %}
+                    <h4>{{ level.grouper }} Sponsors</h4>
+                    <div class="row g-4 mb-4">
+                        {% for sponsor in level.list %}
+                        {% if sponsor.is_approved %}
+                        <div class="col-md-4">
+                            <div class="card">
+                                <img src="{{ sponsor.logo.url }}" class="card-img-top p-3" alt="{{ sponsor.company_name }}">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ sponsor.company_name }}</h5>
+                                    {% if sponsor.website %}
+                                    <a href="{{ sponsor.website }}" target="_blank" class="btn btn-outline-primary btn-sm">Visit Website</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>Become a Sponsor</h4>
+                            <form method="post" enctype="multipart/form-data" action="{% url 'sponsor_application' conference.pk %}">
+                                {% csrf_token %}
+                                {{ sponsor_form|crispy }}
+                                <button type="submit" class="btn btn-eltan">Submit Application</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Venue Tab -->
+        <div class="tab-pane fade" id="venue">
+            <div class="row justify-content-center">
+                <div class="col-md-10">
+                    <div class="card shadow-lg border-0 rounded-4">
+                        <div class="row g-0">
+                            <!-- Venue Image -->
+                            {% if conference.venue_image %}
+                            <div class="col-md-6">
+                                <img src="{{ conference.venue_image.url }}" class="img-fluid rounded-start w-100 h-100" 
+                                     alt="Conference Venue" style="object-fit: cover;">
+                            </div>
+                            {% endif %}
+        
+                            <!-- Venue Details -->
+                            <div class="col-md-6">
+                                <div class="card-body p-4">
+                                    <h3 class="card-title text-primary fw-bold">Conference Venue</h3>
+                                    <h4 class="text-secondary">{{ conference.venue }}</h4>
+                                    <p class="card-text">{{ conference.venue_description|safe }}</p>
+        
+                                    {% if conference.venue_map_embed %}
+                                    <div class="mt-3">
+                                        {{ conference.venue_map_embed|safe }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LOC TAB -->
+        <div class="tab-pane fade" id="loc-members">
+            <style>
+                .loc-card-img {
+                    height: 250px;
+                    object-fit: cover;
+                    object-position: top;
+                    width: 100%;
+                }
+                .img-placeholder {
+                    height: 250px;
+                    background: #f0f0f0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .img-placeholder i {
+                    font-size: 3rem;
+                    color: #666;
+                }
+            </style>
+            
+            <div class="row g-4">
+                <!-- LOC Member 1 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/MaureenOrorho.jpg' %}" class="loc-card-img" alt="Maureen">
+                        <div class="card-body">
+                            <h5 class="card-title">Maureen E. Ororho</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Chairperson</h6>
+                
+                            <div class="mb-2">
+                                <i class="fas fa-phone me-2 text-primary"></i>
+                                <span>+234 803 592 4509</span>
+                            </div>
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span></span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">eltanconfasaba@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- LOC Member 2 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/DrOvieJack.jpg' %}" class="loc-card-img" alt="Ovie">
+                        <div class="card-body">
+                            <h5 class="card-title">Dr. Eyituoyo M. Ovie-Jack</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Welfare</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>Delta State Maritime Polytechnic, Burutu. Delta State.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">ebonnyt@yahoo.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        
+                <!-- LOC Member 3 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/DrJowieAsidi.jpg' %}" class="loc-card-img" alt="Jowe">
+                        <div class="card-body">
+                            <h5 class="card-title">Dr. Jowe-Asidi Obiageli Helen</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Mobilization</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>Marble Hill School Okpanam, Delta State.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">ojoweasidi@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        
+                <!-- LOC Member 4 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/BrightC.jpg' %}" class="loc-card-img" alt="Bright">
+                        <div class="card-body">
+                            <h5 class="card-title">Bright Chukwuemeke</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">LOC Secretariat</h6>
+                
+                            
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>Pilgrim Baptist Grammar School, Issele-uku, Delta State.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">talktobrightchucks@litersturers.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LOC Member 5 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/NwadeiMary.jpg' %}" class="loc-card-img" alt="Jude">
+                        <div class="card-body">
+                            <h5 class="card-title">Nwadei, Mary O. (Mrs.) </h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Entertainment</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>Language and Communication Department, School of General Studies Education, Federal College of Education (Technical), Asaba.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">nwadeioluchi@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LOC Member 6 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/AsemJude.jpg' %}" class="loc-card-img" alt="Jude">
+                        <div class="card-body">
+                            <h5 class="card-title">Asem Jude Okechukwu </h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Publicity</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>St Thomas College, Ibusa.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">judeski2013@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LOC Member 7 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/EmmanuelO.jpg' %}" class="loc-card-img" alt="Emmanuel">
+                        <div class="card-body">
+                            <h5 class="card-title">Emmanuel Oshilonya </h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Logistics and Security</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>Federal college of Education, Asaba.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">emmanuelkpeters@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LOC Member 8 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/IdekeJU.jpg' %}" class="loc-card-img" alt="Ideka Joseph">
+                        <div class="card-body">
+                            <h5 class="card-title">Ideke Joseph Uchechukwu </h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Technical</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>Language and Communication Department, School of General Studies Education, Federal College of Education (Technical), Asaba.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">josephideke22@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LOC Member 9 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/MustaphaTafarki.jpg' %}" class="loc-card-img" alt="Dr. Mustapha">
+                        <div class="card-body">
+                            <h5 class="card-title">Dr. Mustapha Tafarki</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Abstract Reviewer</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>Federal University Brinin-Kebbi, Kebbi State.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">mtafarki1@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LOC Member 10 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/RasheedatS.jpg' %}" class="loc-card-img" alt="Rasheedat">
+                        <div class="card-body">
+                            <h5 class="card-title">Dr. Rasheedat Sadiq</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Media</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>ICICE Al Noor Academy, Abuja, Nigeria.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">rahaha.aa@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- LOC Member 11 -->
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="{% static 'images/loc/RuthO.jpg' %}" class="loc-card-img" alt="RuthO">
+                        <div class="card-body">
+                            <h5 class="card-title">Ruth Ogboji</h5>
+                            <h6 class="card-subtitle mb-3 text-muted">Administration</h6>
+                
+                            
+                
+                            <div class="mb-2">
+                                <i class="fas fa-location-dot me-2 text-danger"></i>
+                                <span>Kafin Madaki Secondary School, Bauchi, Bauchi State.</span>
+                            </div>
+                
+                            <div>
+                                <i class="fas fa-envelope me-2 text-success"></i>
+                                <a href="mailto:eltanconfasaba@gmail.com">ruthogboji@gmail.com</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                
+                
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize Bootstrap tabs
+    var triggerTabList = [].slice.call(document.querySelectorAll('#conferenceTab a'))
+    triggerTabList.forEach(function (triggerEl) {
+        var tabTrigger = new bootstrap.Tab(triggerEl)
+        triggerEl.addEventListener('click', function (event) {
+            event.preventDefault()
+            tabTrigger.show()
+        })
+    })
+</script>
+{% endblock %}

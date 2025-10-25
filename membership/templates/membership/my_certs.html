@@ -1,0 +1,38 @@
+{% extends "membership/base.html" %}
+{% load static %}
+
+{% block title %}
+    {{ title }} My Certificates
+{% endblock title %}
+
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h2 class="text-2xl font-bold mb-6">Your ELTAN Certificates</h2>
+    
+    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        {% if subscription %}
+            {% for subscription in subscription %}
+                <div class="mb-4 p-4 border rounded">
+                    <h3 class="text-lg font-semibold">ELTAN Year: {{ subscription.eltan_year }}</h3>
+                    <p class="text-gray-600">
+                        Subscription Period: 
+                        {{ subscription.start_date|date:"M d, Y" }} - 
+                        {{ subscription.end_date|date:"M d, Y" }}
+                    </p>
+                    <div class="mt-2">
+                        <a href="{% url 'generate_certificate' subscription.eltan_year %}" 
+                           class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Download Certificate
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-gray-600">
+                No certificates available. Please ensure your membership is active.
+            </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

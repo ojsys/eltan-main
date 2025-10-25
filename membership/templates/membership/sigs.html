@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Interest Groups - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+</head>
+<body>
+    <!-- Navigation -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <p class="subtitle">Special Interest Groups (SIGs)</p>
+            <h1>Discover Your Unique Path in English Language Teaching</h1>
+            <p class="description">
+                Join specialized communities of English language teachers who share your specific interests and challenges. Collaborate, learn, and grow together.
+            </p>
+        </div>
+    </section>
+
+    <!-- Join CTA -->
+    {% if user.is_authenticated %}
+    <section class="content-container" style="padding-top: 2rem; padding-bottom: 1rem;">
+        <div style="background: linear-gradient(135deg, #E67918 0%, #1565C0 100%); padding: 2rem; border-radius: 20px; text-align: center; color: white;">
+            <h3 style="font-size: 1.75rem; margin-bottom: 1rem; font-weight: 700;">Join a Special Interest Group Today</h3>
+            <p style="margin-bottom: 0; font-size: 1.125rem; opacity: 0.95;">Browse the SIGs below and click "View Details" to join communities that match your interests.</p>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Messages -->
+    {% if messages %}
+    <section class="content-container" style="padding-top: 1rem; padding-bottom: 0;">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" style="padding: 1rem; border-radius: 8px; margin-bottom: 1rem; background: {% if message.tags == 'success' %}#d4edda{% elif message.tags == 'error' %}#f8d7da{% else %}#d1ecf1{% endif %}; border-left: 4px solid {% if message.tags == 'success' %}#28a745{% elif message.tags == 'error' %}#dc3545{% else %}#17a2b8{% endif %};">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    <!-- SIGs Section -->
+    <section class="content-container">
+        {% if sigs %}
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                {% for sig in sigs %}
+                <div class="card-modern" style="display: flex; flex-direction: column; lg:flex-direction: row;">
+                    <div style="flex: 1;">
+                        {% if sig.image %}
+                            <img src="{{ sig.image.url }}" alt="{{ sig.title }}" style="height: 100%; min-height: 300px; object-fit: cover;">
+                        {% else %}
+                            <div style="height: 300px; background: linear-gradient(135deg, #E67918 0%, #1565C0 100%); display: flex; align-items: center; justify-content: center;">
+                                <span class="material-icons" style="font-size: 80px; color: white;">groups</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-body" style="flex: 1.5;">
+                        <div style="margin-bottom: 1rem;">
+                            <span class="card-label">Special Interest Group</span>
+                            {% if sig.moderator %}
+                            <span class="card-label" style="background: #1565C0; margin-left: 0.5rem;">
+                                <span class="material-icons" style="font-size: 14px;">admin_panel_settings</span>
+                                Moderated by {{ sig.moderator.get_full_name }}
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <h2 class="card-title">{{ sig.title }}</h2>
+
+                        <p class="card-text">{{ sig.description|safe|truncatewords_html:30 }}</p>
+
+                        <!-- Member count -->
+                        <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem; color: #666;">
+                            <span class="material-icons" style="font-size: 18px;">people</span>
+                            <span>{{ sig.member_count }} Member{{ sig.member_count|pluralize }}</span>
+                            {% if sig.pk in user_sigs %}
+                                <span class="card-label" style="background: #28a745; margin-left: 0.5rem;">
+                                    <span class="material-icons" style="font-size: 14px;">check_circle</span>
+                                    Joined
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                            <a href="{% url 'sig_detail' sig.pk %}" class="btn-modern btn-primary-modern">
+                                <span>View Details</span>
+                                <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                            </a>
+                            {% if user.is_authenticated %}
+                                {% if sig.pk in user_sigs %}
+                                    <a href="{% url 'leave_sig' sig.pk %}" class="btn-modern btn-outline-modern" onclick="return confirm('Are you sure you want to leave this SIG?')">
+                                        <span class="material-icons" style="font-size: 18px;">exit_to_app</span>
+                                        <span>Leave</span>
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'join_sig' sig.pk %}" class="btn-modern" style="background: #28a745; color: white;">
+                                        <span class="material-icons" style="font-size: 18px;">group_add</span>
+                                        <span>Join</span>
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert-modern alert-info">
+                <span class="material-icons" style="font-size: 24px;">info</span>
+                <div>
+                    <strong>No SIGs Available Yet</strong>
+                    <p style="margin-top: 0.25rem;">We're currently setting up Special Interest Groups. Check back soon to find your community!</p>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Why Join SIGs Section -->
+    <section style="background: #F5F5F5; padding: 4rem 1rem; margin-top: 4rem;">
+        <div class="content-container">
+            <div class="section-divider">
+                <h2>Why Join a Special Interest Group?</h2>
+                <p>Connect with like-minded educators and enhance your professional development</p>
+                <div class="divider-line"></div>
+            </div>
+
+            <div class="grid-3" style="margin-top: 3rem;">
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #E67918 0%, #FF9147 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">diversity_3</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Specialized Focus</h3>
+                    <p style="color: #616161; line-height: 1.7;">Deep dive into specific areas of English language teaching that match your interests and career goals.</p>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #1565C0 0%, #5E92F3 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">forum</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Peer Collaboration</h3>
+                    <p style="color: #616161; line-height: 1.7;">Share best practices, resources, and experiences with colleagues facing similar challenges.</p>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #00796B 0%, #26A69A 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">trending_up</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Professional Growth</h3>
+                    <p style="color: #616161; line-height: 1.7;">Access specialized workshops, webinars, and resources tailored to your teaching context.</p>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #7B1FA2 0%, #AB47BC 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">connect_without_contact</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Networking</h3>
+                    <p style="color: #616161; line-height: 1.7;">Build meaningful connections with experts and peers in your area of specialization.</p>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #D84315 0%, #FF6F00 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">psychology</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Research & Innovation</h3>
+                    <p style="color: #616161; line-height: 1.7;">Engage in collaborative research and explore innovative teaching methodologies.</p>
+                </div>
+
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, #0288D1 0%, #03A9F4 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">campaign</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: #1A1A1A;">Collective Voice</h3>
+                    <p style="color: #616161; line-height: 1.7;">Contribute to policy discussions and advocate for improvements in your area of interest.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- Mobile Menu Script -->
+    {% include 'partials/mobile_menu_script.html' %}
+</body>
+</html>

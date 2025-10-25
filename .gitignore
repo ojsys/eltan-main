@@ -1,0 +1,398 @@
+# ============================================================================
+# ELTAN Project - Git Ignore Configuration
+# ============================================================================
+
+# ============================================================================
+# Python
+# ============================================================================
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ============================================================================
+# Virtual Environment
+# ============================================================================
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+virtualenv/
+
+# ============================================================================
+# Django
+# ============================================================================
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/static_root/
+/media/
+/media_root/
+
+# Django migrations - KEEP tracked but ignore auto-generated migration files if needed
+# Uncomment the line below if you want to ignore migrations
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Django secret key and settings
+secret.txt
+secret_key.txt
+
+# ============================================================================
+# Environment Variables & Sensitive Data
+# ============================================================================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.development.local
+.env.production
+.env.production.local
+
+# Keep example files
+!.env.example
+
+# Sensitive configuration files
+secrets/
+credentials/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# API Keys and tokens
+*_token.txt
+*_key.txt
+api_keys.txt
+
+# ============================================================================
+# Database Files
+# ============================================================================
+*.sqlite
+*.sqlite3
+*.db
+db.json
+*.dump
+*.sql
+*.backup
+*.bak
+
+# PostgreSQL
+*.psql
+
+# MySQL
+*.mysql
+
+# ============================================================================
+# Media Files (User Uploads)
+# ============================================================================
+/media/*
+!/media/.gitkeep
+/uploads/*
+!/uploads/.gitkeep
+
+# Conference images and user uploads
+/media/conference_images/
+/media/payment_proofs/
+/media/certificates/
+/media/sig_images/
+/media/partners/
+/media/profile_pics/
+/media/resources/
+/media/events/
+/media/news/
+/media/site/
+
+# ============================================================================
+# Static Files
+# ============================================================================
+/staticfiles/
+/static/
+/collected_static/
+*.manifest
+*.map
+
+# Keep static directory structure
+!/static/.gitkeep
+
+# ============================================================================
+# IDE & Editor Files
+# ============================================================================
+# VSCode
+.vscode/
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+*.code-workspace
+
+# PyCharm / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ============================================================================
+# Operating System Files
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# Logs & Debug Files
+# ============================================================================
+logs/
+*.log
+debug.log
+production.log
+error.log
+access.log
+celery.log
+gunicorn.log
+nginx.log
+
+# Django debug toolbar
+.django_debug_toolbar/
+
+# ============================================================================
+# Testing & Coverage
+# ============================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.cache/
+
+# ============================================================================
+# Documentation
+# ============================================================================
+docs/_build/
+docs/.doctrees/
+site/
+
+# ============================================================================
+# Node & Frontend (if applicable)
+# ============================================================================
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+.npm/
+.yarn/
+
+# ============================================================================
+# Compiled Files & Cache
+# ============================================================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# ============================================================================
+# Deployment & CI/CD
+# ============================================================================
+.github/workflows/secrets.yml
+.gitlab-ci-local/
+deployment/secrets/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Kubernetes
+kube-config.yml
+secrets.yml
+
+# ============================================================================
+# Backup & Temporary Files
+# ============================================================================
+*.tmp
+*.temp
+*.backup
+*.bak
+*.old
+*~
+.~*
+tmp/
+temp/
+backups/
+*.swp
+
+# Compressed files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# ============================================================================
+# Security & Sensitive Files
+# ============================================================================
+# SSL Certificates
+*.pem
+*.key
+*.csr
+*.crt
+*.der
+*.p7b
+*.p7c
+*.p12
+*.pfx
+
+# SSH Keys
+id_rsa
+id_rsa.pub
+id_dsa
+id_dsa.pub
+id_ecdsa
+id_ecdsa.pub
+id_ed25519
+id_ed25519.pub
+
+# GPG Keys
+*.gpg
+*.asc
+
+# Password files
+passwords.txt
+*.credentials
+
+# ============================================================================
+# Development Tools
+# ============================================================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# ============================================================================
+# Project Specific
+# ============================================================================
+# ELTAN specific files that should not be committed
+/conference_data/
+/member_exports/
+/payment_receipts/
+/certificates_generated/
+
+# Email templates testing
+test_emails/
+
+# Development database fixtures (if contains sensitive data)
+# fixtures/*.json
+
+# Collected media during development
+dev_media/
+
+# ============================================================================
+# Keep These Files
+# ============================================================================
+# Keep .gitkeep files to maintain directory structure
+!.gitkeep
+!**/.gitkeep
+
+# Keep requirements files
+!requirements.txt
+!requirements/*.txt
+
+# Keep example configuration files
+!.env.example
+!settings.example.py
+!config.example.yml

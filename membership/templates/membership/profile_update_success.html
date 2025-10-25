@@ -1,0 +1,20 @@
+{% extends 'membership/base.html' %}
+
+{% block title %}
+    {{ title }} - Profile Updated 
+{% endblock title %}
+
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4"></div>
+            <div class="col-md-4">
+                <h2 style="color: green;">Profile Updated Successfully</h2>
+                <p><i class="fa-solid fa-circle-check" style="color:green;"></i></p>
+                <a href="{% url 'home' %}">Go To Home Page</a>
+            </div>
+            <div class="col-md-4"></div>
+        </div>
+    </div>
+
+{% endblock content %}

@@ -1,0 +1,284 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ conference.title }} - ELTAN Conference</title>
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+    <link href="{% static 'css/conference.css' %}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    {% include 'partials/navbar.html' %}
+
+    <!-- Hero -->
+    <section class="conf-hero" id="overview">
+        {% if conference.image %}
+            <div class="conf-hero__bg" style="background-image:url('{{ conference.image.url }}')"></div>
+        {% else %}
+            <div class="conf-hero__bg" style="background-image:linear-gradient(135deg, #E8F4F8 0%, #F8F9FA 100%)"></div>
+        {% endif %}
+        <div class="conf-hero__content">
+            <div class="conf-hero__badge">
+                <span class="material-icons" style="font-size: 18px;">event_available</span>
+                ELTAN Conference
+            </div>
+            <h1 class="conf-hero__title">{{ conference.title }}</h1>
+            <p class="conf-hero__meta">
+                {{ conference.theme }} · {{ conference.start_date|date:"M d" }} – {{ conference.end_date|date:"M d, Y" }} · {{ conference.venue }}
+            </p>
+            <div class="conf-hero__cta">
+                {% if conference.is_open_for_registration %}
+                    <a href="{% url 'conference_register' conference.pk %}?type=member" class="btn btn-primary btn-pill">Register as Member</a>
+                    <a href="{% url 'conference_register' conference.pk %}?type=non-member" class="btn btn-secondary btn-pill">Non‑Member</a>
+                    <a href="{% url 'conference_register' conference.pk %}?type=international" class="btn btn-secondary btn-pill">International</a>
+                {% else %}
+                    <span class="btn btn-secondary btn-pill" style="opacity: .8; cursor: not-allowed;">Registration Closed</span>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Tabs -->
+    <div class="conf-tabs">
+        <div class="container">
+            <a href="#tab-overview" class="conf-tab active" data-target="tab-overview"><span class="material-icons">info</span> Overview</a>
+            <a href="#tab-speakers" class="conf-tab" data-target="tab-speakers"><span class="material-icons">groups</span> Speakers</a>
+            <a href="#tab-schedule" class="conf-tab" data-target="tab-schedule"><span class="material-icons">schedule</span> Schedule</a>
+            <a href="#tab-sponsors" class="conf-tab" data-target="tab-sponsors"><span class="material-icons">handshake</span> Sponsors</a>
+            <a href="#tab-loc" class="conf-tab" data-target="tab-loc"><span class="material-icons">diversity_3</span> LOC</a>
+            {% if abstract_form_link %}
+            <a href="{{ abstract_form_link }}" target="_blank" class="conf-tab" style="text-decoration:none;"><span class="material-icons">upload_file</span> Submit Abstract</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Overview and Registration -->
+    <section class="conf-tabpanel active" id="tab-overview">
+        <div class="container">
+            <div class="overview-grid">
+                <div class="content-text">
+                    <div class="conf-section__header">
+                        <p class="conf-kicker">Overview</p>
+                        <h2 class="conf-title">About the Conference</h2>
+                    </div>
+                    <div class="text-body-large">
+                        {{ conference.description|safe }}
+                    </div>
+                    {% if sub_themes %}
+                    <div class="mt-lg">
+                        <h3 class="text-heading-2">Sub-Themes</h3>
+                        <div class="text-body-large">{{ sub_themes|safe }}</div>
+                    </div>
+                    {% endif %}
+                    {% if cfp_guidelines %}
+                    <div class="mt-lg">
+                        <h3 class="text-heading-2">Call for Papers</h3>
+                        <div class="text-body-large">{{ cfp_guidelines|safe }}</div>
+                        {% if abstract_form_link %}
+                        <a href="{{ abstract_form_link }}" target="_blank" class="btn btn-secondary mt-md">Submit Abstract</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="content-illustration">
+                    <div class="conf-reg-card">
+                        <h3 class="text-heading-2" style="margin-bottom:.25rem;">Registration</h3>
+                        {% if conference.is_early_bird_active %}
+                        <div class="conf-badge-info" style="margin: .5rem 0 1rem 0;">
+                            <span class="material-icons" style="color:#1565C0">info</span>
+                            <div>
+                                <strong>Early Bird Rates Available!</strong><br>
+                                <small>Ends {{ conference.early_bird_end|date }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <ul class="conf-reg-list">
+                            <li><strong>Member:</strong> ₦{{ conference.member_fee }}</li>
+                            <li><strong>Member (Early Bird):</strong> ₦{{ conference.member_early_bird_fee }}</li>
+                            <li><strong>Non‑Member:</strong> ₦{{ conference.non_member_fee }}</li>
+                            <li><strong>Non‑Member (Early Bird):</strong> ₦{{ conference.non_member_early_bird_fee }}</li>
+                            {% if conference.international_delegate_fee %}
+                            <li><strong>International Delegate:</strong> ${{ conference.international_delegate_fee }}</li>
+                            {% endif %}
+                        </ul>
+                        <div style="display: grid; gap: .5rem;">
+                            {% if conference.is_open_for_registration %}
+                                <a href="{% url 'conference_register' conference.pk %}?type=member" class="btn btn-primary btn-pill">Register as Member</a>
+                                <a href="{% url 'conference_register' conference.pk %}?type=non-member" class="btn btn-secondary btn-pill">Register as Non‑Member</a>
+                                <a href="{% url 'conference_register' conference.pk %}?type=international" class="btn btn-secondary btn-pill">International Delegate</a>
+                            {% else %}
+                                <span class="btn btn-secondary btn-pill" style="opacity: .7; cursor: not-allowed;">Registration Closed</span>
+                            {% endif %}
+                        </div>
+                        {% if contact_name or contact_email or contact_phone %}
+                        <div class="mt-md">
+                            <p class="text-body-large" style="font-size: .95rem;">
+                                <strong>Contact:</strong> {{ contact_name }}
+                                {% if contact_phone %}<br>Phone: {{ contact_phone }}{% endif %}
+                                {% if contact_email %}<br>Email: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Speakers -->
+    <section class="conf-tabpanel" id="tab-speakers">
+        <div class="container">
+            <div class="conf-section__header">
+                <p class="conf-kicker">Speakers</p>
+                <h2 class="conf-title">Meet Our Speakers</h2>
+            </div>
+            {% if speakers %}
+            <div class="features-grid">
+                {% for s in speakers %}
+                <div class="speaker-card">
+                    {% if s.image %}
+                    <img src="{{ s.image.url }}" alt="{{ s.name }}" class="speaker-card__img">
+                    {% endif %}
+                    <div class="speaker-card__body">
+                        <div class="speaker-card__name">{{ s.name }}</div>
+                        <div class="speaker-card__meta">{{ s.title }}{% if s.presentation_title %} • {{ s.presentation_title }}{% endif %}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-body-large">Speakers will be announced soon.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Schedule -->
+    <section class="conf-tabpanel" id="tab-schedule">
+        <div class="container">
+            <div class="conf-section__header">
+                <p class="conf-kicker">Programme</p>
+                <h2 class="conf-title">Conference Schedule</h2>
+            </div>
+            {% if schedule %}
+                <div class="timeline">
+                    {% for item in schedule %}
+                        <div class="timeline-item">
+                            <div class="timeline-time">
+                                <div>{{ item.date|date:"M d" }}</div>
+                                <small>{{ item.start_time }}–{{ item.end_time }}</small>
+                            </div>
+                            <div class="timeline-card">
+                                <div class="timeline-title">{{ item.session_title }}</div>
+                                <div class="timeline-meta">{{ item.location }}{% if item.speaker %} • {{ item.speaker.name }}{% endif %}</div>
+                                {% if item.description %}<div class="text-muted" style="margin-top:.25rem;">{{ item.description }}</div>{% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-body-large">Schedule will be published soon.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Sponsors & Documents -->
+    <section class="conf-tabpanel" id="tab-sponsors">
+        <div class="container">
+            <div class="conf-section__header">
+                <p class="conf-kicker">Sponsors</p>
+                <h2 class="conf-title">Our Partners</h2>
+            </div>
+            <div class="sponsor-grid">
+                {% for sp in sponsors %}
+                    {% if sp.is_approved %}
+                        <img src="{{ sp.logo.url }}" alt="{{ sp.company_name }}" class="sponsor-logo">
+                    {% endif %}
+                {% empty %}
+                    <p class="text-body-large">Sponsorship opportunities available.</p>
+                {% endfor %}
+            </div>
+            {% if documents %}
+            <div class="mt-xl">
+                <h3 class="text-heading-2">Documents</h3>
+                <ul class="footer-links">
+                    {% for d in documents %}
+                        <li><a href="{{ d.document.url }}" target="_blank">{{ d.title }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- LOC Members -->
+    <section class="conf-tabpanel" id="tab-loc">
+        <div class="container">
+            <div class="conf-section__header">
+                <p class="conf-kicker">Local Organizing Committee</p>
+                <h2 class="conf-title">Conference LOC</h2>
+            </div>
+            {% if loc_members %}
+            <div class="loc-grid">
+                {% for m in loc_members %}
+                <div class="loc-card">
+                    {% if m.image %}
+                    <img src="{{ m.image.url }}" alt="{{ m.name }}" class="loc-img">
+                    {% endif %}
+                    <div class="loc-body">
+                        <div class="loc-name">{{ m.name }}</div>
+                        <div class="loc-role">{{ m.role }}</div>
+                        {% if m.organization %}<div class="text-muted">{{ m.organization }}</div>{% endif %}
+                        {% if m.email %}<div><a href="mailto:{{ m.email }}">{{ m.email }}</a></div>{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-body-large">LOC details coming soon.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    {% if conference.is_open_for_registration %}
+    <div class="floating-cta">
+        <a href="{% url 'conference_register' conference.pk %}?type=member" class="btn btn-primary btn-pill">
+            <span class="material-icons" style="font-size: 18px;">how_to_reg</span> Register Now
+        </a>
+    </div>
+    {% endif %}
+
+    {% include 'partials/footer.html' %}
+    <script>
+      (function(){
+        const tabs = document.querySelectorAll('.conf-tab[data-target]');
+        const panes = document.querySelectorAll('.conf-tabpanel');
+        const tabsWrap = document.querySelector('.conf-tabs');
+
+        function activate(target){
+          panes.forEach(p=>p.classList.remove('active'));
+          tabs.forEach(t=>t.classList.remove('active'));
+          const pane = document.getElementById(target);
+          const tab = Array.from(tabs).find(t=>t.dataset.target===target);
+          if (pane) pane.classList.add('active');
+          if (tab) tab.classList.add('active');
+          // Keep page near the tabs for better UX
+          if (tabsWrap) window.scrollTo({ top: tabsWrap.offsetTop + 1, behavior: 'instant' in window ? 'instant' : 'auto' });
+        }
+
+        // Hash-based activation (primary driver)
+        function fromHash(){
+          const hash = (location.hash || '').replace('#','');
+          const target = hash ? (hash.startsWith('tab-') ? hash : ('tab-' + hash)) : 'tab-overview';
+          if (document.getElementById(target)) activate(target);
+        }
+        window.addEventListener('hashchange', fromHash);
+        fromHash();
+      })();
+    </script>
+</body>
+</html>

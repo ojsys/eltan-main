@@ -1,0 +1,448 @@
+{% load static %}
+{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership Subscription - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+
+    <style>
+        .payment-method-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .payment-method-card:hover {
+            border-color: #E67918 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(230, 121, 24, 0.2);
+        }
+        .countdown-timer {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <p class="subtitle">Membership</p>
+            <h1>Subscribe to ELTAN</h1>
+            <p class="description">
+                Join the English Language Teachers' Association of Nigeria and access exclusive benefits
+            </p>
+        </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="content-container">
+        <div style="max-width: 800px; margin: 0 auto;">
+            <!-- User Info Banner -->
+            <div class="card-modern" style="background: linear-gradient(135deg, #E67918 0%, #FF9147 100%); color: white; margin-bottom: 2rem;">
+                <div class="card-body" style="text-align: center;">
+                    <h2 style="color: white; margin-bottom: 0.5rem;">Welcome, {{ request.user.first_name }} {{ request.user.last_name }}</h2>
+                    <p style="margin: 0; opacity: 0.95;">Complete your membership subscription below</p>
+                </div>
+            </div>
+
+            <!-- Progress Indicator -->
+            <div class="card-modern" style="margin-bottom: 2rem;">
+                <div class="card-body">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="flex: 1; text-align: center;">
+                            <div id="step1-indicator" style="width: 40px; height: 40px; background: #E67918; color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">1</div>
+                            <p style="margin: 0; font-size: 0.875rem; font-weight: 600;">Details</p>
+                        </div>
+                        <div style="flex: 1; height: 2px; background: #E0E0E0; margin: 0 1rem;"></div>
+                        <div style="flex: 1; text-align: center;">
+                            <div id="step2-indicator" style="width: 40px; height: 40px; background: #E0E0E0; color: #757575; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">2</div>
+                            <p style="margin: 0; font-size: 0.875rem; color: #757575;">Payment</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 1: Subscription Details -->
+            <div id="step1" style="display: block;">
+                <div class="card-modern">
+                    <div class="card-body">
+                        <h2 class="card-title" style="margin-bottom: 1.5rem;">Step 1: Subscription Details</h2>
+
+                        <div style="display: grid; gap: 1.5rem; margin-bottom: 2rem;">
+                            <!-- Membership Fees Info -->
+                            <div style="padding: 1rem; background: #F5F5F5; border-radius: 8px;">
+                                <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem;">Membership Fees</h3>
+                                <div style="display: grid; gap: 0.75rem;">
+                                    <div style="padding: 0.75rem; background: #FFF3CD; border-left: 4px solid #856404; border-radius: 4px;">
+                                        <p style="margin: 0; color: #856404; font-size: 0.875rem;"><strong>New Members:</strong> ₦5,500</p>
+                                    </div>
+                                    <div style="padding: 0.75rem; background: #D4EDDA; border-left: 4px solid #155724; border-radius: 4px;">
+                                        <p style="margin: 0; color: #155724; font-size: 0.875rem;"><strong>Renewing Members:</strong> ₦3,000</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Membership Type Field -->
+                            <div class="form-field-modern">
+                                <label for="membership_type" class="form-label-modern">
+                                    <span class="material-icons" style="font-size: 20px; color: #E67918;">card_membership</span>
+                                    <span>Membership Type</span>
+                                </label>
+                                <select name="membership_type" id="membership_type" class="form-input-modern" required>
+                                    <option value="">Select membership type</option>
+                                    {% for value, label in form.membership_type.field.choices %}
+                                        {% if value %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- State Chapter Field -->
+                            <div class="form-field-modern">
+                                <label for="state_chapter" class="form-label-modern">
+                                    <span class="material-icons" style="font-size: 20px; color: #E67918;">location_on</span>
+                                    <span>State Chapter</span>
+                                </label>
+                                <select name="state_chapter" id="state_chapter" class="form-input-modern" required>
+                                    <option value="">Select your state chapter</option>
+                                    {% for value, label in form.state_chapter.field.choices %}
+                                        {% if value %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- ELTAN Year Field -->
+                            <div class="form-field-modern">
+                                <label for="eltan_year" class="form-label-modern">
+                                    <span class="material-icons" style="font-size: 20px; color: #E67918;">calendar_today</span>
+                                    <span>ELTAN Year</span>
+                                </label>
+                                <select name="eltan_year" id="eltan_year" class="form-input-modern" required>
+                                    <option value="">Select ELTAN year</option>
+                                    {% for value, label in form.eltan_year.field.choices %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="goToStep2()" class="btn-modern btn-primary-modern" style="width: 100%;">
+                            <span>Continue to Payment</span>
+                            <span class="material-icons" style="font-size: 20px;">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Payment Method Selection -->
+            <div id="step2" style="display: none;">
+                <div class="card-modern">
+                    <div class="card-body">
+                        <h2 class="card-title" style="margin-bottom: 1rem;">Step 2: Choose Payment Method</h2>
+                        <p style="color: #616161; margin-bottom: 1.5rem;">Amount to pay: <strong id="amount-display" style="color: #E67918; font-size: 1.25rem;">₦0.00</strong></p>
+
+                        <div style="display: grid; gap: 1rem; margin-bottom: 2rem;">
+                            <!-- Bank Transfer Option -->
+                            <div onclick="selectManualPayment()" class="payment-method-card" style="padding: 1.5rem; border: 2px solid #E0E0E0; border-radius: 12px; background: white;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #1565C0 0%, #5E92F3 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                        <span class="material-icons" style="font-size: 28px; color: white;">account_balance</span>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <h4 style="font-size: 1rem; font-weight: 600; margin: 0;">Bank Transfer</h4>
+                                        <p style="font-size: 0.875rem; color: #616161; margin: 0;">Pay to ELTAN account and upload proof</p>
+                                    </div>
+                                    <span class="material-icons" style="font-size: 24px; color: #E67918;">arrow_forward</span>
+                                </div>
+                            </div>
+
+                            <!-- Online Payment Option -->
+                            <div onclick="selectPaystackPayment()" class="payment-method-card" style="padding: 1.5rem; border: 2px solid #E0E0E0; border-radius: 12px; background: white;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #00C3F8 0%, #0082C9 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                        <span class="material-icons" style="font-size: 28px; color: white;">payment</span>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <h4 style="font-size: 1rem; font-weight: 600; margin: 0;">Online Payment (Paystack)</h4>
+                                        <p style="font-size: 0.875rem; color: #616161; margin: 0;">Pay instantly with card or transfer</p>
+                                    </div>
+                                    <span class="material-icons" style="font-size: 24px; color: #E67918;">arrow_forward</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="goToStep1()" class="btn-modern" style="width: 100%; background: #F5F5F5; color: #1A1A1A;">
+                            <span class="material-icons" style="font-size: 20px;">arrow_back</span>
+                            <span>Back to Details</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Manual Payment Upload -->
+            <div id="step3-manual" style="display: none;">
+                <div class="card-modern">
+                    <div class="card-body">
+                        <h2 class="card-title" style="margin-bottom: 1.5rem;">Bank Transfer Payment</h2>
+
+                        <!-- Timer -->
+                        <div style="padding: 1rem; background: linear-gradient(135deg, #E67918 0%, #FF9147 100%); border-radius: 12px; margin-bottom: 1.5rem; text-align: center; color: white;">
+                            <p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; opacity: 0.95;">Complete payment within</p>
+                            <div id="countdown-timer" class="countdown-timer">15:00</div>
+                        </div>
+
+                        <!-- Bank Details -->
+                        <div style="padding: 1.5rem; background: #F5F5F5; border-radius: 12px; margin-bottom: 1.5rem;">
+                            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Transfer to this account</h3>
+                            <div style="display: grid; gap: 1rem;">
+                                <div>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #757575;">Bank Name</p>
+                                    <p style="margin: 0.25rem 0 0 0; font-size: 1.125rem; font-weight: 600; color: #1A1A1A;">FCMB</p>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #757575;">Account Number</p>
+                                    <p style="margin: 0.25rem 0 0 0; font-size: 1.125rem; font-weight: 600; color: #1A1A1A;">2002674132</p>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #757575;">Account Name</p>
+                                    <p style="margin: 0.25rem 0 0 0; font-size: 1.125rem; font-weight: 600; color: #1A1A1A;">ELTAN</p>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; font-size: 0.875rem; color: #757575;">Amount</p>
+                                    <p id="manual-amount" style="margin: 0.25rem 0 0 0; font-size: 1.5rem; font-weight: 700; color: #E67918;">₦0.00</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Form -->
+                        <form method="post" enctype="multipart/form-data" action="{% url 'subscribe' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="payment_method" value="manual">
+                            <input type="hidden" name="membership_type" id="manual_membership_type">
+                            <input type="hidden" name="state_chapter" id="manual_state_chapter">
+                            <input type="hidden" name="eltan_year" id="manual_eltan_year">
+
+                            <div class="form-field-modern" style="margin-bottom: 1.5rem;">
+                                <label for="payment_proof" class="form-label-modern">
+                                    <span class="material-icons" style="font-size: 20px; color: #E67918;">upload_file</span>
+                                    <span>Upload Payment Proof</span>
+                                </label>
+                                <input type="file" name="payment_proof" id="payment_proof" class="form-input-modern" accept="image/*,.pdf" required>
+                                <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #616161;">
+                                    <span class="material-icons" style="font-size: 16px; vertical-align: middle; color: #E67918;">info</span>
+                                    Upload a screenshot or PDF of your payment receipt
+                                </p>
+                            </div>
+
+                            <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr;">
+                                <button type="button" onclick="goToStep2()" class="btn-modern" style="background: #F5F5F5; color: #1A1A1A;">
+                                    <span class="material-icons" style="font-size: 20px;">arrow_back</span>
+                                    <span>Back</span>
+                                </button>
+                                <button type="submit" class="btn-modern btn-primary-modern">
+                                    <span class="material-icons" style="font-size: 20px;">check_circle</span>
+                                    <span>Submit</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Paystack Payment -->
+            <div id="step3-paystack" style="display: none;">
+                <div class="card-modern">
+                    <div class="card-body">
+                        <h2 class="card-title" style="margin-bottom: 1.5rem;">Online Payment</h2>
+
+                        <!-- Payment Summary -->
+                        <div style="padding: 1.5rem; background: linear-gradient(135deg, #00C3F8 0%, #0082C9 100%); border-radius: 12px; margin-bottom: 1.5rem; color: white; text-align: center;">
+                            <p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; opacity: 0.95;">Total Amount</p>
+                            <div id="paystack-amount" style="font-size: 2.5rem; font-weight: 700;">₦0.00</div>
+                        </div>
+
+                        <!-- Summary Details -->
+                        <div style="padding: 1.5rem; background: #F5F5F5; border-radius: 12px; margin-bottom: 1.5rem;">
+                            <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Payment Summary</h3>
+                            <div style="display: grid; gap: 0.75rem;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #757575;">Membership Type</span>
+                                    <span id="paystack-membership-type" style="font-weight: 600; color: #1A1A1A;">-</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #757575;">State Chapter</span>
+                                    <span id="paystack-state-chapter" style="font-weight: 600; color: #1A1A1A;">-</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: #757575;">ELTAN Year</span>
+                                    <span id="paystack-eltan-year" style="font-weight: 600; color: #1A1A1A;">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Paystack Form -->
+                        <form method="post" action="{% url 'initiate_subscription_payment' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="membership_type" id="paystack_membership_type">
+                            <input type="hidden" name="state_chapter" id="paystack_state_chapter">
+                            <input type="hidden" name="eltan_year" id="paystack_eltan_year">
+
+                            <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr;">
+                                <button type="button" onclick="goToStep2()" class="btn-modern" style="background: #F5F5F5; color: #1A1A1A;">
+                                    <span class="material-icons" style="font-size: 20px;">arrow_back</span>
+                                    <span>Back</span>
+                                </button>
+                                <button type="submit" class="btn-modern btn-primary-modern">
+                                    <span class="material-icons" style="font-size: 20px;">payment</span>
+                                    <span>Pay Now</span>
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Security Badge -->
+                        <div style="margin-top: 1.5rem; text-align: center; padding: 1rem; background: #F9FBE7; border-radius: 8px;">
+                            <span class="material-icons" style="font-size: 20px; color: #558B2F; vertical-align: middle;">lock</span>
+                            <span style="margin-left: 0.5rem; font-size: 0.875rem; color: #558B2F;">Secured by Paystack</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <script type="text/javascript">
+        let countdownInterval = null;
+
+        function goToStep1() {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3-manual').style.display = 'none';
+            document.getElementById('step3-paystack').style.display = 'none';
+
+            document.getElementById('step1-indicator').style.background = '#E67918';
+            document.getElementById('step1-indicator').style.color = 'white';
+            document.getElementById('step2-indicator').style.background = '#E0E0E0';
+            document.getElementById('step2-indicator').style.color = '#757575';
+
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+        }
+
+        function goToStep2() {
+            const membershipType = document.getElementById('membership_type').value;
+            const stateChapter = document.getElementById('state_chapter').value;
+            const eltanYear = document.getElementById('eltan_year').value;
+
+            if (!membershipType || !stateChapter || !eltanYear) {
+                alert('Please fill in all fields before continuing.');
+                return;
+            }
+
+            const amount = membershipType.includes('New Membership') ? 5500 : 3000;
+            document.getElementById('amount-display').textContent = '₦' + amount.toLocaleString() + '.00';
+
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+            document.getElementById('step3-manual').style.display = 'none';
+            document.getElementById('step3-paystack').style.display = 'none';
+
+            document.getElementById('step1-indicator').style.background = '#4CAF50';
+            document.getElementById('step2-indicator').style.background = '#E67918';
+            document.getElementById('step2-indicator').style.color = 'white';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectManualPayment() {
+            const membershipType = document.getElementById('membership_type').value;
+            const stateChapter = document.getElementById('state_chapter').value;
+            const eltanYear = document.getElementById('eltan_year').value;
+            const amount = membershipType.includes('New Membership') ? 5500 : 3000;
+
+            document.getElementById('manual-amount').textContent = '₦' + amount.toLocaleString() + '.00';
+            document.getElementById('manual_membership_type').value = membershipType;
+            document.getElementById('manual_state_chapter').value = stateChapter;
+            document.getElementById('manual_eltan_year').value = eltanYear;
+
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3-manual').style.display = 'block';
+
+            startCountdown(15 * 60);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectPaystackPayment() {
+            const membershipType = document.getElementById('membership_type').value;
+            const stateChapter = document.getElementById('state_chapter').value;
+            const eltanYear = document.getElementById('eltan_year').value;
+            const amount = membershipType.includes('New Membership') ? 5500 : 3000;
+
+            document.getElementById('paystack-amount').textContent = '₦' + amount.toLocaleString() + '.00';
+            document.getElementById('paystack-membership-type').textContent = membershipType;
+            document.getElementById('paystack-state-chapter').textContent = stateChapter;
+            document.getElementById('paystack-eltan-year').textContent = eltanYear;
+
+            document.getElementById('paystack_membership_type').value = membershipType;
+            document.getElementById('paystack_state_chapter').value = stateChapter;
+            document.getElementById('paystack_eltan_year').value = eltanYear;
+
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3-paystack').style.display = 'block';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function startCountdown(duration) {
+            let timeRemaining = duration;
+            const timerDisplay = document.getElementById('countdown-timer');
+
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            countdownInterval = setInterval(function() {
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                timerDisplay.textContent = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+
+                if (timeRemaining <= 0) {
+                    clearInterval(countdownInterval);
+                    alert('Time expired! Please start a new payment process.');
+                    goToStep2();
+                }
+                timeRemaining--;
+            }, 1000);
+        }
+    </script>
+
+    <!-- Mobile Menu Script -->
+    {% include 'partials/mobile_menu_script.html' %}
+</body>
+</html>

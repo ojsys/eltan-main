@@ -1,0 +1,18 @@
+# Production requirements for ELTAN project
+# Include base requirements plus production-specific dependencies
+
+-r base.txt
+
+# MySQL Database Driver
+PyMySQL==1.1.0
+
+# Production Server (optional - cPanel usually has its own)
+# gunicorn==21.2.0
+
+# Performance and Monitoring (optional but recommended)
+# sentry-sdk==1.39.1
+# django-redis==5.4.0
+
+# Security (optional but recommended)
+# django-csp==3.7
+# django-permissions-policy==4.18.0

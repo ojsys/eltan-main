@@ -1,0 +1,21 @@
+# Step 1: Basic requirements for immediate implementation
+# Install these first, then gradually add more features
+
+# Core Django and existing packages
+Django>=5.0.4
+python-decouple
+pillow
+pymysql
+requests
+
+# For static file serving
+whitenoise
+
+# Optional: CORS headers (for API functionality)
+django-cors-headers
+
+# For better logging
+# (no additional packages needed - using Django's built-in logging)
+
+# For payment processing
+# (using requests library for Paystack API calls)

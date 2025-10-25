@@ -1,0 +1,171 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+</head>
+<body>
+    <!-- Navigation -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <p class="subtitle">About ELTAN</p>
+            <h1>Redefining English Language Education in Nigeria</h1>
+            <p class="description">
+                Our journey began with a dream of creating a unified platform for English language teachers across all educational levels in Nigeria.
+            </p>
+        </div>
+    </section>
+
+    <!-- Vision & Mission Section -->
+    <section class="content-container">
+        <div class="grid-2">
+            <div class="card-modern">
+                <img src="{% static 'images/eltan_group1.jpeg' %}" alt="About ELTAN">
+                <div class="card-body">
+                    <h2 class="card-title">Our Vision</h2>
+                    <p class="card-text">
+                        The Association aims to become the principal forum for all English Language and Literature in English teachers at all levels of Nigeria's educational system; in addition to others and/or activities related to these subjects and teachers as well as their development.
+                    </p>
+                    <h3 style="margin-top: 1.5rem; font-size: 1.5rem; font-weight: 700; color: #1A1A1A;">Our Mission</h3>
+                    <p class="card-text">
+                        The principal goal of the Association is to promote the study and teaching of English Language and literature in English; to form a professional network of English Language/Literature teaching (ELT) professionals, and jointly tackle problems that are of common interest through several channels.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card-modern">
+                <img src="{% static 'images/eltan_group.jpeg' %}" alt="Our History">
+                <div class="card-body">
+                    <h2 class="card-title">Our History</h2>
+                    <p class="card-text">
+                        ELTAN began in Kano in 2004 when a training was organized by The British Council to train all the English Language Teachers in Nigeria. Stakeholders in the education sector, that is, staff from the Ministry of Education nationwide, teachers from the secondary and primary schools and the Nigeria English Scholars Association (NESA) were all invited. During the training, Dr. Felicia Moh did a presentation on vocabulary building using flashcards.
+                    </p>
+                    <p class="card-text">
+                        The meeting brought out the glaring disparity between primary/secondary school teachers and their counterparts in the universities. Stakeholders at the meeting realized that there was a need for a platform that will take care of English Teachers at all levels. The British Council Scholar, Mr. Collin Davies was in attendance. Consequently, the participants agreed to return to their different states to form State Chapters of the association.
+                    </p>
+                    <p class="card-text">
+                        <strong>ELTAN was formally incorporated as a non-profit (non-governmental) organization on the 28th of February, 2008.</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section style="background: #F5F5F5; padding: 4rem 1rem;">
+        <div class="content-container">
+            <div class="section-divider">
+                <h2>Meet Our Leadership Team</h2>
+                <p>Experienced educators and professionals committed to advancing English language education in Nigeria</p>
+                <div class="divider-line"></div>
+            </div>
+
+            <!-- Executive Team -->
+            <div class="grid-4 mt-4">
+                <div class="team-card">
+                    <img src="{% static 'images/Dr_Ken.jpg' %}" alt="Dr. Kennedy Edegbe">
+                    <div class="card-content">
+                        <h3 class="member-name">Dr. Kennedy Edegbe</h3>
+                        <p class="member-role">President</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <img src="{% static 'images/dr_scholar.jpg' %}" alt="Dr. Scholastica Amadi">
+                    <div class="card-content">
+                        <h3 class="member-name">Dr. Scholastica Amadi</h3>
+                        <p class="member-role">National Vice President</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <img src="{% static 'images/abel.jpg' %}" alt="Abel Eleojo Ochika">
+                    <div class="card-content">
+                        <h3 class="member-name">Abel Eleojo Ochika</h3>
+                        <p class="member-role">National Secretary</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <img src="{% static 'images/dr_tina.jpg' %}" alt="Dr. Tina Ayanjor">
+                    <div class="card-content">
+                        <h3 class="member-name">Dr. Tina Ayanjor</h3>
+                        <p class="member-role">Assistant National Secretary</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <img src="{% static 'images/frank.jpg' %}" alt="Frank Agulu">
+                    <div class="card-content">
+                        <h3 class="member-name">Frank Agulu</h3>
+                        <p class="member-role">Publicity Secretary</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <img src="{% static 'images/joyce.jpg' %}" alt="Joyce Amatotsero">
+                    <div class="card-content">
+                        <h3 class="member-name">Joyce Amatotsero</h3>
+                        <p class="member-role">Financial Secretary</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <img src="{% static 'images/salome.jpg' %}" alt="Salome Ikokoyo">
+                    <div class="card-content">
+                        <h3 class="member-name">Salome Ikokoyo</h3>
+                        <p class="member-role">Treasurer</p>
+                    </div>
+                </div>
+
+                <div class="team-card">
+                    <img src="{% static 'images/tijani.jpeg' %}" alt="Toyin Tijani">
+                    <div class="card-content">
+                        <h3 class="member-name">Toyin Tijani</h3>
+                        <p class="member-role">Auditor</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ex-Officio -->
+            <div class="grid-4 mt-4" style="margin-top: 2rem;">
+                <div class="team-card">
+                    <img src="{% static 'images/prof_ibiere.jpg' %}" alt="Prof. Ibiere Ken-Maduako">
+                    <div class="card-content">
+                        <h3 class="member-name">Prof. Ibiere Ken-Maduako</h3>
+                        <p class="member-role">Ex-Officio</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- Mobile Menu Script -->
+    {% include 'partials/mobile_menu_script.html' %}
+</body>
+</html>

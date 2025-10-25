@@ -1,0 +1,290 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teaching Resources - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Bootstrap (for modal functionality) -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+
+    <style>
+        .resource-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.25s ease-in-out;
+            border: 1px solid #E0E0E0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .resource-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .resource-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #E67918 0%, #FF9147 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .resource-category {
+            display: inline-block;
+            background: rgba(230, 121, 24, 0.1);
+            color: #E67918;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .external-resource-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.25s ease-in-out;
+            border: 1px solid #E0E0E0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .external-resource-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .external-resource-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+        }
+
+        .external-resource-card .card-content {
+            padding: 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-content {
+            border-radius: 16px;
+            border: none;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #E67918 0%, #FF9147 100%);
+            color: white;
+            border-radius: 16px 16px 0 0;
+            padding: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .form-control {
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            transition: all 0.25s ease-in-out;
+        }
+
+        .form-control:focus {
+            border-color: #E67918;
+            box-shadow: 0 0 0 3px rgba(230, 121, 24, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <p class="subtitle">Teaching Resources</p>
+            <h1>Free Resources for English Language Teachers</h1>
+            <p class="description">
+                Access a wealth of teaching materials, lesson plans, and professional development resources to enhance your classroom practice.
+            </p>
+        </div>
+    </section>
+
+    <!-- Messages -->
+    {% if messages %}
+    <section class="content-container" style="padding-top: 2rem; padding-bottom: 0;">
+        {% for message in messages %}
+        <div class="alert-modern alert-success" id="message-container">
+            <span class="material-icons" style="font-size: 24px;">check_circle</span>
+            <div>{{ message }}</div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    <!-- ELTAN Resources Section -->
+    <section class="content-container">
+        <div class="section-divider" style="margin: 2rem 0;">
+            <h2>ELTAN Resources</h2>
+            <p>Download teaching materials and resources curated by ELTAN members</p>
+            <div class="divider-line"></div>
+        </div>
+
+        {% if resources %}
+        <div class="grid-3" style="margin-top: 3rem;">
+            {% for resource in resources %}
+            <div class="resource-card">
+                <div class="resource-icon">
+                    <span class="material-icons" style="font-size: 32px; color: white;">description</span>
+                </div>
+                <span class="resource-category">{{ resource.category }}</span>
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: #1A1A1A; margin-bottom: 1rem; flex: 1;">{{ resource.title }}</h3>
+                <button class="btn-modern btn-primary-modern" data-toggle="modal" data-target="#downloadModal{{ resource.id }}">
+                    <span class="material-icons" style="font-size: 18px;">download</span>
+                    <span>Download Resource</span>
+                </button>
+            </div>
+
+            <!-- Download Modal -->
+            <div class="modal fade" id="downloadModal{{ resource.id }}" tabindex="-1" role="dialog" aria-labelledby="downloadModalLabel{{ resource.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="downloadModalLabel{{ resource.id }}">
+                                <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">download</span>
+                                Download {{ resource.title }}
+                            </h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white; opacity: 1;">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p style="color: #616161; margin-bottom: 1.5rem;">Please provide your details to download this resource.</p>
+                            <form method="post" action="{% url 'download-resource' resource.id %}">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="name" style="font-weight: 600; margin-bottom: 0.5rem; color: #424242;">Your Name</label>
+                                    <input type="text" class="form-control" name="name" required placeholder="Enter your full name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="email" style="font-weight: 600; margin-bottom: 0.5rem; color: #424242;">Your Email</label>
+                                    <input type="email" class="form-control" name="email" required placeholder="Enter your email address">
+                                </div>
+                                <button type="submit" class="btn-modern btn-primary-modern" style="width: 100%; justify-content: center; margin-top: 1rem;">
+                                    <span class="material-icons" style="font-size: 18px;">download</span>
+                                    <span>Download Now</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert-modern alert-info">
+            <span class="material-icons" style="font-size: 24px;">info</span>
+            <div>
+                <strong>No Resources Available</strong>
+                <p style="margin-top: 0.25rem;">We're working on adding teaching resources. Check back soon!</p>
+            </div>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- External Resources Section -->
+    <section style="background: #F5F5F5; padding: 4rem 1rem; margin-top: 4rem;">
+        <div class="content-container">
+            <div class="section-divider">
+                <h2>Partner Resources</h2>
+                <p>Access high-quality teaching resources from our partners at the British Council</p>
+                <div class="divider-line"></div>
+            </div>
+
+            <div class="grid-2" style="margin-top: 3rem; gap: 2rem;">
+                <!-- TeachingEnglish Global -->
+                <div class="external-resource-card">
+                    <img src="https://www.teachingenglish.org.uk/sites/teacheng/files/styles/homepage_course_block/public/2022-03/GettyImages-1184242030%20web.jpeg.webp?itok=y1YwnDOu" alt="TeachingEnglish Global">
+                    <div class="card-content">
+                        <h3 style="font-size: 1.5rem; font-weight: 700; color: #1A1A1A; margin-bottom: 1rem;">TeachingEnglish Global</h3>
+                        <p style="color: #616161; line-height: 1.7; margin-bottom: 1.5rem; flex: 1;">
+                            The British Council's global support site for teachers and teacher educators, drawing on UK and local expertise. Access lesson plans, events, and learning resources to support your practice, plus career growth opportunities for both new and experienced educators.
+                        </p>
+                        <a href="https://www.teachingenglish.org.uk/?utm_source=0&utm_medium=referral&utm_campaign=ceenglishprogrammes-teachers-engconx-ssa&utm_term=eltan" target="_blank" class="btn-modern btn-primary-modern">
+                            <span>Visit TeachingEnglish</span>
+                            <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- TeachingEnglish Africa -->
+                <div class="external-resource-card">
+                    <img src="https://africa.teachingenglish.org.uk/sites/default/files/styles/bc-landscape-630x354/public/tea-gram-identifying-parts-of-speech.jpg?itok=MtSu7efB" alt="TeachingEnglish Africa">
+                    <div class="card-content">
+                        <h3 style="font-size: 1.5rem; font-weight: 700; color: #1A1A1A; margin-bottom: 1rem;">TeachingEnglish Africa</h3>
+                        <p style="color: #616161; line-height: 1.7; margin-bottom: 1.5rem; flex: 1;">
+                            The British Council's regional support site for teachers and teacher educators in Sub-Saharan Africa. Access hundreds of high-quality free classroom resources, articles, and publications tailored for the African context to support your continuing professional development.
+                        </p>
+                        <a href="https://africa.teachingenglish.org.uk/?utm_source=0&utm_medium=referral&utm_campaign=ceenglishprogrammes-teachers-engconx-ssa&utm_term=eltan" target="_blank" class="btn-modern btn-primary-modern">
+                            <span>Visit TeachingEnglish Africa</span>
+                            <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- Bootstrap JS for Modal -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+    <script>
+        // Auto-hide messages after 5 seconds
+        setTimeout(function() {
+            const messageContainer = document.getElementById('message-container');
+            if (messageContainer) {
+                messageContainer.style.opacity = 0;
+                setTimeout(() => messageContainer.remove(), 600);
+            }
+        }, 5000);
+    </script>
+
+    <!-- Mobile Menu Script -->
+    {% include 'partials/mobile_menu_script.html' %}
+</body>
+</html>

@@ -1,0 +1,41 @@
+{% extends 'membership/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">My Conference Registrations</h2>
+    
+    {% if registrations %}
+        <div class="row">
+            {% for registration in registrations %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ registration.conference.title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    {{ registration.conference.start_date|date:"F d" }} - 
+                                    {{ registration.conference.end_date|date:"F d, Y" }}
+                                </small>
+                            </p>
+                            
+                            <div class="mb-3">
+                                <span class="badge bg-{% if registration.payment_status == 'paid' %}success{% else %}warning{% endif %}">
+                                    {{ registration.payment_status|title }}
+                                </span>
+                            </div>
+                            
+                            <a href="{% url 'conference_registration_detail' registration.pk %}" 
+                               class="btn btn-primary">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            You haven't registered for any conferences yet.
+            <a href="{% url 'conference_list' %}" class="alert-link">View Available Conferences</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

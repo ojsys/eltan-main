@@ -1,0 +1,35 @@
+# Current requirements
+Django>=5.0.4
+crispy-forms
+crispy-bootstrap5
+django-ckeditor
+pymysql
+WeasyPrint
+python-decouple
+livereload
+Pillow
+
+# New additions for modern design and CMS functionality
+django-material-admin
+django-mptt  # For hierarchical content
+django-taggit  # For tagging system
+django-summernote  # Better rich text editor
+django-import-export  # For admin data management
+django-extensions  # Development tools
+django-debug-toolbar  # Development debugging
+django-cors-headers  # For API functionality
+djangorestframework  # For future API needs
+django-filter  # For advanced filtering
+django-tables2  # For better table displays
+whitenoise  # Static file serving
+gunicorn  # Production server
+redis  # Caching
+celery  # Background tasks
+django-celery-beat  # Scheduled tasks
+stripe  # Alternative payment processor
+django-allauth  # Social authentication
+django-guardian  # Object-level permissions
+django-reversion  # Model versioning for CMS
+django-constance[database]  # Dynamic settings
+django-modeltranslation  # Multi-language support
+django-tinymce  # Another rich text option

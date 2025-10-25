@@ -1,0 +1,127 @@
+{% extends 'membership/base.html' %}
+
+{% block content %}
+<style>
+    .conference-header {
+        background-color: #E67918;
+    }
+    
+    .nav-pills .nav-link {
+        color: #E67918;
+    }
+    
+    .nav-pills .nav-link.active {
+        background-color: #E67918;
+        color: white;
+    }
+    
+    .btn-eltan {
+        background-color: #E67918;
+        color: white;
+        border: none;
+    }
+    
+    .btn-eltan:hover {
+        background-color: #d36816;
+        color: white;
+    }
+    
+    .btn-outline-eltan {
+        border-color: #E67918;
+        color: #E67918;
+    }
+    
+    .btn-outline-eltan:hover {
+        background-color: #E67918;
+        color: white;
+    }
+
+    .text-eltan {
+        color: #E67918;
+    }
+
+    .alert-eltan {
+        background-color: #fff3e6;
+        border-color: #E67918;
+        color: #E67918;
+    }
+</style>
+
+<div class="container py-5">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="card-title">{{ conference.title }}</h2>
+            <h4 class="text-muted">{{ conference.theme }}</h4>
+            
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5>Conference Details</h5>
+                            <p>{{ conference.description|linebreaks }}</p>
+                            <hr>
+                            <dl class="row">
+                                <dt class="col-sm-4">Date:</dt>
+                                <dd class="col-sm-8">{{ conference.start_date|date:"F d" }} - {{ conference.end_date|date:"F d, Y" }}</dd>
+                                
+                                <dt class="col-sm-4">Venue:</dt>
+                                <dd class="col-sm-8">{{ conference.venue }}</dd>
+                                
+                                <dt class="col-sm-4">Registration Period:</dt>
+                                <dd class="col-sm-8">
+                                    {{ conference.registration_start|date:"F d" }} - {{ conference.registration_end|date:"F d, Y" }}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Registration Fees</h5>
+                            <table class="table">
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Fee</th>
+                                </tr>
+                                <tr>
+                                    <td>Members</td>
+                                    <td>₦{{ conference.member_fee }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Non-Members</td>
+                                    <td>₦{{ conference.non_member_fee }}</td>
+                                </tr>
+                                {% if conference.is_early_bird_active %}
+                                    <tr>
+                                        <td>Members (Early Bird)</td>
+                                        <td>₦{{ conference.member_early_bird_fee }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Non-Members (Early Bird)</td>
+                                        <td>₦{{ conference.non_member_early_bird_fee }}</td>
+                                    </tr>
+                                {% endif %}
+                            </table>
+                            
+                            {% if is_registered %}
+                                <div class="alert alert-success">
+                                    You are registered for this conference.
+                                    <a href="{% url 'conference_registration_detail' registration.pk %}" class="btn btn-link">View Registration</a>
+                                </div>
+                            {% elif conference.is_open_for_registration %}
+                                <a href="{% url 'conference_register' conference.pk %}" class="btn btn-primary btn-block">Register Now</a>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    Registration is currently closed.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

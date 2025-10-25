@@ -1,0 +1,20 @@
+{% extends 'membership/base.html' %}
+{% load static %}
+
+
+{% block title %}
+    Subscription Success - ELTAN
+{% endblock title %}
+
+{% block content %}
+<div class="container mt-9 h-100">
+    <div class="row mt-5">
+        <div class="col-md-3"></div>
+        <div class="col-md-6">
+            <h2 class="text-white text-center p-5 bg-success">Subscription Successful!</h2>
+            <a href="{% url 'dash' %}" class="btn btn-warning">Go to Dashboard</a>
+        </div>
+        <div class="col-md-3"></div>
+    </div>
+</div>
+{% endblock content %}

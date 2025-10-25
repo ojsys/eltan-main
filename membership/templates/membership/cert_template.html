@@ -1,0 +1,87 @@
+<!-- certificate_template.html -->
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership Certificate Page</title>
+    <style>
+        @font-face {
+            font-family: CloisterBlack;
+            src: url("static 'fonts/CloisterBlack.ttf' ");
+        }
+       
+        @page {
+        size: letter landscape;
+        margin: 2cm;
+        @frame header_frame {           /* Static frame */
+            -pdf-frame-content: header_content;
+            left: 50pt; width: 512pt; top: 30pt; height: 140pt;
+        }
+        @frame col1_frame {             /* Content frame 1 */
+            left: 44pt; width: 512pt; top: 130pt; height: 632pt;
+        }
+        @frame col2_frame {
+            -pdf-frame-content: signatures;             /* Content frame 2 */
+            left: 44pt; width: 512pt; top:430pt; height: 632pt;
+        }
+        @frame col3_frame {
+            -pdf-frame-content: qr_code;             /* Content frame 2 */
+            left: 580pt; width: 300pt; top:400pt; height: 320pt;
+        }
+
+        @frame footer_frame {           /* Static frame */
+            -pdf-frame-content: footer_content;
+            left: 600pt; width: 150pt; top: 590pt; height: 20pt;
+            }
+        }
+        h1{
+            font-size: 5em;
+        }
+        p{
+            font-size: 1.5em;
+        }
+
+    </style>
+</head>
+<body>
+    
+    <div id="header_content"><img src="https://eltanigeria.org/{% static 'images/logo-eltan.jpeg' %}" width="130" alt="ELTAN"></div>
+    
+    
+    <h1 style="color: #193784; font-family: CloisterBlack; font-size: 2.5em; line-height: 1.1em;">English Language Teachers <br>Association of Nigeria</h1>
+    <p style="font-size: 0.1em; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 0.1em;">ELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANEL3TANELTANELTANELTANELTANELTANELTANEL3TANELTANELTANELTANELTANELTANELTANELVERIFIEDTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTAN</p>
+    <h1 style="color: #E97717; margin-bottom: -3pt;">Certificate of Membership</h1>
+    <p style="color: #1D4355; margin-top: -4pt; margin-bottom: 1pt;">This is to certify that</p>
+    <h3 style="color: #1D4355; font-size: 4em; margin-top: 0.3em; margin-bottom: -3pt;">{{ member.first_name }} {{ member.last_name }}</h3> 
+    <p style="color: #1D4355; margin-top: -2pt;">with membership number <span style="font-size: 1.5em;">#00{{ member.eltan_number }}</span></p>
+    <!-- Add additional certificate details -->
+    <p style="color: #1D4355;">is a registered member of the English Language Teachers Association of Nigeria (ELTAN) for {{ eltan_year }}</p>
+    
+    <div id="signatures" style="display: inline-block;">
+        <div >
+            <img style="margin-bottom: -2pt;" src="https://eltanigeria.org/{% static 'images/signature_DrKen.jpeg' %}" width="150" height="45" alt="">
+            <p style="font-size: 0.1em; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 0.1em;">ELTANELTANELTANELTANELTANELTANELTANELTANELTAN3LTANELTANELTANELTANELTAN3LTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANEL</p>
+            <p style="margin-top: -0.8pt;"><span style="font-size: 18px; margin-bottom: -1.2pt; font-weight: bolder;">Dr. Kennedy Edegbe</span><br><span style="font-size: 16px;">National President</span></p>
+        </div>
+        <div>
+            <img style="margin-bottom: -2pt;" src="https://eltanigeria.org/{% static 'images/signature_abel.jpeg' %}" width="70" height="45" alt="">
+            <p style="font-size: 0.1em; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 0.1em;">ELTANELTANELTANELTANELTANELTANELTANELTANELTAN3LTANELTANELTANELTANELTAN3LTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANEL</p>
+            <p style="margin-top: 0;"><span style="font-size: 18px; margin-bottom: -1.2pt; font-weight: bolder;">Abel Ochika</span><br><span style="font-size: 16px;">National Secretary</span></p>
+        </div>
+    
+    </div>
+
+    <div id="footer_content" style="background-color: #ffffff; height: 250pt;">
+        <p style="text-align: center; font-weight: bold; margin-top: 3px; color: #E97717;">VERIFY ME</p>
+    </div>
+
+    <div id="qr_code">
+        
+        <img style="margin-left: 0;" src="{{ qr_code_path }}" alt="QR Code" width="250" height="250"> 
+    </div>
+    
+</body>
+</html>

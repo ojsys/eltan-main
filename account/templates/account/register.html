@@ -1,0 +1,227 @@
+{% load static %}
+{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - ELTAN</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="{% static 'css/auth-modern.css' %}" rel="stylesheet">
+</head>
+<body>
+    <!-- Back to Home -->
+    <a href="{% url 'home' %}" class="back-home">
+        <span class="material-icons">arrow_back</span>
+        Back to Home
+    </a>
+
+    <div class="auth-container">
+        <div class="auth-wrapper">
+            <!-- Left Side - Form -->
+            <div class="auth-form-side">
+                <div class="auth-logo">
+                    <a href="{% url 'home' %}">
+                        <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo">
+                    </a>
+                </div>
+
+                <div class="auth-header">
+                    <h1 class="auth-title">Join ELTAN Today</h1>
+                    <p class="auth-subtitle">Create your account and become part of Nigeria's premier English language teachers community</p>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            <span class="material-icons">
+                                {% if message.tags == 'success' %}check_circle
+                                {% elif message.tags == 'error' %}error
+                                {% else %}info{% endif %}
+                            </span>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" action="" class="auth-form">
+                    {% csrf_token %}
+
+                    <!-- Render all form fields dynamically -->
+                    {% for field in form %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                <span class="material-icons">
+                                    {% if 'email' in field.name %}email
+                                    {% elif 'password' in field.name %}lock
+                                    {% elif 'name' in field.name or 'first' in field.name or 'last' in field.name %}person
+                                    {% elif 'phone' in field.name %}phone
+                                    {% elif 'address' in field.name or 'location' in field.name %}location_on
+                                    {% elif 'state' in field.name %}map
+                                    {% elif 'qualification' in field.name %}school
+                                    {% elif 'institution' in field.name %}business
+                                    {% else %}edit{% endif %}
+                                </span>
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <div class="form-helper">{{ field.help_text|safe }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="form-error">
+                                    <span class="material-icons">error</span>
+                                    {{ field.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <label for="terms">
+                            I agree to the <a href="#" style="color: var(--eltan-orange); text-decoration: none;">Terms and Conditions</a>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        Create Account
+                        <span class="material-icons">arrow_forward</span>
+                    </button>
+
+                    <div class="auth-links">
+                        <a href="{% url 'login' %}" class="auth-link">
+                            Already have an account? <strong>Sign in here</strong>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Side - Illustration -->
+            <div class="auth-illustration-side">
+                <div class="illustration-content">
+                    <div class="illustration-icon">
+                        <span class="material-icons">groups</span>
+                    </div>
+
+                    <h2 class="illustration-title">Become Part of Something Bigger</h2>
+                    <p class="illustration-text">
+                        Join thousands of English language teachers across Nigeria advancing education excellence
+                    </p>
+
+                    <div class="illustration-features">
+                        <div class="illustration-feature">
+                            <span class="material-icons">check_circle</span>
+                            <div class="illustration-feature-text">
+                                <strong>Free Membership Benefits</strong><br>
+                                Access to resources and community
+                            </div>
+                        </div>
+                        <div class="illustration-feature">
+                            <span class="material-icons">check_circle</span>
+                            <div class="illustration-feature-text">
+                                <strong>Professional Development</strong><br>
+                                CPD workshops and certifications
+                            </div>
+                        </div>
+                        <div class="illustration-feature">
+                            <span class="material-icons">check_circle</span>
+                            <div class="illustration-feature-text">
+                                <strong>Networking Opportunities</strong><br>
+                                Connect with educators nationwide
+                            </div>
+                        </div>
+                        <div class="illustration-feature">
+                            <span class="material-icons">check_circle</span>
+                            <div class="illustration-feature-text">
+                                <strong>Annual Conference Access</strong><br>
+                                Discounted registration rates
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Form enhancement
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add placeholders if not present
+            const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], input[type="tel"], input[type="number"], textarea');
+            inputs.forEach(input => {
+                if (!input.getAttribute('placeholder')) {
+                    const label = input.closest('.form-group')?.querySelector('label');
+                    if (label) {
+                        const labelText = label.textContent.replace(/[*:]/g, '').trim();
+                        // Remove icon text from label
+                        const cleanLabel = labelText.replace(/email|lock|person|phone|location_on|map|school|business|edit/g, '').trim();
+                        input.setAttribute('placeholder', `Enter your ${cleanLabel.toLowerCase()}`);
+                    }
+                }
+            });
+
+            // Password strength indicator
+            const passwordFields = document.querySelectorAll('input[type="password"]');
+            passwordFields.forEach(field => {
+                // Only add to first password field (usually password1)
+                if (field.name.includes('password1') || (field.name.includes('password') && !field.name.includes('2'))) {
+                    const formGroup = field.closest('.form-group');
+                    if (formGroup && !formGroup.querySelector('.password-strength')) {
+                        const strengthDiv = document.createElement('div');
+                        strengthDiv.className = 'password-strength';
+                        strengthDiv.innerHTML = `
+                            <div class="password-strength-bar"></div>
+                            <div class="password-strength-bar"></div>
+                            <div class="password-strength-bar"></div>
+                            <div class="password-strength-bar"></div>
+                        `;
+                        formGroup.appendChild(strengthDiv);
+
+                        field.addEventListener('input', function() {
+                            const strength = calculatePasswordStrength(this.value);
+                            const bars = strengthDiv.querySelectorAll('.password-strength-bar');
+                            bars.forEach((bar, index) => {
+                                bar.classList.remove('active', 'weak', 'medium', 'strong');
+                                if (index < strength) {
+                                    bar.classList.add('active');
+                                    if (strength <= 1) bar.classList.add('weak');
+                                    else if (strength <= 2) bar.classList.add('medium');
+                                    else bar.classList.add('strong');
+                                }
+                            });
+                        });
+                    }
+                }
+            });
+
+            // Add loading state to submit button
+            const form = document.querySelector('.auth-form');
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            form.addEventListener('submit', function() {
+                submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
+            });
+        });
+
+        function calculatePasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
+            if (password.match(/\d/)) strength++;
+            if (password.match(/[^a-zA-Z\d]/)) strength++;
+            return strength;
+        }
+    </script>
+</body>
+</html>

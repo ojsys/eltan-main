@@ -1,0 +1,495 @@
+{% extends 'base/material_base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - {{ user.first_name }} | ELTAN{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dashboard Layout */
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--md-sys-spacing-xl) var(--md-sys-spacing-lg);
+    }
+
+    /* Welcome Banner */
+    .welcome-banner {
+        background: linear-gradient(135deg, var(--md-sys-color-primary) 0%, var(--md-sys-color-secondary) 100%);
+        color: white;
+        padding: var(--md-sys-spacing-xl);
+        border-radius: var(--md-sys-shape-corner-extra-large);
+        margin-bottom: var(--md-sys-spacing-xl);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+
+    .welcome-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .welcome-content h1 {
+        font-size: 32px;
+        font-weight: 600;
+        margin-bottom: var(--md-sys-spacing-sm);
+    }
+
+    .welcome-content p {
+        opacity: 0.9;
+        font-size: 16px;
+    }
+
+    /* Membership Card */
+    .membership-card {
+        background: white;
+        border-radius: var(--md-sys-shape-corner-extra-large);
+        padding: var(--md-sys-spacing-xl);
+        box-shadow: var(--md-sys-elevation-level2);
+        margin-bottom: var(--md-sys-spacing-xl);
+    }
+
+    .membership-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--md-sys-spacing-lg);
+    }
+
+    .eltan-number {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--md-sys-color-primary);
+    }
+
+    .status-badge {
+        padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
+        border-radius: var(--md-sys-shape-corner-full);
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .status-active {
+        background-color: #E8F5E9;
+        color: #1B5E20;
+    }
+
+    .status-expired {
+        background-color: var(--md-sys-color-error-container);
+        color: var(--md-sys-color-on-error-container);
+    }
+
+    .status-pending {
+        background-color: #FFF4E5;
+        color: #663C00;
+    }
+
+    .membership-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--md-sys-spacing-lg);
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-label {
+        font-size: 12px;
+        color: var(--md-sys-color-on-surface-variant);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        font-weight: 500;
+    }
+
+    .info-value {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--md-sys-color-on-surface);
+    }
+
+    /* Progress Bar */
+    .membership-progress {
+        margin-top: var(--md-sys-spacing-lg);
+    }
+
+    .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: var(--md-sys-spacing-sm);
+        font-size: 14px;
+    }
+
+    .progress-bar-bg {
+        height: 8px;
+        background-color: var(--md-sys-color-surface-variant);
+        border-radius: var(--md-sys-shape-corner-full);
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+        border-radius: var(--md-sys-shape-corner-full);
+        transition: width 0.3s;
+    }
+
+    /* Quick Actions Grid */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--md-sys-spacing-lg);
+        margin-bottom: var(--md-sys-spacing-xl);
+    }
+
+    .action-card {
+        background: white;
+        border-radius: var(--md-sys-shape-corner-large);
+        padding: var(--md-sys-spacing-lg);
+        box-shadow: var(--md-sys-elevation-level1);
+        transition: all 0.3s;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--md-sys-elevation-level3);
+    }
+
+    .action-icon {
+        width: 56px;
+        height: 56px;
+        background-color: var(--md-sys-color-primary-container);
+        color: var(--md-sys-color-primary);
+        border-radius: var(--md-sys-shape-corner-large);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--md-sys-spacing-md);
+        font-size: 28px;
+    }
+
+    .action-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: var(--md-sys-spacing-xs);
+        color: var(--md-sys-color-on-surface);
+    }
+
+    .action-desc {
+        font-size: 14px;
+        color: var(--md-sys-color-on-surface-variant);
+        line-height: 1.5;
+    }
+
+    /* Recent Activity */
+    .activity-section {
+        background: white;
+        border-radius: var(--md-sys-shape-corner-large);
+        padding: var(--md-sys-spacing-xl);
+        box-shadow: var(--md-sys-elevation-level1);
+        margin-bottom: var(--md-sys-spacing-xl);
+    }
+
+    .section-title {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: var(--md-sys-spacing-lg);
+        display: flex;
+        align-items: center;
+        gap: var(--md-sys-spacing-sm);
+    }
+
+    .activity-list {
+        list-style: none;
+    }
+
+    .activity-item {
+        display: flex;
+        gap: var(--md-sys-spacing-md);
+        padding: var(--md-sys-spacing-md) 0;
+        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-icon-wrapper {
+        width: 40px;
+        height: 40px;
+        background-color: var(--md-sys-color-secondary-container);
+        color: var(--md-sys-color-secondary);
+        border-radius: var(--md-sys-shape-corner-medium);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        font-weight: 500;
+        color: var(--md-sys-color-on-surface);
+        margin-bottom: 4px;
+    }
+
+    .activity-time {
+        font-size: 12px;
+        color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* SIGs Section */
+    .sigs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: var(--md-sys-spacing-md);
+    }
+
+    .sig-chip {
+        padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
+        background-color: var(--md-sys-color-tertiary-container);
+        color: var(--md-sys-color-on-tertiary-container);
+        border-radius: var(--md-sys-shape-corner-small);
+        font-size: 14px;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: var(--md-sys-spacing-md);
+        }
+
+        .membership-info {
+            grid-template-columns: 1fr;
+        }
+
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .welcome-content h1 {
+            font-size: 24px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+        <div class="welcome-content">
+            <h1>Welcome back, {{ user.first_name }}! 👋</h1>
+            <p>Here's what's happening with your ELTAN membership today.</p>
+        </div>
+    </div>
+
+    <!-- Membership Card -->
+    <div class="membership-card">
+        <div class="membership-header">
+            <div>
+                <div class="info-label">ELTAN Number</div>
+                <div class="eltan-number">{{ user.eltan_number|default:"Not Assigned" }}</div>
+            </div>
+            <div>
+                {% if user.is_subscribed %}
+                    <span class="status-badge status-active">
+                        <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">check_circle</span>
+                        Active
+                    </span>
+                {% else %}
+                    <span class="status-badge status-expired">
+                        <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle;">error</span>
+                        Inactive
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="membership-info">
+            <div class="info-item">
+                <span class="info-label">Full Name</span>
+                <span class="info-value">{{ user.first_name }} {{ user.last_name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ user.email }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Member Since</span>
+                <span class="info-value">{{ user.date_joined|date:"M Y" }}</span>
+            </div>
+        </div>
+
+        {% if user.is_subscribed %}
+        <div class="membership-progress">
+            <div class="progress-label">
+                <span>Membership Validity</span>
+                <span>{{ days_remaining|default:"0" }} days remaining</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: {{ progress_percentage|default:"0" }}%;"></div>
+            </div>
+        </div>
+        {% else %}
+        <div style="margin-top: var(--md-sys-spacing-lg); padding: var(--md-sys-spacing-md); background-color: var(--md-sys-color-error-container); color: var(--md-sys-color-on-error-container); border-radius: var(--md-sys-shape-corner-medium);">
+            <strong>Membership Expired</strong> - Please renew to continue enjoying member benefits
+            <a href="{% url 'subscribe' %}" class="md-button md-button-filled" style="margin-top: var(--md-sys-spacing-sm);">Renew Now</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{% url 'my_conferences' %}" class="action-card">
+            <div class="action-icon">
+                <span class="material-symbols-rounded">event</span>
+            </div>
+            <div class="action-title">My Conferences</div>
+            <div class="action-desc">View and manage your conference registrations</div>
+        </a>
+
+        <a href="{% url 'my_certs' %}" class="action-card">
+            <div class="action-icon">
+                <span class="material-symbols-rounded">workspace_premium</span>
+            </div>
+            <div class="action-title">Certificates</div>
+            <div class="action-desc">Download your membership certificates</div>
+        </a>
+
+        <a href="{% url 'my_cpds' %}" class="action-card">
+            <div class="action-icon">
+                <span class="material-symbols-rounded">school</span>
+            </div>
+            <div class="action-title">CPD Tracking</div>
+            <div class="action-desc">Track your professional development hours</div>
+        </a>
+
+        <a href="{% url 'my_sigs' %}" class="action-card">
+            <div class="action-icon">
+                <span class="material-symbols-rounded">groups</span>
+            </div>
+            <div class="action-title">My SIGs</div>
+            <div class="action-desc">Manage your special interest groups</div>
+        </a>
+
+        <a href="{% url 'update_profile' %}" class="action-card">
+            <div class="action-icon">
+                <span class="material-symbols-rounded">person</span>
+            </div>
+            <div class="action-title">Profile Settings</div>
+            <div class="action-desc">Update your personal information</div>
+        </a>
+
+        <a href="{% url 'subscribe' %}" class="action-card">
+            <div class="action-icon">
+                <span class="material-symbols-rounded">payments</span>
+            </div>
+            <div class="action-title">Subscription</div>
+            <div class="action-desc">Renew or manage your membership</div>
+        </a>
+    </div>
+
+    <!-- Two Column Layout for Activity and SIGs -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--md-sys-spacing-lg);">
+        <!-- Recent Activity -->
+        <div class="activity-section">
+            <h2 class="section-title">
+                <span class="material-symbols-outlined">history</span>
+                Recent Activity
+            </h2>
+            <ul class="activity-list">
+                <li class="activity-item">
+                    <div class="activity-icon-wrapper">
+                        <span class="material-symbols-outlined">person_add</span>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Account Created</div>
+                        <div class="activity-time">{{ user.date_joined|date:"M d, Y" }}</div>
+                    </div>
+                </li>
+                {% if user.is_subscribed %}
+                <li class="activity-item">
+                    <div class="activity-icon-wrapper">
+                        <span class="material-symbols-outlined">check_circle</span>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Membership Activated</div>
+                        <div class="activity-time">Active subscription</div>
+                    </div>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- My SIGs -->
+        <div class="activity-section">
+            <h2 class="section-title">
+                <span class="material-symbols-outlined">diversity_3</span>
+                My SIGs
+            </h2>
+            <div class="sigs-grid">
+                <!-- SIGs will be loaded from context -->
+                {% if user_sigs %}
+                    {% for sig in user_sigs %}
+                        <div class="sig-chip">{{ sig.sig.title }}</div>
+                    {% endfor %}
+                {% else %}
+                    <p class="body-medium" style="color: var(--md-sys-color-on-surface-variant);">
+                        You haven't joined any SIGs yet.
+                        <a href="{% url 'add_sigs' %}" style="color: var(--md-sys-color-primary);">Join Now</a>
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <a href="{% url 'conferences' %}" class="md-fab" style="position: fixed; bottom: 24px; right: 24px;">
+        <span class="material-symbols-rounded">add</span>
+    </a>
+</div>
+
+<script>
+    // Auto-hide welcome alert after 10 seconds
+    setTimeout(() => {
+        const banner = document.querySelector('.welcome-banner');
+        if (banner) {
+            banner.style.transition = 'opacity 0.5s';
+            // Don't hide, just make it subtle
+        }
+    }, 10000);
+
+    // Add entrance animations
+    const cards = document.querySelectorAll('.action-card, .membership-card, .activity-section');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s, transform 0.5s';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+</script>
+{% endblock %}

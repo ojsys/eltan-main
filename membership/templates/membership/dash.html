@@ -1,0 +1,126 @@
+{% extends "membership/base.html" %}
+{% load static %}
+
+{% block title %}
+    {{ title }}
+{% endblock title %}
+
+{% block content %}
+    <div class="container">
+        {% if user.is_authenticated %}
+        <div id="loggedInAlert" class="alert alert-success alert-dismissible fade show" role="alert">
+            Welcome {{ user.first_name }}!
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+
+
+        <script>
+            // Auto-hide the alert after 5 seconds (adjust as needed)
+            setTimeout(function() {
+                $('#loggedInAlert').alert('close');
+            }, 10000);
+        </script>
+        {% endif %}
+        <h2 class="mt-5 mb-5">My Dashboard</h2>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="row mb-xl-9">
+                    <div class="col-6">
+                        <div class="p-lg-5 p-4 shadow">
+                            <div class="lc-block mb-4">
+                                <img alt="" class="img-fluid" src="https://cdn.livecanvas.com/media/svg/undraw/no-data.svg" style="height:10vh">
+            
+                                <h4 class="my-3" editable="inline"> Events</h4>
+                                <p editable="inline">Register for An Event</p>
+            
+                                <a class="btn btn-outline-warning text-black" href="{% url 'my_conferences' %}" role="button">Click to View</a>
+                            </div><!-- /lc-block -->
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-lg-5 p-4 shadow">
+                            <div class="lc-block mb-4">
+                                <img alt="" class="img-fluid" src="https://cdn.livecanvas.com/media/svg/undraw/select.svg" style="height:10vh">
+            
+                                <h4 class="my-3" editable="inline">Membership Benefits</h4>
+                                <p editable="inline">Check out your Benefits!</p>
+            
+            
+                                <a class="btn btn-outline-warning text-black" href="#" role="button">Click Here</a>
+                            </div><!-- /lc-block -->
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-xl-5">
+                    <div class="col-6">
+                        <div class="p-lg-5 p-4 shadow">
+                            <div class="lc-block mb-4">
+                                <img alt="" class="img-fluid" src="https://cdn.livecanvas.com/media/svg/undraw/no-data.svg" style="height:10vh">
+            
+                                <h4 class="my-3" editable="inline"> My SIGs</h4>
+                                <p editable="inline">What are my SIGs?</p>
+            
+                                <a class="btn btn-outline-warning text-black" href="#" role="button">Click Here</a>
+                            </div><!-- /lc-block -->
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-lg-5 p-4 shadow">
+                            <div class="lc-block mb-4">
+                                <img alt="" class="img-fluid" src="https://cdn.livecanvas.com/media/svg/undraw/select.svg" style="height:10vh">
+            
+                                <h4 class="my-3" editable="inline">My CPDs</h4>
+                                <p editable="inline">Check our my CPDs!</p>
+            
+            
+                                <a class="btn btn-outline-warning text-black" href="#" role="button">Click Here</a>
+                            </div><!-- /lc-block -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div style="background-color: rgb(243, 218, 185);" class="p-lg-5 p-4 shadow">
+                    <h4 class="my-3 mb-4" editable="inline">Membership Info</h4>
+                    <p class="">
+                        Your Personal ID: #00{{ user.eltan_number }}<br>
+                        <strong>{{ user.first_name}} {{ user.last_name }}</strong>
+                    </p>
+                    {% if remaining_days <= 0 %}
+                    <p class="">Your Membership has Expired, <a style="color:#0047AB !important" href="{% url 'subscribe' %}">Please Subscribe</a></p>
+                    {% else %}
+                    <p class="">Your Membership <br>Expires on <strong>{{ end_date }}</strong></p>
+                    <p class="">Remaining Days - <strong>{{ remaining_days }}</strong></p>
+                    {% endif %}    
+                    <p class="mt-4">SIGs Subscriptions</p>
+                    
+                    <!---->
+                    <h4 class="mt-5 mb-4" editable="inline">Account Settings</h4>
+                    <p class="">Change Your Password</p>
+
+                    <p class=""><a style="color:#0047AB !important" href="{% url 'profile_update' %}">Update Profile</a></p>
+                    
+                    {% if remaining_days <= 0 %}
+                        <p class="text-primary"><strong><a aria-disabled="true" style="color:#0047AB !important" href="#">Subscribe to Download Certificate</a></strong></p>                
+                    {% else %}
+                        <p class="text-primary"><strong><a style="color:#0047AB !important" href="{% url 'list_certificates' %}">Download Certificate</a></strong></p>
+                        <p class="text-primary"><strong><a style="color:#0047AB !important" href="https://chat.whatsapp.com/FjROkOB9wf59UGYKPkPVIB?mode=r_t">Join Our WhatsApp Community</a></strong></p>
+                        <p class="text-primary"><strong><a style="color:#0047AB !important" href="{% static 'resources/Constitution.pdf' %}">Download Our Constitution</a></strong></p>
+                    {% endif %}
+ 
+                </div>
+                <div style="background-color: rgb(243, 218, 185);" class="p-lg-5 mt-3 p-4 shadow">
+                    <h4 class="my-3 mb-4" editable="inline">Jobs & Careers</h4>
+                    <p class="">Check out our Job Market</p>
+                    <p class="mt-4">Post a Job Opening</p>
+ 
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}
