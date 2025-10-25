@@ -381,6 +381,30 @@ test_emails/
 # Collected media during development
 dev_media/
 
+# Documentation files (may contain sensitive setup info)
+# Keep only README.md tracked
+ADMIN_CREDENTIALS.md
+AUTH_PAGES_REDESIGN_COMPLETE.md
+CHANGES_SUMMARY.md
+CMS_DYNAMIC_CONTENT_GUIDE.md
+DESIGN_ROLLOUT_PLAN.md
+ENVIRONMENT_SETUP.md
+ERRORS_FIXED.md
+GETTING_STARTED.md
+HOMEPAGE_REDESIGN_COMPLETE.md
+ILLUSTRATIONS_GUIDE.md
+IMPLEMENTATION_GUIDE.md
+MIGRATION_SUCCESS.md
+NEW_LANDING_PAGE_SUMMARY.md
+QUICK_START.md
+QUICK_START_ENVIRONMENTS.md
+QUICK_START_NEW_DESIGN.md
+README_ENVIRONMENTS.md
+REDESIGN_IMPLEMENTATION_SUMMARY.md
+REDESIGN_LANDING_PAGE.md
+TEMPLATE_COMPLETE.md
+SECURITY_INCIDENT_RESOLUTION.md
+
 # ============================================================================
 # Keep These Files
 # ============================================================================
