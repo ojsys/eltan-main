@@ -1,0 +1,115 @@
+================================================================================
+ELTAN PROJECT - SECURITY CHECKLIST
+================================================================================
+This file is LOCAL ONLY and not tracked in git.
+
+================================================================================
+URGENT ACTIONS REQUIRED - Complete these immediately!
+================================================================================
+
+[ ] 1. ROTATE PAYSTACK API KEYS (CRITICAL)
+    URL: https://dashboard.paystack.com/settings/developer
+    Steps:
+    - Login to Paystack Dashboard
+    - Click "Settings" > "API Keys & Webhooks"
+    - Click "Roll Keys" or "Deactivate" on current keys
+    - Generate new live API keys
+    - Update .env file with new keys:
+      PAYSTACK_SECRET_KEY=sk_live_YOUR_NEW_KEY
+      PAYSTACK_PUBLIC_KEY=pk_live_YOUR_NEW_KEY
+
+[ ] 2. ROTATE GMAIL APP PASSWORD (CRITICAL)
+    URL: https://myaccount.google.com/apppasswords
+    Steps:
+    - Login to Google Account
+    - Go to App Passwords page
+    - Find and REVOKE the compromised password
+    - Generate new app-specific password
+    - Update .env file:
+      USER_PASSWORD=YOUR_NEW_APP_PASSWORD
+
+[ ] 3. CHANGE DATABASE PASSWORD (HIGH PRIORITY)
+    Steps:
+    - Login to cPanel
+    - Navigate to MySQL Databases
+    - Find user: eltanige_eltan_user
+    - Change password to new strong password
+    - Update .env file:
+      DB_PASSWORD=YOUR_NEW_DATABASE_PASSWORD
+
+[ ] 4. TEST APPLICATION
+    - Test Paystack payments work with new keys
+    - Test email sending works with new password
+    - Test database connection works
+    - Check all major features work properly
+
+[ ] 5. MONITOR FOR SUSPICIOUS ACTIVITY (Next 30 days)
+    - Paystack Dashboard: Check for unauthorized transactions
+    - Gmail: Check sent folder for unauthorized emails
+    - Database: Check for suspicious queries (if logs available)
+    - Server: Review access logs for unusual activity
+
+================================================================================
+COMPLETED ACTIONS ✓
+================================================================================
+
+✓ Git history completely cleaned
+✓ Compromised commit removed
+✓ Fresh repository initialized with clean history
+✓ .env files excluded from git tracking
+✓ Documentation files excluded from git
+✓ Django SECRET_KEY rotated (new key in .env)
+✓ .gitignore updated to prevent future issues
+✓ README.md created for project documentation
+✓ Pushed clean history to GitHub (no sensitive data)
+
+================================================================================
+REPOSITORY STATUS
+================================================================================
+
+Current Branch: main
+Commits: 2 clean commits (bc78753, dff6e32)
+Remote: https://github.com/ojsys/eltan-main.git
+Status: Clean - No sensitive data in repository
+
+Files tracked in git:
+- Source code (.py files)
+- Templates (.html files)
+- Requirements files
+- .gitignore
+- .env.example (template only)
+- README.md
+
+Files NOT tracked (local only):
+- .env (your actual credentials)
+- .env.development
+- .env.production
+- All other .md documentation files
+- Database files (db.sqlite3)
+- Media uploads
+- Static files
+- This checklist file
+
+================================================================================
+PREVENTION - Best Practices Going Forward
+================================================================================
+
+1. NEVER commit actual credentials
+2. Always use .env.example as template only
+3. Keep .env files local only
+4. Rotate credentials every 90 days
+5. Use different credentials for dev/prod
+6. Enable 2FA on all service accounts
+7. Review what's being committed before pushing
+
+================================================================================
+SUPPORT RESOURCES
+================================================================================
+
+Paystack Support: support@paystack.com
+Google Security: https://myaccount.google.com/security
+GitHub Security: https://docs.github.com/en/code-security
+
+================================================================================
+Last Updated: October 25, 2025
+================================================================================
