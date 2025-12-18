@@ -52,7 +52,8 @@ typing-extensions==4.11.0
 django-ordered-model==3.7.4
 Pillow
 
-# Material Design
+# Admin Interface Themes
+django-jazzmin==3.0.0
 django-material-admin==1.8.6
 
 # HTTP Requests

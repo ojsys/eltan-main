@@ -3,6 +3,7 @@ Production settings for ELTAN project.
 Uses MySQL database on cPanel hosting.
 """
 
+import os
 from .base import *
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -86,6 +87,9 @@ LOGGING = {
         },
     },
 }
+
+# Create logs directory if it doesn't exist
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 
 # Use SMTP email backend for production
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
