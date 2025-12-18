@@ -19,8 +19,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # Paystack Configuration
-PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY')
-PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY')
+PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')
+PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='')
 PAYSTACK_TEST_SECRET_KEY = 'sk_test_1ccdb1ad0a8a19c53492781336ad15390760afd8'
 PAYSTACK_TEST_PUBLIC_KEY = 'pk_test_96b9995fbf552beec8da11acbb821aa5c1d06341'
 PAYSTACK_INITIALIZE_PAYMENT_URL = 'https://api.paystack.co/transaction/initialize'
@@ -151,8 +151,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = config('USER_EMAIL')
-EMAIL_HOST_PASSWORD = config('USER_PASSWORD')
+EMAIL_HOST_USER = config('USER_EMAIL', default='')
+EMAIL_HOST_PASSWORD = config('USER_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = 'ELTAN <noreply@eltanigeria.org>'
 
 # =============================================================================
