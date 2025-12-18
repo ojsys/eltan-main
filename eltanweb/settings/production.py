@@ -12,6 +12,7 @@ DEBUG = False
 ALLOWED_HOSTS = [
     'www.eltanigeria.org',
     'eltanigeria.org',
+    'web.eltanigeria.org',
 ]
 
 # Database - MySQL for production (cPanel)
