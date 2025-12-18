@@ -50,7 +50,7 @@ typing-extensions==4.11.0
 
 # CMS & Ordering
 django-ordered-model==3.7.4
-Pillow==10.2.0
+Pillow
 
 # Material Design
 django-material-admin==1.8.6
