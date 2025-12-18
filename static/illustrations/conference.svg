@@ -1,0 +1,32 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect x="0" y="0" width="400" height="300" fill="#F5F9FF"/>
+
+    <!-- Presentation Screen -->
+    <rect x="50" y="40" width="300" height="180" rx="10" fill="#FFFFFF" stroke="#1565C0" stroke-width="3"/>
+    <rect x="70" y="60" width="260" height="140" fill="#D1E4FF"/>
+
+    <!-- Chart on Screen -->
+    <rect x="100" y="140" width="40" height="40" fill="#E67918"/>
+    <rect x="150" y="120" width="40" height="60" fill="#1565C0"/>
+    <rect x="200" y="100" width="40" height="80" fill="#00796B"/>
+    <rect x="250" y="80" width="40" height="100" fill="#E67918"/>
+
+    <!-- Speaker Podium -->
+    <rect x="330" y="200" width="50" height="70" rx="5" fill="#E67918"/>
+    <circle cx="355" cy="175" r="20" fill="#1565C0"/>
+
+    <!-- Audience -->
+    <circle cx="50" cy="250" r="15" fill="#1565C0" opacity="0.7"/>
+    <rect x="35" y="250" width="30" height="40" rx="5" fill="#1565C0" opacity="0.6"/>
+
+    <circle cx="100" cy="255" r="15" fill="#00796B" opacity="0.7"/>
+    <rect x="85" y="255" width="30" height="35" rx="5" fill="#00796B" opacity="0.6"/>
+
+    <circle cx="150" cy="250" r="15" fill="#E67918" opacity="0.7"/>
+    <rect x="135" y="250" width="30" height="40" rx="5" fill="#E67918" opacity="0.6"/>
+
+    <!-- Microphone -->
+    <line x1="355" y1="195" x2="355" y2="220" stroke="#333" stroke-width="2"/>
+    <ellipse cx="355" cy="225" rx="8" ry="12" fill="#333"/>
+</svg>

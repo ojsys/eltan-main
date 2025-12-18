@@ -1,0 +1,45 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect x="0" y="0" width="400" height="300" fill="#F0F8FF"/>
+
+    <!-- Center Person (Leader) -->
+    <circle cx="200" cy="120" r="30" fill="#E67918"/>
+    <ellipse cx="200" cy="200" rx="40" ry="60" fill="#E67918" opacity="0.9"/>
+
+    <!-- Left Person -->
+    <circle cx="100" cy="140" r="25" fill="#1565C0"/>
+    <ellipse cx="100" cy="210" rx="35" ry="50" fill="#1565C0" opacity="0.8"/>
+
+    <!-- Right Person -->
+    <circle cx="300" cy="140" r="25" fill="#00796B"/>
+    <ellipse cx="300" cy="210" rx="35" ry="50" fill="#00796B" opacity="0.8"/>
+
+    <!-- Top Left Person -->
+    <circle cx="120" cy="80" r="20" fill="#1565C0" opacity="0.7"/>
+    <ellipse cx="120" cy="135" rx="28" ry="40" fill="#1565C0" opacity="0.6"/>
+
+    <!-- Top Right Person -->
+    <circle cx="280" cy="80" r="20" fill="#00796B" opacity="0.7"/>
+    <ellipse cx="280" cy="135" rx="28" ry="40" fill="#00796B" opacity="0.6"/>
+
+    <!-- Connection Lines (Network) -->
+    <line x1="200" y1="150" x2="100" y2="165" stroke="#E67918" stroke-width="3" opacity="0.5"/>
+    <line x1="200" y1="150" x2="300" y2="165" stroke="#E67918" stroke-width="3" opacity="0.5"/>
+    <line x1="200" y1="140" x2="120" y2="100" stroke="#E67918" stroke-width="2" opacity="0.4"/>
+    <line x1="200" y1="140" x2="280" y2="100" stroke="#E67918" stroke-width="2" opacity="0.4"/>
+
+    <!-- Network Nodes (Connection Points) -->
+    <circle cx="200" cy="150" r="8" fill="#FFD700"/>
+    <circle cx="100" cy="165" r="6" fill="#FFD700" opacity="0.8"/>
+    <circle cx="300" cy="165" r="6" fill="#FFD700" opacity="0.8"/>
+    <circle cx="120" cy="100" r="5" fill="#FFD700" opacity="0.7"/>
+    <circle cx="280" cy="100" r="5" fill="#FFD700" opacity="0.7"/>
+
+    <!-- Hands Joined (Unity Symbol) -->
+    <ellipse cx="150" cy="260" rx="50" ry="15" fill="#E67918" opacity="0.4" transform="rotate(-20 150 260)"/>
+    <ellipse cx="250" cy="260" rx="50" ry="15" fill="#1565C0" opacity="0.4" transform="rotate(20 250 260)"/>
+    <circle cx="200" cy="265" r="20" fill="#00796B" opacity="0.5"/>
+
+    <!-- Heart (Community Love) -->
+    <path d="M 200 35 C 200 35 185 20 170 20 C 150 20 145 35 145 45 C 145 60 200 85 200 85 C 200 85 255 60 255 45 C 255 35 250 20 230 20 C 215 20 200 35 200 35 Z" fill="#E67918" opacity="0.6"/>
+</svg>

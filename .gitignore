@@ -129,14 +129,14 @@ db.json
 # ============================================================================
 # Static Files
 # ============================================================================
+# Ignore collected/generated static files
 /staticfiles/
-/static/
 /collected_static/
 *.manifest
 *.map
 
-# Keep static directory structure
-!/static/.gitkeep
+# Source static files (custom CSS, JS, images) SHOULD be tracked
+# /static/ is now tracked in version control
 
 # ============================================================================
 # IDE & Editor Files

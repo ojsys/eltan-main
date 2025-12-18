@@ -1,0 +1,38 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect x="0" y="0" width="400" height="300" fill="#FFFBF5"/>
+
+    <!-- Laptop -->
+    <rect x="100" y="120" width="200" height="120" rx="8" fill="#1565C0"/>
+    <rect x="110" y="130" width="180" height="100" fill="#D1E4FF"/>
+    <rect x="80" y="240" width="240" height="15" rx="7" fill="#1565C0" opacity="0.8"/>
+
+    <!-- Screen Content (Book/Education) -->
+    <rect x="140" y="150" width="50" height="60" fill="#E67918" opacity="0.3"/>
+    <line x1="165" y1="160" x2="165" y2="200" stroke="#E67918" stroke-width="2"/>
+    <rect x="210" y="150" width="50" height="60" fill="#E67918" opacity="0.3"/>
+    <line x1="235" y1="160" x2="235" y2="200" stroke="#E67918" stroke-width="2"/>
+
+    <!-- Play Button (Video Learning) -->
+    <circle cx="200" cy="180" r="25" fill="#E67918" opacity="0.9"/>
+    <polygon points="195,170 210,180 195,190" fill="#FFFFFF"/>
+
+    <!-- Graduation Cap -->
+    <polygon points="300,80 350,60 400,80 375,90 325,110 300,100" fill="#E67918"/>
+    <rect x="345" y="90" width="10" height="60" fill="#E67918"/>
+    <circle cx="350" cy="155" r="8" fill="#E67918"/>
+
+    <!-- Person -->
+    <circle cx="50" cy="180" r="25" fill="#00796B"/>
+    <ellipse cx="50" cy="240" rx="35" ry="50" fill="#00796B" opacity="0.8"/>
+
+    <!-- Notebook/Notes -->
+    <rect x="20" y="220" width="30" height="40" rx="3" fill="#FFFFFF" stroke="#1565C0" stroke-width="2"/>
+    <line x1="25" y1="230" x2="45" y2="230" stroke="#1565C0" stroke-width="1"/>
+    <line x1="25" y1="240" x2="45" y2="240" stroke="#1565C0" stroke-width="1"/>
+    <line x1="25" y1="250" x2="40" y2="250" stroke="#1565C0" stroke-width="1"/>
+
+    <!-- Stars (Learning achievements) -->
+    <polygon points="330,30 335,40 345,40 337,47 340,57 330,50 320,57 323,47 315,40 325,40" fill="#FFD700"/>
+    <polygon points="370,100 373,107 380,107 375,112 377,119 370,114 363,119 365,112 360,107 367,107" fill="#FFD700"/>
+</svg>

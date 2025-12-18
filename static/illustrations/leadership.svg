@@ -1,0 +1,28 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background Circle -->
+    <circle cx="200" cy="200" r="180" fill="#FFDCC2" opacity="0.3"/>
+
+    <!-- Main Figure -->
+    <ellipse cx="200" cy="280" rx="60" ry="80" fill="#E67918" opacity="0.8"/>
+    <circle cx="200" cy="160" r="40" fill="#E67918"/>
+
+    <!-- Arms -->
+    <rect x="140" y="220" width="50" height="15" rx="7" fill="#E67918" opacity="0.9" transform="rotate(-30 165 227)"/>
+    <rect x="210" y="220" width="50" height="15" rx="7" fill="#E67918" opacity="0.9" transform="rotate(30 235 227)"/>
+
+    <!-- Crown/Leader Symbol -->
+    <path d="M 180 130 L 200 110 L 220 130 L 215 140 L 185 140 Z" fill="#FFD700"/>
+    <circle cx="200" cy="110" r="5" fill="#FFD700"/>
+
+    <!-- Supporting Figures (Team) -->
+    <ellipse cx="120" cy="300" rx="35" ry="50" fill="#1565C0" opacity="0.6"/>
+    <circle cx="120" cy="230" r="25" fill="#1565C0" opacity="0.7"/>
+
+    <ellipse cx="280" cy="300" rx="35" ry="50" fill="#00796B" opacity="0.6"/>
+    <circle cx="280" cy="230" r="25" fill="#00796B" opacity="0.7"/>
+
+    <!-- Growth Arrow -->
+    <path d="M 320 350 L 350 320 L 345 325 L 355 315 L 365 325 L 360 320 L 390 290"
+          stroke="#E67918" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <polygon points="390,290 385,300 380,295 375,305" fill="#E67918"/>
+</svg>
