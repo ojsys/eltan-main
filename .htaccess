@@ -1,0 +1,140 @@
+# ============================================================================
+# ELTAN Django Application - Apache/LiteSpeed Configuration
+# ============================================================================
+# This file configures the web server to properly serve Django static files
+# and route requests through the Python application.
+# ============================================================================
+
+# Enable Rewrite Engine
+RewriteEngine On
+RewriteBase /
+
+# ============================================================================
+# Static Files Configuration
+# ============================================================================
+# Serve static files (CSS, JavaScript, images) directly without going through Django
+# URL: /static/* -> served from staticfiles/ directory
+RewriteCond %{REQUEST_URI} ^/static/
+RewriteRule ^static/(.*)$ staticfiles/$1 [L]
+
+# ============================================================================
+# Media Files Configuration
+# ============================================================================
+# Serve user-uploaded media files directly without going through Django
+# URL: /media/* -> served from media/ directory
+RewriteCond %{REQUEST_URI} ^/media/
+RewriteRule ^media/(.*)$ media/$1 [L]
+
+# ============================================================================
+# Python Application Routing
+# ============================================================================
+# All other requests should be handled by the Python application (Passenger)
+# This ensures Django processes all non-static requests
+
+# Don't rewrite requests for static/media files
+RewriteCond %{REQUEST_URI} !^/staticfiles/
+RewriteCond %{REQUEST_URI} !^/media/
+RewriteCond %{REQUEST_URI} !^/static/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route to WSGI application
+# (Passenger will handle this automatically via passenger_wsgi.py)
+
+# ============================================================================
+# Security Headers
+# ============================================================================
+<IfModule mod_headers.c>
+    # Prevent clickjacking
+    Header always set X-Frame-Options "DENY"
+
+    # XSS Protection
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # MIME type sniffing prevention
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ============================================================================
+# File Access Protection
+# ============================================================================
+# Prevent access to sensitive files
+<FilesMatch "\.(env|py|pyc|pyo|log|ini|md|txt|sh|sql|sqlite3|db)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Allow specific documentation files if needed
+<FilesMatch "^(README\.md|LICENSE\.txt)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
+
+# Protect passenger_wsgi.py from direct access
+<Files "passenger_wsgi.py">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# ============================================================================
+# Static File Caching
+# ============================================================================
+# Cache static files for better performance
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Images
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-javascript "access plus 1 month"
+
+    # Fonts
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+
+    # Documents
+    ExpiresByType application/pdf "access plus 1 month"
+</IfModule>
+
+# ============================================================================
+# Compression
+# ============================================================================
+# Enable GZIP compression for text-based files
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE application/xml application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ============================================================================
+# Error Pages (Optional)
+# ============================================================================
+# Uncomment and customize if you want custom error pages
+# ErrorDocument 404 /404.html
+# ErrorDocument 500 /500.html
+
+# ============================================================================
+# Directory Listing
+# ============================================================================
+# Disable directory browsing for security
+Options -Indexes
+
+# ============================================================================
+# Follow Symbolic Links
+# ============================================================================
+# Required for some configurations
+Options +FollowSymLinks
