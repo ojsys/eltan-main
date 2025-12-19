@@ -1,0 +1,101 @@
+# ============================================================================
+# ELTAN Django Application - Subdomain Configuration
+# ============================================================================
+# For use in the subdomain directory: /home/eltanige/public_html/web.eltanigeria.org/
+# ============================================================================
+
+# Enable Rewrite Engine
+RewriteEngine On
+RewriteBase /
+
+# ============================================================================
+# Static Files - Serve from symlinks or absolute paths
+# ============================================================================
+# If using symlinks in this directory:
+# ln -sf /home/eltanige/eltanmain/staticfiles static
+# ln -sf /home/eltanige/eltanmain/media media
+
+# Option 1: If you created symlinks (recommended)
+# Static files are served directly from ./static/ (which is a symlink)
+# No rewrite rules needed - Apache serves symlinks automatically
+
+# Option 2: If NOT using symlinks, use these rewrite rules:
+# RewriteRule ^static/(.*)$ /home/eltanige/eltanmain/staticfiles/$1 [L]
+# RewriteRule ^media/(.*)$ /home/eltanige/eltanmain/media/$1 [L]
+
+# ============================================================================
+# Allow Access to Static Files
+# ============================================================================
+# Make sure static and media directories are accessible
+<DirectoryMatch "^/home/eltanige/eltanmain/(staticfiles|media)">
+    Options +FollowSymLinks
+    Require all granted
+</DirectoryMatch>
+
+# ============================================================================
+# File Permissions
+# ============================================================================
+# Allow reading of static files
+<FilesMatch "\.(css|js|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico|pdf)$">
+    Require all granted
+</FilesMatch>
+
+# ============================================================================
+# Security - Block sensitive files (but NOT in static/media)
+# ============================================================================
+# Only block these files if NOT in static or media directories
+<If "%{REQUEST_URI} !~ m#^/(static|media)/#">
+    <FilesMatch "\.(env|pyc|pyo|log|ini|sh|sql|sqlite3|db)$">
+        Require all denied
+    </FilesMatch>
+</If>
+
+# Block direct access to Python source files EXCEPT passenger_wsgi.py
+<FilesMatch "\.py$">
+    <If "%{REQUEST_URI} !~ m#passenger_wsgi\.py$#">
+        Require all denied
+    </If>
+</FilesMatch>
+
+# ============================================================================
+# Caching for Performance
+# ============================================================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Images
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+
+    # Fonts
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# ============================================================================
+# GZIP Compression
+# ============================================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+</IfModule>
+
+# ============================================================================
+# Security Headers
+# ============================================================================
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set X-Frame-Options "DENY"
+</IfModule>
+
+# ============================================================================
+# Directory Options
+# ============================================================================
+# Allow following symlinks (required for static/media symlinks)
+Options +FollowSymLinks -Indexes
