@@ -153,7 +153,7 @@ def home_redesigned(request):
         {
             'icon': 'location_city',
             'number': f"{chapters_count}",
-            'label': 'State Chapters',
+            'label': 'Locations',
             'color': '#00796B',
         },
         {
