@@ -609,9 +609,7 @@ class ExcoMember(models.Model):
         return f"{self.full_name} - {self.get_position_display()} ({status})"
 
     def get_display_name(self):
-        """Returns the name to display (user's name if linked, otherwise full_name)"""
-        if self.user:
-            return f"{self.user.first_name} {self.user.last_name}"
+        """Returns the full_name entered by admin"""
         return self.full_name
 
     def get_email(self):
@@ -635,7 +633,8 @@ class ExcoMember(models.Model):
 
     def clean(self):
         """Validation logic"""
-        # If user is linked, sync the full_name
+        # If user is linked but no full_name provided, use user's name as default
+        # Admin can override this by entering a custom full_name
         if self.user and not self.full_name:
             self.full_name = f"{self.user.first_name} {self.user.last_name}"
 
