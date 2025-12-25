@@ -331,7 +331,10 @@ def dash(request):
     except Exception:
         resources_downloaded = 0
 
-    certificates_earned = Certificate.objects.filter(subscription__user=user).count()
+    try:
+        certificates_earned = Certificate.objects.filter(subscription__user=user).count()
+    except Exception:
+        certificates_earned = 0
 
     stats = {
         'events_attended': events_attended,
@@ -1178,15 +1181,30 @@ def generate_certs(request, subscription_id):
     
     template = get_template(template_path)
     html = template.render(context)
-    
+
     # Generate PDF
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="ELTAN_Certificate_{safe_year}.pdf"'
-    
+
     pisa_status = pisa.CreatePDF(html, dest=response)
     if pisa_status.err:
         return HttpResponse('Failed to generate the certificate. Please try again.', status=500)
-    
+
+    # Save certificate record to database (create if doesn't exist, update if exists)
+    try:
+        from django.core.files.base import ContentFile
+
+        # Get or create the certificate record
+        certificate, created = Certificate.objects.get_or_create(subscription=subscription)
+
+        # Save the PDF content to the certificate's pdf_file field
+        pdf_filename = f'ELTAN_Certificate_{subscription.user.eltan_number}_{safe_year}.pdf'
+        certificate.pdf_file.save(pdf_filename, ContentFile(response.content), save=True)
+
+    except Exception as e:
+        # Log the error but don't fail the download
+        print(f"Error saving certificate record: {e}")
+
     return response
 
 
