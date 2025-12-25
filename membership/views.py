@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from .models import EltanConference, EltanConferenceRegistration, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, Newsletter, ELTANYearSetting, Download
+from .models import EltanConference, EltanConferenceRegistration, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, Newsletter, ELTANYearSetting, Download, ExcoMember
 from .forms import ConferenceRegistrationForm, MemberProfileUpdateForm, SigsForm, SubscriptionForm, DownloadForm, SponsorApplicationForm
 import qrcode
 import os
@@ -193,9 +193,29 @@ def home_redesigned(request):
     return render(request, 'landing/home_redesigned.html', context)
 
 def about(request):
-    user=request.user
-    context = {'title': 'ELTAN - About'}
-    return render(request,'membership/about.html', context)
+    """About page with dynamic leadership data"""
+    user = request.user
+
+    # Fetch current executive members (active and not archived)
+    current_exco = ExcoMember.objects.filter(
+        is_active=True,
+        is_archived=False
+    ).select_related('user').prefetch_related('user__memberprofile').order_by('order', 'position')
+
+    # Fetch past executive members (archived)
+    past_exco = ExcoMember.objects.filter(
+        is_archived=True
+    ).select_related('user').prefetch_related('user__memberprofile').order_by('-start_date', 'order')
+
+    context = {
+        'title': 'ELTAN - About',
+        'current_exco': current_exco,
+        'past_exco': past_exco,
+        'has_current_exco': current_exco.exists(),
+        'has_past_exco': past_exco.exists(),
+    }
+
+    return render(request, 'membership/about.html', context)
 
 ################### Display SIGs #################################
 def sigs(request):

@@ -493,7 +493,170 @@ class ConferenceLocMember(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.role}"
-   
+
+
+###############Defining Executive Committee (Exco) Models#######################
+class ExcoMember(models.Model):
+    """Executive Committee Member - Current and Past Leadership"""
+
+    POSITION_CHOICES = [
+        ('president', 'President'),
+        ('vice_president', 'National Vice President'),
+        ('secretary', 'National Secretary'),
+        ('assistant_secretary', 'Assistant National Secretary'),
+        ('treasurer', 'Treasurer'),
+        ('financial_secretary', 'Financial Secretary'),
+        ('publicity_secretary', 'Publicity Secretary'),
+        ('auditor', 'Auditor'),
+        ('ex_officio', 'Ex-Officio'),
+        ('legal_adviser', 'Legal Adviser'),
+        ('provost', 'Provost'),
+        ('other', 'Other Position'),
+    ]
+
+    # Link to existing user account (optional - some may not have accounts)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='exco_positions',
+        help_text="Link to existing ELTAN member account (optional)"
+    )
+
+    # Basic Information (required even if user is linked)
+    full_name = models.CharField(
+        max_length=200,
+        help_text="Full name of the executive member"
+    )
+    position = models.CharField(
+        max_length=50,
+        choices=POSITION_CHOICES,
+        help_text="Executive position/portfolio"
+    )
+
+    # Institution/Organization
+    institution = models.CharField(
+        max_length=300,
+        blank=True,
+        help_text="University, college, or organization"
+    )
+
+    # Contact Information
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    linkedin_url = models.URLField(
+        blank=True,
+        verbose_name="LinkedIn Profile",
+        help_text="Full LinkedIn profile URL"
+    )
+
+    # Photo
+    photo = models.ImageField(
+        upload_to='exco_members/',
+        blank=True,
+        null=True,
+        help_text="Professional headshot (recommended: 400x400px)"
+    )
+
+    # Bio (optional)
+    bio = RichTextField(
+        blank=True,
+        help_text="Brief biography or professional background"
+    )
+
+    # Tenure Information
+    start_date = models.DateField(
+        help_text="Start date of this position"
+    )
+    end_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="End date of position (leave blank for current members)"
+    )
+
+    # Status Management
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Show in Current Exco section"
+    )
+    is_archived = models.BooleanField(
+        default=False,
+        help_text="Moved to Past Exco (archived members)"
+    )
+
+    # Display Order
+    order = models.IntegerField(
+        default=0,
+        help_text="Display order (lower numbers appear first)"
+    )
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'position', 'full_name']
+        verbose_name = 'Executive Committee Member'
+        verbose_name_plural = 'Executive Committee Members'
+        indexes = [
+            models.Index(fields=['is_active', 'is_archived']),
+            models.Index(fields=['order']),
+        ]
+
+    def __str__(self):
+        status = "Current" if self.is_active and not self.is_archived else "Past"
+        return f"{self.full_name} - {self.get_position_display()} ({status})"
+
+    def get_display_name(self):
+        """Returns the name to display (user's name if linked, otherwise full_name)"""
+        if self.user:
+            return f"{self.user.first_name} {self.user.last_name}"
+        return self.full_name
+
+    def get_email(self):
+        """Returns email from user account or stored email"""
+        if self.user and self.user.email:
+            return self.user.email
+        return self.email
+
+    def get_photo_url(self):
+        """Returns photo URL, falling back to user profile pic if available"""
+        if self.photo:
+            return self.photo.url
+        if self.user:
+            try:
+                profile = self.user.memberprofile
+                if profile.profile_pic:
+                    return profile.profile_pic.url
+            except:
+                pass
+        return None
+
+    def clean(self):
+        """Validation logic"""
+        # If user is linked, sync the full_name
+        if self.user and not self.full_name:
+            self.full_name = f"{self.user.first_name} {self.user.last_name}"
+
+        # Validate that either user or full_name is provided
+        if not self.user and not self.full_name:
+            raise ValidationError("Either link a user account or provide a full name")
+
+        # Validate date logic
+        if self.end_date and self.start_date and self.end_date < self.start_date:
+            raise ValidationError("End date cannot be before start date")
+
+        # Auto-archive logic: if end_date is in the past, should be archived
+        if self.end_date and self.end_date < timezone.now().date():
+            self.is_active = False
+            # Note: is_archived remains manual for admin control
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
 ###############Defining SIGs Models#######################
 class Sigs(models.Model):
     title = models.CharField(max_length=255)

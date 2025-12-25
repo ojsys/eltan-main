@@ -76,89 +76,106 @@
     <!-- Team Section -->
     <section style="background: #F5F5F5; padding: 4rem 1rem;">
         <div class="content-container">
+            {% if has_current_exco %}
+            <!-- Current Executive Team -->
             <div class="section-divider">
                 <h2>Meet Our Leadership Team</h2>
                 <p>Experienced educators and professionals committed to advancing English language education in Nigeria</p>
                 <div class="divider-line"></div>
             </div>
 
-            <!-- Executive Team -->
             <div class="grid-4 mt-4">
+                {% for member in current_exco %}
                 <div class="team-card">
-                    <img src="{% static 'images/Dr_Ken.jpg' %}" alt="Dr. Kennedy Edegbe">
+                    {% if member.get_photo_url %}
+                        <img src="{{ member.get_photo_url }}" alt="{{ member.get_display_name }}">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ member.full_name|urlencode }}&size=400&background=E67918&color=fff" alt="{{ member.get_display_name }}">
+                    {% endif %}
                     <div class="card-content">
-                        <h3 class="member-name">Dr. Kennedy Edegbe</h3>
-                        <p class="member-role">President</p>
-                    </div>
-                </div>
+                        <h3 class="member-name">{{ member.get_display_name }}</h3>
+                        <p class="member-role">{{ member.get_position_display }}</p>
+                        {% if member.institution %}
+                            <p class="member-institution" style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
+                                {{ member.institution }}
+                            </p>
+                        {% endif %}
 
-                <div class="team-card">
-                    <img src="{% static 'images/dr_scholar.jpg' %}" alt="Dr. Scholastica Amadi">
-                    <div class="card-content">
-                        <h3 class="member-name">Dr. Scholastica Amadi</h3>
-                        <p class="member-role">National Vice President</p>
-                    </div>
-                </div>
+                        <!-- Contact Links -->
+                        {% if member.get_email or member.linkedin_url or member.phone %}
+                        <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.75rem;">
+                            {% if member.get_email %}
+                            <a href="mailto:{{ member.get_email }}"
+                               style="color: #E67918; text-decoration: none;"
+                               title="Email">
+                                <i class="material-icons" style="font-size: 18px;">email</i>
+                            </a>
+                            {% endif %}
 
-                <div class="team-card">
-                    <img src="{% static 'images/abel.jpg' %}" alt="Abel Eleojo Ochika">
-                    <div class="card-content">
-                        <h3 class="member-name">Abel Eleojo Ochika</h3>
-                        <p class="member-role">National Secretary</p>
-                    </div>
-                </div>
+                            {% if member.linkedin_url %}
+                            <a href="{{ member.linkedin_url }}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               style="color: #0077B5; text-decoration: none;"
+                               title="LinkedIn">
+                                <i class="fab fa-linkedin" style="font-size: 18px;"></i>
+                            </a>
+                            {% endif %}
 
-                <div class="team-card">
-                    <img src="{% static 'images/dr_tina.jpg' %}" alt="Dr. Tina Ayanjor">
-                    <div class="card-content">
-                        <h3 class="member-name">Dr. Tina Ayanjor</h3>
-                        <p class="member-role">Assistant National Secretary</p>
+                            {% if member.phone %}
+                            <a href="tel:{{ member.phone }}"
+                               style="color: #4caf50; text-decoration: none;"
+                               title="Phone">
+                                <i class="material-icons" style="font-size: 18px;">phone</i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Fallback if no current exco data -->
+            <div class="section-divider">
+                <h2>Leadership Team</h2>
+                <p>Information coming soon</p>
+                <div class="divider-line"></div>
+            </div>
+            {% endif %}
 
-                <div class="team-card">
-                    <img src="{% static 'images/frank.jpg' %}" alt="Frank Agulu">
-                    <div class="card-content">
-                        <h3 class="member-name">Frank Agulu</h3>
-                        <p class="member-role">Publicity Secretary</p>
-                    </div>
-                </div>
-
-                <div class="team-card">
-                    <img src="{% static 'images/joyce.jpg' %}" alt="Joyce Amatotsero">
-                    <div class="card-content">
-                        <h3 class="member-name">Joyce Amatotsero</h3>
-                        <p class="member-role">Financial Secretary</p>
-                    </div>
-                </div>
-
-                <div class="team-card">
-                    <img src="{% static 'images/salome.jpg' %}" alt="Salome Ikokoyo">
-                    <div class="card-content">
-                        <h3 class="member-name">Salome Ikokoyo</h3>
-                        <p class="member-role">Treasurer</p>
-                    </div>
-                </div>
-
-                <div class="team-card">
-                    <img src="{% static 'images/tijani.jpeg' %}" alt="Toyin Tijani">
-                    <div class="card-content">
-                        <h3 class="member-name">Toyin Tijani</h3>
-                        <p class="member-role">Auditor</p>
-                    </div>
-                </div>
+            {% if has_past_exco %}
+            <!-- Past Executive Team -->
+            <div class="section-divider" style="margin-top: 4rem;">
+                <h2>Past Leadership</h2>
+                <p>Honoring those who have served ELTAN with distinction</p>
+                <div class="divider-line"></div>
             </div>
 
-            <!-- Ex-Officio -->
-            <div class="grid-4 mt-4" style="margin-top: 2rem;">
-                <div class="team-card">
-                    <img src="{% static 'images/prof_ibiere.jpg' %}" alt="Prof. Ibiere Ken-Maduako">
+            <div class="grid-4 mt-4">
+                {% for member in past_exco %}
+                <div class="team-card" style="opacity: 0.9;">
+                    {% if member.get_photo_url %}
+                        <img src="{{ member.get_photo_url }}" alt="{{ member.get_display_name }}" style="filter: grayscale(20%);">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ member.full_name|urlencode }}&size=400&background=9e9e9e&color=fff" alt="{{ member.get_display_name }}" style="filter: grayscale(20%);">
+                    {% endif %}
                     <div class="card-content">
-                        <h3 class="member-name">Prof. Ibiere Ken-Maduako</h3>
-                        <p class="member-role">Ex-Officio</p>
+                        <h3 class="member-name">{{ member.get_display_name }}</h3>
+                        <p class="member-role">{{ member.get_position_display }}</p>
+                        <p style="font-size: 0.8rem; color: #888; margin-top: 0.25rem;">
+                            {{ member.start_date|date:"Y" }}{% if member.end_date %} - {{ member.end_date|date:"Y" }}{% endif %}
+                        </p>
+                        {% if member.institution %}
+                            <p class="member-institution" style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
+                                {{ member.institution }}
+                            </p>
+                        {% endif %}
                     </div>
                 </div>
+                {% endfor %}
             </div>
+            {% endif %}
         </div>
     </section>
 

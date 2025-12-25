@@ -8,7 +8,7 @@ from django.db import models
 from django.http import HttpResponse
 from openpyxl import Workbook
 from datetime import datetime
-from .models import Conference, ConferenceRegistration, EltanConference, EltanConferenceRegistration, ConferenceDocument, MemberProfile, MembershipType, Subscription, Sigs, SigsRegistration, Events, News, Resource, Download, ELTANYearSetting, Newsletter, ConferenceSpeaker, ConferenceSchedule, ConferenceSponsor, ConferenceLocMember
+from .models import Conference, ConferenceRegistration, EltanConference, EltanConferenceRegistration, ConferenceDocument, MemberProfile, MembershipType, Subscription, Sigs, SigsRegistration, Events, News, Resource, Download, ELTANYearSetting, Newsletter, ConferenceSpeaker, ConferenceSchedule, ConferenceSponsor, ConferenceLocMember, ExcoMember
 
 
 
@@ -335,9 +335,210 @@ class ConferenceSponsorAdmin(admin.ModelAdmin):
     list_filter = ('conference', 'level', 'is_approved')
     search_fields = ('company_name', 'contact_name', 'contact_email')
     list_editable = ('is_approved',)
-    
 
-    
+
+@admin.register(ExcoMember)
+class ExcoMemberAdmin(admin.ModelAdmin):
+    list_display = (
+        'photo_preview',
+        'full_name',
+        'position',
+        'institution',
+        'tenure_period',
+        'status_badge',
+        'order'
+    )
+
+    list_filter = (
+        'is_active',
+        'is_archived',
+        'position',
+        'start_date',
+    )
+
+    search_fields = (
+        'full_name',
+        'position',
+        'institution',
+        'email',
+        'user__first_name',
+        'user__last_name',
+        'user__email',
+    )
+
+    list_editable = ('order',)
+
+    ordering = ('is_archived', '-is_active', 'order', 'position')
+
+    actions = ['archive_members', 'unarchive_members', 'mark_as_active', 'export_to_excel']
+
+    autocomplete_fields = ['user']
+
+    readonly_fields = ('created_at', 'updated_at', 'photo_preview_large')
+
+    fieldsets = (
+        ('Member Information', {
+            'fields': (
+                'user',
+                'full_name',
+                'position',
+                'institution',
+            )
+        }),
+        ('Contact Details', {
+            'fields': (
+                'email',
+                'phone',
+                'linkedin_url',
+            )
+        }),
+        ('Photo & Bio', {
+            'fields': (
+                'photo',
+                'photo_preview_large',
+                'bio',
+            )
+        }),
+        ('Tenure & Status', {
+            'fields': (
+                'start_date',
+                'end_date',
+                'is_active',
+                'is_archived',
+                'order',
+            )
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def photo_preview(self, obj):
+        """Small thumbnail for list view"""
+        photo_url = obj.get_photo_url()
+        if photo_url:
+            return format_html(
+                '<img src="{}" width="50" height="50" style="border-radius: 50%; object-fit: cover; border: 2px solid #ddd;"/>',
+                photo_url
+            )
+        return format_html(
+            '<div style="width: 50px; height: 50px; border-radius: 50%; background: #e0e0e0; '
+            'display: flex; align-items: center; justify-content: center; color: #666; font-size: 20px;">{}</div>',
+            obj.full_name[0] if obj.full_name else '?'
+        )
+    photo_preview.short_description = 'Photo'
+
+    def photo_preview_large(self, obj):
+        """Large preview for detail view"""
+        photo_url = obj.get_photo_url()
+        if photo_url:
+            return format_html(
+                '<img src="{}" style="max-width: 300px; max-height: 300px; border-radius: 8px; border: 1px solid #ddd;"/>',
+                photo_url
+            )
+        return "No photo uploaded"
+    photo_preview_large.short_description = 'Photo Preview'
+
+    def tenure_period(self, obj):
+        """Display tenure as a date range"""
+        start = obj.start_date.strftime('%b %Y')
+        if obj.end_date:
+            end = obj.end_date.strftime('%b %Y')
+            return f"{start} - {end}"
+        return f"{start} - Present"
+    tenure_period.short_description = 'Tenure'
+
+    def status_badge(self, obj):
+        """Visual status indicator"""
+        if obj.is_archived:
+            return format_html(
+                '<span style="background: #9e9e9e; color: white; padding: 3px 10px; '
+                'border-radius: 12px; font-size: 11px; font-weight: 600;">ARCHIVED</span>'
+            )
+        elif obj.is_active:
+            return format_html(
+                '<span style="background: #4caf50; color: white; padding: 3px 10px; '
+                'border-radius: 12px; font-size: 11px; font-weight: 600;">CURRENT</span>'
+            )
+        else:
+            return format_html(
+                '<span style="background: #ff9800; color: white; padding: 3px 10px; '
+                'border-radius: 12px; font-size: 11px; font-weight: 600;">INACTIVE</span>'
+            )
+    status_badge.short_description = 'Status'
+
+    def archive_members(self, request, queryset):
+        """Archive selected members (move to Past Exco)"""
+        updated = queryset.update(is_archived=True, is_active=False)
+        self.message_user(
+            request,
+            f'{updated} member(s) successfully archived and moved to Past Exco.',
+            messages.SUCCESS
+        )
+    archive_members.short_description = "Archive selected members (move to Past Exco)"
+
+    def unarchive_members(self, request, queryset):
+        """Unarchive selected members"""
+        updated = queryset.update(is_archived=False)
+        self.message_user(
+            request,
+            f'{updated} member(s) unarchived. Remember to set is_active if they should appear in Current Exco.',
+            messages.WARNING
+        )
+    unarchive_members.short_description = "Unarchive selected members"
+
+    def mark_as_active(self, request, queryset):
+        """Mark as active (current exco)"""
+        updated = queryset.update(is_active=True, is_archived=False)
+        self.message_user(
+            request,
+            f'{updated} member(s) marked as active in Current Exco.',
+            messages.SUCCESS
+        )
+    mark_as_active.short_description = "Mark as active (Current Exco)"
+
+    def export_to_excel(self, request, queryset):
+        """Export to Excel following existing pattern"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Exco Members"
+
+        headers = [
+            'Full Name', 'Position', 'Institution', 'Email', 'Phone',
+            'LinkedIn', 'Start Date', 'End Date', 'Status', 'Is Active', 'Is Archived'
+        ]
+        ws.append(headers)
+
+        for obj in queryset:
+            row = [
+                obj.full_name,
+                obj.get_position_display(),
+                obj.institution,
+                obj.get_email(),
+                obj.phone,
+                obj.linkedin_url,
+                obj.start_date.strftime('%Y-%m-%d'),
+                obj.end_date.strftime('%Y-%m-%d') if obj.end_date else 'Present',
+                'Archived' if obj.is_archived else ('Active' if obj.is_active else 'Inactive'),
+                'Yes' if obj.is_active else 'No',
+                'Yes' if obj.is_archived else 'No',
+            ]
+            ws.append(row)
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename=exco_members_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        wb.save(response)
+        return response
+    export_to_excel.short_description = "Export selected members to Excel"
+
+    def get_queryset(self, request):
+        """Optimize queries"""
+        qs = super().get_queryset(request)
+        return qs.select_related('user').prefetch_related('user__memberprofile')
+
 
 @admin.register(Newsletter)
 class NewsletterAdmin(admin.ModelAdmin):
