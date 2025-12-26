@@ -1,11 +1,21 @@
 import warnings
-from cryptography.utils import CryptographyDeprecationWarning
-from pathlib import Path
-from decouple import config
 import os
+from pathlib import Path
 
-# Filter Warnings
-warnings.filterwarnings('ignore', category=CryptographyDeprecationWarning)
+# Try to import cryptography - not critical if it fails
+try:
+    from cryptography.utils import CryptographyDeprecationWarning
+    warnings.filterwarnings('ignore', category=CryptographyDeprecationWarning)
+except ImportError:
+    pass
+
+# Try to import decouple - use os.environ as fallback
+try:
+    from decouple import config
+except ImportError:
+    # Fallback to os.environ if decouple is not available
+    def config(key, default=None):
+        return os.environ.get(key, default)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,9 +25,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
-PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY')  # sk_test_... or sk_live_...
-PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY')  # pk_test_... or pk_live_...
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-fallback-key-change-in-production-env-file')
+PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')  # sk_test_... or sk_live_...
+PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='')  # pk_test_... or pk_live_...
 PAYSTACK_TEST_SECRET_KEY = 'sk_test_1ccdb1ad0a8a19c53492781336ad15390760afd8'
 PAYSTACK_TEST_PUBLIC_KEY = 'pk_test_96b9995fbf552beec8da11acbb821aa5c1d06341'
 PAYSTACK_INITIALIZE_PAYMENT_URL = 'https://api.paystack.co/transaction/initialize'
@@ -103,23 +113,23 @@ WSGI_APPLICATION = 'eltanweb.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Use SQLite for local development when MySQL is not available
-try:
-    config('DB_NAME')
+# Database configuration - use MySQL if DB_NAME is set, otherwise SQLite
+DB_NAME = config('DB_NAME', default=None)
+if DB_NAME:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': config('DB_NAME'),
-            'USER': config('DB_USER'),
-            'PASSWORD': config('DB_PASSWORD'),
-            'HOST': config('DB_HOST'),
-            'PORT': config('DB_PORT'),
+            'NAME': DB_NAME,
+            'USER': config('DB_USER', default=''),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='3306'),
             'OPTIONS':{
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
             }
         }
     }
-except:
+else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
