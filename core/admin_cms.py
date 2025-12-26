@@ -236,45 +236,23 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         ('Site Information', {
             'fields': ('site_name', 'site_tagline', 'site_description')
         }),
-        ('Header Settings', {
-            'fields': ('logo', 'header_announcement', 'show_header_announcement'),
-            'description': 'Configure header logo and announcement bar'
+        ('Contact Information', {
+            'fields': ('contact_email', 'contact_phone', 'contact_address')
         }),
-        ('Footer Settings', {
-            'fields': (
-                'footer_logo',
-                'footer_about_title',
-                'footer_about_text',
-                'footer_contact_title',
-                'copyright_text'
-            ),
-            'description': 'Customize footer content and branding'
-        }),
-        ('Primary Contact Information', {
-            'fields': ('contact_email', 'contact_phone', 'contact_address', 'office_hours')
-        }),
-        ('Additional Contact Details', {
-            'fields': ('alternate_email', 'alternate_phone', 'whatsapp_number'),
-            'classes': ('collapse',)
-        }),
-        ('Social Media Links', {
+        ('Social Media', {
             'fields': ('facebook_url', 'twitter_url', 'linkedin_url', 'instagram_url')
         }),
-        ('Newsletter Settings', {
-            'fields': ('newsletter_title', 'newsletter_description'),
-            'classes': ('collapse',)
+        ('Design Settings', {
+            'fields': ('primary_color', 'secondary_color', 'accent_color')
         }),
-        ('Design & Branding', {
-            'fields': ('primary_color', 'secondary_color', 'accent_color', 'favicon', 'default_og_image'),
-            'classes': ('collapse',)
+        ('Branding', {
+            'fields': ('logo', 'favicon', 'default_og_image')
         }),
         ('Membership Settings', {
-            'fields': ('membership_fee_regular', 'membership_fee_student', 'current_eltan_year'),
-            'classes': ('collapse',)
+            'fields': ('membership_fee_regular', 'membership_fee_student', 'current_eltan_year')
         }),
         ('Payment Settings', {
-            'fields': ('paystack_public_key', 'enable_online_payment'),
-            'classes': ('collapse',)
+            'fields': ('paystack_public_key', 'enable_online_payment')
         }),
     )
 

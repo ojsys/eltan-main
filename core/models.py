@@ -38,31 +38,10 @@ class SiteSettings(models.Model):
     accent_color = models.CharField(max_length=7, default="#e67918")
     
     # Logo and Images
-    logo = models.ImageField(upload_to='site/', blank=True, help_text="Main logo for header")
-    footer_logo = models.ImageField(upload_to='site/', blank=True, help_text="Footer logo (optional, uses header logo if empty)")
+    logo = models.ImageField(upload_to='site/', blank=True)
     favicon = models.ImageField(upload_to='site/', blank=True)
     default_og_image = models.ImageField(upload_to='site/', blank=True)
-
-    # Header Settings
-    header_announcement = models.CharField(max_length=255, blank=True, help_text="Optional announcement bar text")
-    show_header_announcement = models.BooleanField(default=False, help_text="Show/hide announcement bar")
-
-    # Footer Settings
-    footer_about_title = models.CharField(max_length=100, default="About ELTAN", blank=True)
-    footer_about_text = models.TextField(blank=True, help_text="Brief description for footer about section")
-    footer_contact_title = models.CharField(max_length=100, default="Contact Us", blank=True)
-    copyright_text = models.CharField(max_length=255, default="© 2025 ELTAN. All rights reserved.", blank=True)
-
-    # Additional Contact Details
-    whatsapp_number = models.CharField(max_length=20, blank=True, help_text="WhatsApp contact number")
-    office_hours = models.CharField(max_length=100, blank=True, help_text="e.g., Mon-Fri: 9AM-5PM")
-    alternate_email = models.EmailField(blank=True, help_text="Secondary contact email")
-    alternate_phone = models.CharField(max_length=20, blank=True, help_text="Secondary phone number")
-
-    # Newsletter
-    newsletter_title = models.CharField(max_length=100, default="Subscribe to Our Newsletter", blank=True)
-    newsletter_description = models.TextField(blank=True, help_text="Newsletter signup description")
-
+    
     # Membership Settings
     membership_fee_regular = models.DecimalField(max_digits=10, decimal_places=2, default=5500)
     membership_fee_student = models.DecimalField(max_digits=10, decimal_places=2, default=3000)
