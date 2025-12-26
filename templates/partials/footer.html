@@ -4,10 +4,19 @@
         <div class="footer-grid">
             <div class="footer-brand">
                 <div class="footer-logo">
-                    <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo" style="width: 80px; border-radius: 12px;">
+                    {% if site_settings.footer_logo %}
+                        <img src="{{ site_settings.footer_logo.url }}" alt="{{ site_settings.site_name }} Logo" style="width: 80px; border-radius: 12px;">
+                    {% elif site_settings.logo %}
+                        <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }} Logo" style="width: 80px; border-radius: 12px;">
+                    {% else %}
+                        <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo" style="width: 80px; border-radius: 12px;">
+                    {% endif %}
                 </div>
+                <h4 class="footer-title">{{ site_settings.footer_about_title|default:"About ELTAN" }}</h4>
                 <p class="footer-description">
-                    {% if site_settings.site_description %}
+                    {% if site_settings.footer_about_text %}
+                        {{ site_settings.footer_about_text }}
+                    {% elif site_settings.site_description %}
                         {{ site_settings.site_description }}
                     {% else %}
                         English Language Teachers' Association of Nigeria - Advancing education excellence nationwide.
@@ -52,7 +61,7 @@
             </div>
 
             <div class="footer-col">
-                <h4 class="footer-title">Contact</h4>
+                <h4 class="footer-title">{{ site_settings.footer_contact_title|default:"Contact" }}</h4>
                 <ul class="footer-links">
                     {% if site_settings.contact_email %}
                         <li><a href="mailto:{{ site_settings.contact_email }}">{{ site_settings.contact_email }}</a></li>
@@ -64,13 +73,28 @@
                     {% else %}
                         <li><a href="tel:+2347060777753">+234 706 077 7753</a></li>
                     {% endif %}
+                    {% if site_settings.whatsapp_number %}
+                        <li><a href="https://wa.me/{{ site_settings.whatsapp_number }}" target="_blank" rel="noopener">WhatsApp: {{ site_settings.whatsapp_number }}</a></li>
+                    {% endif %}
+                    {% if site_settings.office_hours %}
+                        <li>{{ site_settings.office_hours }}</li>
+                    {% endif %}
+                    {% if site_settings.contact_address %}
+                        <li>{{ site_settings.contact_address|truncatewords:10 }}</li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
     </div>
     <div class="footer-bottom">
         <div class="container footer-bottom-inner">
-            <p>© {% now "Y" %} {% if site_settings.site_name %}{{ site_settings.site_name }}{% else %}English Language Teachers Association of Nigeria (ELTAN){% endif %}. All rights reserved.</p>
+            <p>
+                {% if site_settings.copyright_text %}
+                    {{ site_settings.copyright_text }}
+                {% else %}
+                    © {% now "Y" %} {% if site_settings.site_name %}{{ site_settings.site_name }}{% else %}English Language Teachers Association of Nigeria (ELTAN){% endif %}. All rights reserved.
+                {% endif %}
+            </p>
             <div class="footer-bottom-links">
                 <a href="#">Privacy</a>
                 <a href="#">Terms</a>
