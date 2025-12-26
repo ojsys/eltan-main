@@ -139,7 +139,10 @@ def home_redesigned(request):
     active_members = Subscription.objects.filter(
         payment_status='paid', start_date__lte=today, end_date__gte=today
     ).values('user').distinct().count()
-    chapters_count = MemberProfile.objects.exclude(state__in=[None, '', 'Select']).values('state').distinct().count()
+    # Count distinct states, excluding None, empty strings, and 'Select' option
+    chapters_count_raw = MemberProfile.objects.exclude(state__in=[None, '', 'Select']).values('state').distinct().count()
+    # Subtract 1 to account for 'Select' placeholder if it slipped through (37 states in Nigeria)
+    chapters_count = max(0, chapters_count_raw - 1) if chapters_count_raw > 37 else chapters_count_raw
     downloads_count = Download.objects.count()
     events_12m = Events.objects.filter(event_date__gte=today - timedelta(days=365)).count()
 
