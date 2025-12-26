@@ -4,13 +4,26 @@ These settings are common to both development and production environments.
 """
 
 import warnings
-from cryptography.utils import CryptographyDeprecationWarning
-from pathlib import Path
-from decouple import config
 import os
+from pathlib import Path
 
-# Filter Warnings
-warnings.filterwarnings('ignore', category=CryptographyDeprecationWarning)
+# Try to import cryptography for warnings, but don't fail if not available
+try:
+    from cryptography.utils import CryptographyDeprecationWarning
+    warnings.filterwarnings('ignore', category=CryptographyDeprecationWarning)
+except ImportError:
+    pass
+
+# Try to import decouple, fallback to os.environ if not available
+try:
+    from decouple import config
+except ImportError:
+    # Fallback: use os.environ.get if decouple is not installed
+    def config(key, default=None, cast=None):
+        value = os.environ.get(key, default)
+        if cast and value:
+            return cast(value)
+        return value
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
