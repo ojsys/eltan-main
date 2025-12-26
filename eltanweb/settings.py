@@ -73,9 +73,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'core.context_processors.site_settings',
-                'core.context_processors.current_date',
-                'core.context_processors.social_links',
+                # Commented out to fix server errors - templates will use fallback values
+                # 'core.context_processors.site_settings',
+                # 'core.context_processors.current_date',
+                # 'core.context_processors.social_links',
             ],
         },
     },
