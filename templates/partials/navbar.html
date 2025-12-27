@@ -2,8 +2,12 @@
 <nav class="modern-nav" id="mainNav">
   <div class="nav-container">
     <a href="{% url 'home' %}" class="nav-logo">
-      <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo">
-      <span>ELTAN</span>
+      {% if site_settings.logo %}
+        <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }} Logo">
+      {% else %}
+        <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo">
+      {% endif %}
+      <span>{{ site_settings.site_name|default:"ELTAN" }}</span>
     </a>
 
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
