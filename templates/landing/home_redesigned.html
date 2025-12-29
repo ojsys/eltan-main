@@ -85,19 +85,18 @@
             <div class="hero-content">
                 <div class="hero-badge">
                     <span class="material-icons" style="font-size: 16px;">verified</span>
-                    Professional Membership Organization
+                    {{ homepage.hero_badge_text|default:"Professional Membership Organization" }}
                 </div>
-                <h1 class="text-display hero-title">Welcome to ELTAN</h1>
+                <h1 class="text-display hero-title">{{ homepage.hero_title|default:"Welcome to ELTAN" }}</h1>
                 <p class="hero-description">
-                    Join us in fostering excellence in English language teaching and learning across Nigeria.
-                    Access exclusive conferences, professional development resources, and a thriving community of educators.
+                    {{ homepage.hero_subtitle|default:"Join us in fostering excellence in English language teaching and learning across Nigeria. Access exclusive conferences, professional development resources, and a thriving community of educators." }}
                 </p>
                 <div class="hero-cta">
-                    <a href="{% url 'register' %}" class="btn btn-primary btn-large">
-                        Get Started
+                    <a href="{{ homepage.hero_cta_link|default:"/register/" }}" class="btn btn-primary btn-large">
+                        {{ homepage.hero_cta_text|default:"Get Started" }}
                         <span class="material-icons btn-icon">arrow_forward</span>
                     </a>
-                    <a href="#features" class="btn btn-secondary btn-large">Learn More</a>
+                    <a href="{{ homepage.secondary_cta_link|default:"#features" }}" class="btn btn-secondary btn-large">{{ homepage.secondary_cta_text|default:"Learn More" }}</a>
                     {% if active_conference %}
                         <a href="{% url 'conference_detail' active_conference.pk %}"
                            class="btn btn-secondary btn-large">Register for Conference</a>
@@ -176,12 +175,12 @@
     <section class="features-section" id="features">
         <div class="container">
             <div class="section-header">
-                <p class="section-subtitle">What We Offer</p>
+                <p class="section-subtitle">{{ homepage.features_subtitle|default:"What We Offer" }}</p>
                 <h2 class="text-heading-1">
-                    Empowering English Language Teachers <br>with Resources, Community & <span class="text-gradient">Professional Growth</span>
+                    {{ homepage.features_title|default:"Empowering English Language Teachers with Resources, Community & Professional Growth"|safe }}
                 </h2>
                 <p class="section-description">
-                    Join Nigeria's premier association for English language teachers. Access conferences, training, resources, and a vibrant community dedicated to excellence in English language teaching and learning.
+                    {{ homepage.features_description|default:"Join Nigeria's premier association for English language teachers. Access conferences, training, resources, and a vibrant community dedicated to excellence in English language teaching and learning." }}
                 </p>
             </div>
 
@@ -347,24 +346,15 @@
                 </div>
 
                 <div class="content-text">
-                    <p class="section-subtitle">Professional Growth</p>
+                    <p class="section-subtitle">{{ homepage.content1_subtitle|default:"Professional Growth" }}</p>
                     <h2 class="text-heading-1">
-                        Invest in Your Potential
+                        {{ homepage.content1_title|default:"Invest in Your Potential" }}
                     </h2>
-                    <p>
-                        FlexCloud includes a Performance Lock feature which gives clients the flexibility
-                        End Date for your future. Our membership provides unparalleled value through continuous
-                        learning, networking, and career development opportunities.
-                    </p>
-                    <ul>
-                        <li>Monthly professional development webinars</li>
-                        <li>Access to industry-specific Special Interest Groups</li>
-                        <li>Annual leadership conference with top speakers</li>
-                        <li>Digital resource library with latest research</li>
-                        <li>Career coaching and mentorship programs</li>
-                    </ul>
-                    <a href="#features" class="btn btn-secondary btn-large">
-                        Explore Benefits
+                    <div>
+                        {{ homepage.content1_description|default:"<p>Our membership provides unparalleled value through continuous learning, networking, and career development opportunities.</p><ul><li>Monthly professional development webinars</li><li>Access to industry-specific Special Interest Groups</li><li>Annual leadership conference with top speakers</li><li>Digital resource library with latest research</li><li>Career coaching and mentorship programs</li></ul>"|safe }}
+                    </div>
+                    <a href="{{ homepage.content1_button_link|default:"#features" }}" class="btn btn-secondary btn-large">
+                        {{ homepage.content1_button_text|default:"Explore Benefits" }}
                     </a>
                 </div>
             </div>
@@ -498,18 +488,16 @@
         <div class="container">
             <div class="content-grid">
                 <div class="content-text">
-                    <p class="section-subtitle">Community Impact</p>
+                    <p class="section-subtitle">{{ homepage.content2_subtitle|default:"Community Impact" }}</p>
                     <h2 class="text-heading-1">
-                        Boost Your Career Growth Today
+                        {{ homepage.content2_title|default:"Boost Your Career Growth Today" }}
                     </h2>
                     <p>
-                        Join a community of ambitious professionals who are transforming their careers and making
-                        an impact in their industries. ELTAN members benefit from exclusive opportunities, connections,
-                        and resources that accelerate professional growth.
+                        {{ homepage.content2_description|default:"Join a community of ambitious professionals who are transforming their careers and making an impact in their industries. ELTAN members benefit from exclusive opportunities, connections, and resources that accelerate professional growth." }}
                     </p>
                     <div class="hero-cta">
-                        <a href="{% url 'register' %}" class="btn btn-primary btn-large">
-                            Get Started
+                        <a href="{{ homepage.content2_button_link|default:"/register/" }}" class="btn btn-primary btn-large">
+                            {{ homepage.content2_button_text|default:"Get Started" }}
                             <span class="material-icons btn-icon">arrow_forward</span>
                         </a>
                     </div>
@@ -527,12 +515,10 @@
         <div class="container faq-container">
             <div class="faq-header">
                 <h2 class="faq-title">
-                    Frequently Asked <br>
-                    <span style="font-style: italic; font-weight: 400;">Questions</span>
+                    {{ homepage.faq_title|default:"Frequently Asked Questions"|safe }}
                 </h2>
                 <p class="faq-subtitle">
-                    Have questions about our service, we offer wide-rang of services from better to give best
-                    service to the town, you call contact it
+                    {{ homepage.faq_subtitle|default:"Have questions about our service, we offer wide-range of services to give the best service to the community." }}
                 </p>
             </div>
 
@@ -628,18 +614,17 @@
     <!-- CTA Section -->
     <section class="cta-section">
         <div class="container cta-container">
-            <h2 class="cta-title">Ready to Transform Your Career?</h2>
+            <h2 class="cta-title">{{ homepage.cta_title|default:"Ready to Transform Your Career?" }}</h2>
             <p class="cta-description">
-                Join over 500 professionals who are accelerating their growth with ELTAN.
-                Get access to exclusive events, training, and a powerful network.
+                {{ homepage.cta_description|default:"Join over 500 professionals who are accelerating their growth with ELTAN. Get access to exclusive events, training, and a powerful network." }}
             </p>
             <div class="cta-buttons">
-                <a href="{% url 'register' %}" class="btn btn-white btn-large">
-                    Get Started Today
+                <a href="{{ homepage.cta_button_link|default:"/register/" }}" class="btn btn-white btn-large">
+                    {{ homepage.cta_button_text|default:"Get Started Today" }}
                     <span class="material-icons btn-icon">arrow_forward</span>
                 </a>
-                <a href="#contact" class="btn btn-large" style="background: transparent; border: 2px solid white; color: white;">
-                    Contact Us
+                <a href="{{ homepage.cta_secondary_button_link|default:"#contact" }}" class="btn btn-large" style="background: transparent; border: 2px solid white; color: white;">
+                    {{ homepage.cta_secondary_button_text|default:"Contact Us" }}
                 </a>
             </div>
         </div>

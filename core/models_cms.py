@@ -35,9 +35,15 @@ class HeroSlide(OrderedModel):
 class HomePage(models.Model):
     """Homepage content management"""
     # Hero Section
+    hero_badge_text = models.CharField(
+        max_length=100,
+        default="Professional Membership Organization",
+        help_text="Badge text above hero title"
+    )
     hero_title = models.CharField(max_length=200, default="Welcome to ELTAN")
     hero_subtitle = models.TextField(
         blank=True,
+        default="Join us in fostering excellence in English language teaching and learning across Nigeria.",
         help_text="Short description under the main title"
     )
     hero_cta_text = models.CharField(
@@ -57,8 +63,60 @@ class HomePage(models.Model):
     )
 
     # Secondary CTA
-    secondary_cta_text = models.CharField(max_length=50, blank=True)
-    secondary_cta_link = models.CharField(max_length=200, blank=True)
+    secondary_cta_text = models.CharField(max_length=50, blank=True, default="Learn More")
+    secondary_cta_link = models.CharField(max_length=200, blank=True, default="#features")
+
+    # Features Section
+    features_subtitle = models.CharField(
+        max_length=100,
+        default="What We Offer",
+        help_text="Small text above features heading"
+    )
+    features_title = models.CharField(
+        max_length=300,
+        default="Empowering English Language Teachers with Resources, Community & Professional Growth",
+        help_text="Main features section heading"
+    )
+    features_description = models.TextField(
+        default="Join Nigeria's premier association for English language teachers. Access conferences, training, resources, and a vibrant community dedicated to excellence in English language teaching and learning.",
+        help_text="Description under features heading"
+    )
+
+    # Content Section 1 (Professional Growth)
+    content1_subtitle = models.CharField(max_length=100, default="Professional Growth")
+    content1_title = models.CharField(max_length=200, default="Invest in Your Potential")
+    content1_description = RichTextField(
+        blank=True,
+        default="Our membership provides unparalleled value through continuous learning, networking, and career development opportunities."
+    )
+    content1_button_text = models.CharField(max_length=50, default="Explore Benefits")
+    content1_button_link = models.CharField(max_length=200, default="#features")
+
+    # Content Section 2 (Community Impact)
+    content2_subtitle = models.CharField(max_length=100, default="Community Impact")
+    content2_title = models.CharField(max_length=200, default="Boost Your Career Growth Today")
+    content2_description = models.TextField(
+        default="Join a community of ambitious professionals who are transforming their careers and making an impact in their industries. ELTAN members benefit from exclusive opportunities, connections, and resources that accelerate professional growth."
+    )
+    content2_button_text = models.CharField(max_length=50, default="Get Started")
+    content2_button_link = models.CharField(max_length=200, default="/register/")
+
+    # FAQ Section
+    faq_title = models.CharField(max_length=200, default="Frequently Asked Questions")
+    faq_subtitle = models.TextField(
+        default="Have questions about our service, we offer wide-range of services to give the best service to the community.",
+        help_text="Description under FAQ heading"
+    )
+
+    # Final CTA Section
+    cta_title = models.CharField(max_length=200, default="Ready to Transform Your Career?")
+    cta_description = models.TextField(
+        default="Join over 500 professionals who are accelerating their growth with ELTAN. Get access to exclusive events, training, and a powerful network."
+    )
+    cta_button_text = models.CharField(max_length=50, default="Get Started Today")
+    cta_button_link = models.CharField(max_length=200, default="/register/")
+    cta_secondary_button_text = models.CharField(max_length=50, default="Contact Us")
+    cta_secondary_button_link = models.CharField(max_length=200, default="#contact")
 
     # About Section
     about_title = models.CharField(max_length=200, default="About ELTAN")

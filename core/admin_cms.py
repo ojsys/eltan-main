@@ -17,12 +17,38 @@ from .models import SiteSettings, ContactMessage
 class HomePageAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Hero Section', {
-            'fields': ('hero_title', 'hero_subtitle', 'hero_image',
+            'fields': ('hero_badge_text', 'hero_title', 'hero_subtitle', 'hero_image',
                       'hero_cta_text', 'hero_cta_link',
-                      'secondary_cta_text', 'secondary_cta_link')
+                      'secondary_cta_text', 'secondary_cta_link'),
+            'description': 'Main hero banner at the top of the homepage'
+        }),
+        ('Features Section Header', {
+            'fields': ('features_subtitle', 'features_title', 'features_description'),
+            'description': 'Header text for the features/benefits section'
+        }),
+        ('Content Section 1 - Professional Growth', {
+            'fields': ('content1_subtitle', 'content1_title', 'content1_description',
+                      'content1_button_text', 'content1_button_link'),
+            'description': 'First content section with image and text'
+        }),
+        ('Content Section 2 - Community Impact', {
+            'fields': ('content2_subtitle', 'content2_title', 'content2_description',
+                      'content2_button_text', 'content2_button_link'),
+            'description': 'Second content section with image and text'
+        }),
+        ('FAQ Section Header', {
+            'fields': ('faq_title', 'faq_subtitle'),
+            'description': 'Header text for the FAQ section (FAQs themselves are managed separately)'
+        }),
+        ('Final CTA Section', {
+            'fields': ('cta_title', 'cta_description',
+                      'cta_button_text', 'cta_button_link',
+                      'cta_secondary_button_text', 'cta_secondary_button_link'),
+            'description': 'Call-to-action section at the bottom of the page'
         }),
         ('About Section', {
-            'fields': ('about_title', 'about_content', 'about_image')
+            'fields': ('about_title', 'about_content', 'about_image'),
+            'classes': ('collapse',)
         }),
         ('Section Visibility', {
             'fields': ('show_statistics', 'show_features', 'show_partners',
