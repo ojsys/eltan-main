@@ -39,17 +39,17 @@
                     <div class="hero-content">
                         <div class="hero-badge">
                             <span class="material-icons" style="font-size: 16px;">verified</span>
-                            Professional Membership Organization
+                            {{ homepage.hero_badge_text|default:"Professional Membership Organization" }}
                         </div>
                         {% if s.title %}
                         <h1 class="text-display hero-title">{{ s.title }}</h1>
                         {% else %}
-                        <h1 class="text-display hero-title">Welcome to ELTAN</h1>
+                        <h1 class="text-display hero-title">{{ homepage.hero_title|default:"Welcome to ELTAN" }}</h1>
                         {% endif %}
-                        <p class="hero-description">{{ s.subtitle|default:"Join us in fostering excellence in English language teaching and learning across Nigeria." }}</p>
+                        <p class="hero-description">{{ s.subtitle|default:homepage.hero_subtitle|default:"Join us in fostering excellence in English language teaching and learning across Nigeria." }}</p>
                         <div class="hero-cta">
-                            <a href="{% url 'register' %}" class="btn btn-primary btn-large">
-                                Get Started
+                            <a href="{{ homepage.hero_cta_link|default:'/register/' }}" class="btn btn-primary btn-large">
+                                {{ homepage.hero_cta_text|default:"Get Started" }}
                                 <span class="material-icons btn-icon">arrow_forward</span>
                             </a>
                             {% if s.cta_text and s.cta_link %}
@@ -57,7 +57,7 @@
                             {% elif active_conference %}
                                 <a href="{% url 'conference_detail' active_conference.pk %}" class="btn btn-secondary btn-large">Register for Conference</a>
                             {% else %}
-                                <a href="#features" class="btn btn-secondary btn-large">Learn More</a>
+                                <a href="{{ homepage.secondary_cta_link|default:'#features' }}" class="btn btn-secondary btn-large">{{ homepage.secondary_cta_text|default:"Learn More" }}</a>
                             {% endif %}
                         </div>
                     </div>
