@@ -20,13 +20,23 @@ NC='\033[0m' # No Color
 # Get the script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-echo -e "${YELLOW}Step 1: Activating virtual environment...${NC}"
-if [ -f "venv/bin/activate" ]; then
+echo -e "${YELLOW}Step 1: Checking virtual environment...${NC}"
+# Check if already in a virtual environment
+if [ -n "$VIRTUAL_ENV" ]; then
+    echo -e "${GREEN}✓ Virtual environment already activated: $VIRTUAL_ENV${NC}"
+# Try common virtual environment locations
+elif [ -f "venv/bin/activate" ]; then
     source venv/bin/activate
-    echo -e "${GREEN}✓ Virtual environment activated${NC}"
+    echo -e "${GREEN}✓ Virtual environment activated (venv)${NC}"
+elif [ -f "../venv/bin/activate" ]; then
+    source ../venv/bin/activate
+    echo -e "${GREEN}✓ Virtual environment activated (../venv)${NC}"
+elif [ -f "env/bin/activate" ]; then
+    source env/bin/activate
+    echo -e "${GREEN}✓ Virtual environment activated (env)${NC}"
 else
-    echo -e "${RED}✗ Virtual environment not found!${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠ No virtual environment found, continuing anyway...${NC}"
+    echo -e "${YELLOW}  Make sure you've activated your virtual environment manually${NC}"
 fi
 
 echo ""
