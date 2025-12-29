@@ -1295,25 +1295,52 @@ def verify_certificate(request, subscription_id):
 
 # Event View
 def events(request):
+    today = timezone.now().date()
+
+    # Get all events
     events = Events.objects.all()
+
+    # Get upcoming/ongoing conferences
     try:
-        qs_conf_all = EltanConference.objects.filter(
-            end_date__gte=timezone.now().date(),
+        upcoming_conferences = EltanConference.objects.filter(
+            end_date__gte=today,
             is_active=True
-        ).order_by('-created_at')
-        conferences = list(qs_conf_all)
+        ).order_by('start_date')
+        conferences = list(upcoming_conferences)
     except DBOperationalError:
-        qs_conf_all = EltanConference.objects.only(
+        upcoming_conferences = EltanConference.objects.only(
             'id', 'title', 'theme', 'image', 'start_date', 'end_date', 'venue',
             'registration_start', 'registration_end', 'early_bird_end',
             'member_fee', 'member_early_bird_fee', 'non_member_fee',
             'non_member_early_bird_fee', 'international_delegate_fee', 'is_active', 'created_at'
         ).filter(
-            end_date__gte=timezone.now().date(),
+            end_date__gte=today,
             is_active=True
-        ).order_by('-created_at')
-        conferences = list(qs_conf_all)
-    context = {'title': 'ELTAN - Events', 'events': events, 'conferences':conferences}
+        ).order_by('start_date')
+        conferences = list(upcoming_conferences)
+
+    # Get past conferences (most recent first)
+    try:
+        past_conferences = EltanConference.objects.filter(
+            end_date__lt=today,
+            is_active=True
+        ).order_by('-start_date')[:10]  # Limit to 10 most recent past events
+    except DBOperationalError:
+        past_conferences = EltanConference.objects.only(
+            'id', 'title', 'theme', 'image', 'start_date', 'end_date', 'venue', 'created_at'
+        ).filter(
+            end_date__lt=today,
+            is_active=True
+        ).order_by('-start_date')[:10]
+
+    context = {
+        'title': 'ELTAN - Events',
+        'events': events,
+        'conferences': conferences,
+        'past_conferences': past_conferences,
+        'has_upcoming': conferences,
+        'has_past': past_conferences.exists() if hasattr(past_conferences, 'exists') else bool(past_conferences)
+    }
     return render(request, 'membership/events.html', context)
 
 
