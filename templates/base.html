@@ -1,0 +1,157 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-D6VDFGP84T"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-D6VDFGP84T');
+    </script>
+
+    <!-- Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <!-- SEO Meta -->
+    <title>{% block title %}{{ site_settings.site_name|default:"ELTAN" }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ site_settings.site_description|default:"English Language Teachers Association of Nigeria" }}{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}ELTAN, English Language Teachers Association, Nigeria, Education{% endblock %}">
+
+    <!-- Favicon -->
+    {% if site_settings.favicon %}
+    <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
+    {% else %}
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+    {% endif %}
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Owl Carousel -->
+    <link rel="stylesheet" href="{% static 'css/owl.carousel.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/owl.theme.default.min.css' %}">
+
+    <!-- Ionicons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/4.5.6/css/ionicons.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/style1.css' %}">
+    <link rel="stylesheet" href="{% static 'css/public-modern.css' %}">
+
+    {% block extra_css %}{% endblock %}
+
+    <style>
+        @media (max-width: 480px) {
+            .main_nav {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Main Content -->
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    {% include 'partials/footer.html' %}
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+
+    <!-- Owl Carousel JS -->
+    <script src="{% static 'js/popper.js' %}"></script>
+    <script src="{% static 'js/owl.carousel.min.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+
+    <!-- Custom Scripts -->
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('.download-form').on('submit', function(e) {
+                e.preventDefault();
+                var form = $(this);
+                var url = form.attr('action');
+
+                $.ajax({
+                    type: "POST",
+                    url: url,
+                    data: form.serialize(),
+                    success: function(data) {
+                        if(data.status === 'ok') {
+                            window.open(data.download_url, '_blank');
+                            $('#downloadModal' + data.resource_id).modal('hide');
+                        } else {
+                            alert('Failed to process download. Please try again.');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            if ("{{ messages }}" !== "") {
+                $('.modal').modal('hide');
+            }
+        });
+    </script>
+
+    <script type="text/javascript">
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+            }
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            setTimeout(function() {
+                $("#message-container").fadeOut("slow", function() {
+                    $(this).remove();
+                });
+            }, 5000);
+        });
+    </script>
+
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', (event) => {
+            setTimeout(() => {
+                const messageContainer = document.getElementById('message-container');
+                if (messageContainer) {
+                    messageContainer.style.opacity = 0;
+                    setTimeout(() => messageContainer.remove(), 600);
+                }
+            }, 5000);
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

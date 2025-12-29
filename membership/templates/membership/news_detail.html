@@ -1,132 +1,10 @@
+{%extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ story.headline }} - ELTAN</title>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+{% block title %}{{ story.headline }} - ELTAN{% endblock %}
 
-    <!-- Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <!-- Custom CSS -->
-    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
-
-    <!-- Favicon -->
-    {% if site_settings.favicon %}
-    <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
-    {% else %}
-    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
-    {% endif %}
-
-    <style>
-        .article-hero {
-            width: 100%;
-            height: 500px;
-            object-fit: cover;
-            border-radius: 20px;
-            margin-bottom: 2rem;
-        }
-
-        .article-content {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-
-        .article-meta {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-            padding-bottom: 2rem;
-            border-bottom: 2px solid #E0E0E0;
-        }
-
-        .article-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: #616161;
-        }
-
-        .article-body {
-            font-size: 1.125rem;
-            line-height: 1.8;
-            color: #424242;
-        }
-
-        .article-body p {
-            margin-bottom: 1.5rem;
-        }
-
-        .article-body h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #1A1A1A;
-            margin-top: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .article-body h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1A1A1A;
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .article-body ul, .article-body ol {
-            margin-bottom: 1.5rem;
-            padding-left: 2rem;
-        }
-
-        .article-body li {
-            margin-bottom: 0.5rem;
-        }
-
-        .back-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: #E67918;
-            text-decoration: none;
-            font-weight: 600;
-            margin-bottom: 2rem;
-            transition: all 0.25s ease-in-out;
-        }
-
-        .back-button:hover {
-            gap: 0.75rem;
-            color: #C5630C;
-        }
-
-        @media (max-width: 768px) {
-            .article-hero {
-                height: 300px;
-            }
-
-            .article-meta {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation -->
-    {% include 'partials/navbar.html' %}
-
-    <!-- Article Content -->
+{% block content %}
+<!-- Article Content -->
     <section class="content-container" style="padding-top: 3rem;">
         <div class="article-content">
             <!-- Back Button -->
@@ -190,11 +68,5 @@
             </div>
         </div>
     </section>
+{% endblock %}
 
-    <!-- Footer -->
-    {% include 'partials/footer.html' %}
-
-    <!-- Mobile Menu Script -->
-    {% include 'partials/mobile_menu_script.html' %}
-</body>
-</html>

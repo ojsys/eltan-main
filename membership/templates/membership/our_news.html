@@ -1,37 +1,10 @@
+{%extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News & Updates - ELTAN</title>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+{% block title %}News & Updates - ELTAN{% endblock %}
 
-    <!-- Material Icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <!-- Custom CSS -->
-    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
-
-    <!-- Favicon -->
-    {% if site_settings.favicon %}
-    <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
-    {% else %}
-    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
-    {% endif %}
-</head>
-<body>
-    <!-- Navigation -->
-    {% include 'partials/navbar.html' %}
-
-    <!-- Page Header -->
+{% block content %}
+<!-- Page Header -->
     <section class="page-header">
         <div class="container">
             <p class="subtitle">Latest Updates</p>
@@ -158,11 +131,5 @@
             </div>
         </div>
     </section>
+{% endblock %}
 
-    <!-- Footer -->
-    {% include 'partials/footer.html' %}
-
-    <!-- Mobile Menu Script -->
-    {% include 'partials/mobile_menu_script.html' %}
-</body>
-</html>
