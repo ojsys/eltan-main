@@ -24,7 +24,11 @@
     <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
 
     <!-- Favicon -->
+    {% if site_settings.favicon %}
+    <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
+    {% else %}
     <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+    {% endif %}
 
     <style>
         .resource-card {
