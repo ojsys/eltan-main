@@ -7,6 +7,13 @@
     <title>ELTAN - You can Control All your Professional Growth through ELTAN</title>
     <meta name="description" content="Join Nigeria's premier leadership training organization. Access exclusive conferences, professional development resources, and a thriving community of emerging leaders.">
 
+    <!-- Favicon -->
+    {% if site_settings.favicon %}
+    <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
+    {% else %}
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo-eltan.jpeg' %}">
+    {% endif %}
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
