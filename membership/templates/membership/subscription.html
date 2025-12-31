@@ -69,7 +69,7 @@
                                     <span class="material-icons" style="font-size: 20px; color: #E67918;">card_membership</span>
                                     <span>Membership Type</span>
                                 </label>
-                                <select name="membership_type" id="membership_type" class="form-input-modern" required>
+                                <select name="membership_type" id="membership_type" class="form-input-modern" required onchange="updateAmount()">
                                     <option value="">Select membership type</option>
                                     {% for value, label in form.membership_type.field.choices %}
                                         {% if value %}
@@ -77,6 +77,12 @@
                                         {% endif %}
                                     {% endfor %}
                                 </select>
+                            </div>
+
+                            <!-- Amount Display -->
+                            <div id="amount-preview" style="display: none; padding: 1.25rem; background: linear-gradient(135deg, #E67918 0%, #FF9147 100%); border-radius: 12px; text-align: center;">
+                                <p style="margin: 0 0 0.5rem 0; color: white; font-size: 0.875rem; opacity: 0.95;">Amount to Pay</p>
+                                <div id="step1-amount" style="font-size: 2rem; font-weight: 700; color: white;">₦0.00</div>
                             </div>
 
                             <!-- State Chapter Field -->
@@ -295,6 +301,37 @@
     </section>
 
     <script>
+        // Calculate and display amount based on membership type
+        function updateAmount() {
+            const membershipType = document.getElementById('membership_type').value;
+            const amountPreview = document.getElementById('amount-preview');
+            const step1Amount = document.getElementById('step1-amount');
+
+            if (membershipType) {
+                let amount = 0;
+                if (membershipType === 'new') {
+                    amount = 5500;
+                } else if (membershipType === 'renewing') {
+                    amount = 3000;
+                }
+
+                // Show the amount preview with animation
+                step1Amount.textContent = '₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2});
+                amountPreview.style.display = 'block';
+
+                // Add subtle animation
+                amountPreview.style.opacity = '0';
+                amountPreview.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    amountPreview.style.transition = 'all 0.3s ease';
+                    amountPreview.style.opacity = '1';
+                    amountPreview.style.transform = 'scale(1)';
+                }, 10);
+            } else {
+                amountPreview.style.display = 'none';
+            }
+        }
+
         // Step navigation functions
         function goToStep1() {
             document.getElementById('step1').style.display = 'block';
