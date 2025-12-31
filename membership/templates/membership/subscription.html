@@ -307,11 +307,11 @@
             const amountPreview = document.getElementById('amount-preview');
             const step1Amount = document.getElementById('step1-amount');
 
-            if (membershipType) {
+            if (membershipType && membershipType !== 'select') {
                 let amount = 0;
-                if (membershipType === 'new') {
+                if (membershipType === 'New Membership') {
                     amount = 5500;
-                } else if (membershipType === 'renewing') {
+                } else if (membershipType === 'Renew Membership') {
                     amount = 3000;
                 }
 
@@ -367,9 +367,9 @@
 
             // Calculate amount based on membership type
             let amount = 0;
-            if (membershipType === 'new') {
+            if (membershipType === 'New Membership') {
                 amount = 5500;
-            } else if (membershipType === 'renewing') {
+            } else if (membershipType === 'Renew Membership') {
                 amount = 3000;
             }
 
