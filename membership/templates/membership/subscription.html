@@ -293,5 +293,154 @@
             </div>
         </div>
     </section>
+
+    <script>
+        // Step navigation functions
+        function goToStep1() {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3-manual').style.display = 'none';
+            document.getElementById('step3-paystack').style.display = 'none';
+
+            // Update progress indicators
+            document.getElementById('step1-indicator').style.background = '#E67918';
+            document.getElementById('step1-indicator').style.color = 'white';
+            document.getElementById('step2-indicator').style.background = '#E0E0E0';
+            document.getElementById('step2-indicator').style.color = '#757575';
+        }
+
+        function goToStep2() {
+            // Validate Step 1 fields
+            const membershipType = document.getElementById('membership_type').value;
+            const stateChapter = document.getElementById('state_chapter').value;
+            const eltanYear = document.getElementById('eltan_year').value;
+
+            if (!membershipType) {
+                alert('Please select a membership type');
+                return;
+            }
+            if (!stateChapter) {
+                alert('Please select your state chapter');
+                return;
+            }
+            if (!eltanYear) {
+                alert('Please select ELTAN year');
+                return;
+            }
+
+            // Calculate amount based on membership type
+            let amount = 0;
+            if (membershipType === 'new') {
+                amount = 5500;
+            } else if (membershipType === 'renewing') {
+                amount = 3000;
+            }
+
+            // Update amount displays
+            document.getElementById('amount-display').textContent = '₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2});
+            document.getElementById('manual-amount').textContent = '₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2});
+            document.getElementById('paystack-amount').textContent = '₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2});
+
+            // Show step 2
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+
+            // Update progress indicators
+            document.getElementById('step1-indicator').style.background = '#4CAF50';
+            document.getElementById('step2-indicator').style.background = '#E67918';
+            document.getElementById('step2-indicator').style.color = 'white';
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectManualPayment() {
+            // Get form values
+            const membershipType = document.getElementById('membership_type').value;
+            const stateChapter = document.getElementById('state_chapter').value;
+            const eltanYear = document.getElementById('eltan_year').value;
+
+            // Set hidden fields for manual payment
+            document.getElementById('manual_membership_type').value = membershipType;
+            document.getElementById('manual_state_chapter').value = stateChapter;
+            document.getElementById('manual_eltan_year').value = eltanYear;
+
+            // Show manual payment step
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3-manual').style.display = 'block';
+
+            // Start countdown timer
+            startCountdown(15 * 60); // 15 minutes in seconds
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectPaystackPayment() {
+            // Get form values
+            const membershipType = document.getElementById('membership_type').value;
+            const stateChapter = document.getElementById('state_chapter').value;
+            const eltanYear = document.getElementById('eltan_year').value;
+
+            // Get display texts
+            const membershipTypeText = document.getElementById('membership_type').selectedOptions[0].text;
+            const stateChapterText = document.getElementById('state_chapter').selectedOptions[0].text;
+
+            // Set hidden fields for Paystack payment
+            document.getElementById('paystack_membership_type').value = membershipType;
+            document.getElementById('paystack_state_chapter').value = stateChapter;
+            document.getElementById('paystack_eltan_year').value = eltanYear;
+
+            // Update summary display
+            document.getElementById('paystack-membership-type').textContent = membershipTypeText;
+            document.getElementById('paystack-state-chapter').textContent = stateChapterText;
+            document.getElementById('paystack-eltan-year').textContent = eltanYear;
+
+            // Show Paystack payment step
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3-paystack').style.display = 'block';
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function startCountdown(seconds) {
+            const timerElement = document.getElementById('countdown-timer');
+            let remainingTime = seconds;
+
+            const interval = setInterval(function() {
+                const minutes = Math.floor(remainingTime / 60);
+                const secs = remainingTime % 60;
+
+                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+                if (remainingTime <= 0) {
+                    clearInterval(interval);
+                    timerElement.textContent = 'Time Expired';
+                    timerElement.style.color = '#F44336';
+                }
+
+                remainingTime--;
+            }, 1000);
+        }
+
+        // Add visual feedback to payment method cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const paymentCards = document.querySelectorAll('.payment-method-card');
+            paymentCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.borderColor = '#E67918';
+                    this.style.cursor = 'pointer';
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 4px 12px rgba(230, 121, 24, 0.2)';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.borderColor = '#E0E0E0';
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                });
+            });
+        });
+    </script>
 {% endblock %}
 
