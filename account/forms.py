@@ -36,6 +36,16 @@ class CustomUserCreationForm(UserCreationForm):
         gender_field.choices = non_empty_choices
         state_field.choices = non_empty_state_choices
 
+    def clean_email(self):
+        """Validate that the email is unique"""
+        email = self.cleaned_data.get('email')
+        if email and CustomUser.objects.filter(email=email).exists():
+            raise forms.ValidationError(
+                "A user with this email address already exists. "
+                "Please use a different email or login to your existing account."
+            )
+        return email
+
     class Meta:
         model = CustomUser
         fields = ['email', 'first_name', 'last_name', 'gender', 'phone_number', 'state']
