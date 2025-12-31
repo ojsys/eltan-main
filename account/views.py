@@ -38,15 +38,15 @@ def register(request):
         if form.is_valid():
             user = form.save()
 
-            # Create MemberProfile with phone number and state
+            # Update MemberProfile with phone number and state
+            # (Profile is automatically created by signal)
             phone_number = form.cleaned_data.get('phone_number')
             state = form.cleaned_data.get('state')
 
-            MemberProfile.objects.create(
-                user=user,
-                phone_number=phone_number,
-                state=state
-            )
+            profile = MemberProfile.objects.get(user=user)
+            profile.phone_number = phone_number
+            profile.state = state
+            profile.save()
 
             auth_login(request, user)
 
