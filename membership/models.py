@@ -198,6 +198,7 @@ class Subscription(models.Model):
     payment_proof = models.FileField(upload_to='payment_proof/', null=True, blank=True)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='manual', help_text="Payment method used for this subscription")
     paystack_reference = models.CharField(max_length=100, null=True, blank=True, help_text="Paystack transaction reference")
+    qualification_certificate = models.FileField(upload_to='qualifications/', null=True, blank=True, help_text="Teaching qualification certificate for English language")
 
     def calculate_eltan_dates(self):
         """Calculate the correct ELTAN year dates based on registration date"""

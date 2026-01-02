@@ -172,11 +172,12 @@ class SubscriptionForm(forms.ModelForm):
         model = Subscription
         #exclude = ('user', 'payment_id', 'payment_status', 'end_date', )
         #fields = "__all__"
-        fields = ["membership_type", 'state_chapter', 'eltan_year', "payment_proof"]
+        fields = ["membership_type", 'state_chapter', 'eltan_year', "qualification_certificate", "payment_proof"]
         labels = {
             "membership_type": "Membership Type",
             "state_chapter": "State Chapter",
-            "eltan_year":"ELTAN Year",
+            "eltan_year": "ELTAN Year",
+            "qualification_certificate": "Teaching Qualification Certificate",
             "payment_proof": "Upload Proof"
         }
         

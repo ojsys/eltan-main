@@ -379,6 +379,7 @@ def subscription(request):
         membership_type = form.cleaned_data.get('membership_type')
         state_chapter = form.cleaned_data.get('state_chapter')
         eltan_year = form.cleaned_data.get('eltan_year')
+        qualification_certificate = form.cleaned_data.get('qualification_certificate')
 
         # Determine payment amount based on membership type
         if 'New Membership' in membership_type:
@@ -394,6 +395,8 @@ def subscription(request):
                 'eltan_year': eltan_year,
                 'payment_amount': payment_amount,
             }
+            # Store qualification certificate in session (as file path or handle separately)
+            # For now, we'll handle it after payment verification
             # Redirect to Paystack payment initiation
             return redirect('initiate_subscription_payment')
 
@@ -403,11 +406,11 @@ def subscription(request):
 
             if subscription and subscription.end_date < timezone.now().date():
                 # Renew existing subscription
-                subscription = renew_subscription(subscription, payment_proof, payment_amount, state_chapter)
+                subscription = renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate)
                 return redirect('subscribe_success')
             else:
                 # Create new subscription
-                subscription = create_subscription(user, payment_proof, payment_amount, state_chapter, payment_method='manual')
+                subscription = create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate, payment_method='manual')
                 return redirect('subscription_pending')
 
     context = {
@@ -416,12 +419,13 @@ def subscription(request):
     }
     return render(request, 'membership/subscription.html', context)
 
-def create_subscription(user, payment_proof, payment_amount, state_chapter, payment_method='manual'):
+def create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate=None, payment_method='manual'):
     subscription = Subscription.objects.create(
         user=user,
         payment_proof=payment_proof,
         payment_amount=payment_amount,
-        state_chapter = state_chapter,
+        state_chapter=state_chapter,
+        qualification_certificate=qualification_certificate,
         payment_status='pending',
         start_date=timezone.now().date(),
         end_date=timezone.now().date() + timezone.timedelta(days=365)  # Assuming 1-year subscription
@@ -432,19 +436,20 @@ def create_subscription(user, payment_proof, payment_amount, state_chapter, paym
 
     return subscription
 
-def renew_subscription(subscription, payment_proof, payment_amount, state_chapter):
+def renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate=None):
     subscription.payment_proof = payment_proof
     subscription.payment_amount = payment_amount
     subscription.state_chapter = state_chapter
+    subscription.qualification_certificate = qualification_certificate
     subscription.payment_status = 'pending'
     subscription.start_date = timezone.now().date()
     subscription.end_date = timezone.now().date() + timezone.timedelta(days=365)  # Assuming 1-year renewal
     subscription.save()
-    
+
     user = subscription.user
     user.is_subscribed = True
     user.save()  # This will ensure ELTAN Number is assigned if it wasn't before
-    
+
     return subscription
 
 
@@ -1423,10 +1428,14 @@ def initiate_subscription_payment(request):
         email = user.email
         # Accept data either from session (old flow) or POST (direct modal submit)
         subscription_data = request.session.get('subscription_data')
+        qualification_certificate = None
+
         if not subscription_data and request.method == 'POST':
             membership_type = request.POST.get('membership_type')
             state_chapter = request.POST.get('state_chapter')
             eltan_year = request.POST.get('eltan_year')
+            qualification_certificate = request.FILES.get('qualification_certificate')
+
             if not (membership_type and state_chapter and eltan_year):
                 messages.error(request, 'Please complete the form before proceeding to payment.')
                 return redirect('subscribe')
@@ -1448,16 +1457,22 @@ def initiate_subscription_payment(request):
         payment_reference = f"SUB-{user.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
 
         # Create or update pending subscription
+        defaults = {
+            'membership_type': subscription_data['membership_type'],
+            'state_chapter': subscription_data['state_chapter'],
+            'payment_amount': amount,
+            'payment_status': 'pending',
+            'payment_id': payment_reference,
+        }
+
+        # Add qualification_certificate if provided
+        if qualification_certificate:
+            defaults['qualification_certificate'] = qualification_certificate
+
         subscription, created = Subscription.objects.update_or_create(
             user=user,
             eltan_year=subscription_data['eltan_year'],
-            defaults={
-                'membership_type': subscription_data['membership_type'],
-                'state_chapter': subscription_data['state_chapter'],
-                'payment_amount': amount,
-                'payment_status': 'pending',
-                'payment_id': payment_reference,
-            }
+            defaults=defaults
         )
 
         logger.info(f"Subscription {'created' if created else 'updated'} with ID: {subscription.pk}")
