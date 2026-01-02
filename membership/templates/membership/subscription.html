@@ -37,11 +37,6 @@
                         <div style="flex: 1; height: 2px; background: #E0E0E0; margin: 0 1rem;"></div>
                         <div style="flex: 1; text-align: center;">
                             <div id="step2-indicator" style="width: 40px; height: 40px; background: #E0E0E0; color: #757575; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">2</div>
-                            <p style="margin: 0; font-size: 0.875rem; color: #757575;">Qualification</p>
-                        </div>
-                        <div style="flex: 1; height: 2px; background: #E0E0E0; margin: 0 1rem;"></div>
-                        <div style="flex: 1; text-align: center;">
-                            <div id="step3-indicator" style="width: 40px; height: 40px; background: #E0E0E0; color: #757575; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 0.5rem;">3</div>
                             <p style="margin: 0; font-size: 0.875rem; color: #757575;">Payment</p>
                         </div>
                     </div>
@@ -122,53 +117,18 @@
                         </div>
 
                         <button type="button" onclick="goToStep2()" class="btn-modern btn-primary-modern" style="width: 100%;">
-                            <span>Continue to Qualification Upload</span>
+                            <span>Continue to Payment</span>
                             <span class="material-icons" style="font-size: 20px;">arrow_forward</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- STEP 2: Qualification Upload -->
+            <!-- STEP 2: Payment Method Selection -->
             <div id="step2" style="display: none;">
                 <div class="card-modern">
                     <div class="card-body">
-                        <h2 class="card-title" style="margin-bottom: 1rem;">Step 2: Upload Teaching Qualification</h2>
-                        <p style="color: #616161; margin-bottom: 1.5rem;">Please upload your certificate to teach English language in Nigeria</p>
-
-                        <div style="padding: 1.5rem; background: #F5F5F5; border-radius: 12px; margin-bottom: 1.5rem;">
-                            <div class="form-field-modern">
-                                <label for="qualification_certificate" class="form-label-modern">
-                                    <span class="material-icons" style="font-size: 20px; color: #E67918;">upload_file</span>
-                                    <span>Qualification Certificate</span>
-                                </label>
-                                <input type="file" name="qualification_certificate" id="qualification_certificate" class="form-input-modern" accept="image/*,.pdf" required>
-                                <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #616161;">
-                                    <span class="material-icons" style="font-size: 16px; vertical-align: middle; color: #E67918;">info</span>
-                                    Upload a clear scan or photo of your teaching qualification certificate (PDF or image format)
-                                </p>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr;">
-                            <button type="button" onclick="goToStep1()" class="btn-modern" style="background: #F5F5F5; color: #1A1A1A;">
-                                <span class="material-icons" style="font-size: 20px;">arrow_back</span>
-                                <span>Back to Details</span>
-                            </button>
-                            <button type="button" onclick="goToStep3()" class="btn-modern btn-primary-modern">
-                                <span>Continue to Payment</span>
-                                <span class="material-icons" style="font-size: 20px;">arrow_forward</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- STEP 3: Payment Method Selection -->
-            <div id="step3" style="display: none;">
-                <div class="card-modern">
-                    <div class="card-body">
-                        <h2 class="card-title" style="margin-bottom: 1rem;">Step 3: Choose Payment Method</h2>
+                        <h2 class="card-title" style="margin-bottom: 1rem;">Step 2: Choose Payment Method</h2>
                         <p style="color: #616161; margin-bottom: 1.5rem;">Amount to pay: <strong id="amount-display" style="color: #E67918; font-size: 1.25rem;">₦0.00</strong></p>
 
                         <div style="display: grid; gap: 1rem; margin-bottom: 2rem;">
@@ -201,16 +161,16 @@
                             </div>
                         </div>
 
-                        <button type="button" onclick="goToStep2()" class="btn-modern" style="width: 100%; background: #F5F5F5; color: #1A1A1A;">
+                        <button type="button" onclick="goToStep1()" class="btn-modern" style="width: 100%; background: #F5F5F5; color: #1A1A1A;">
                             <span class="material-icons" style="font-size: 20px;">arrow_back</span>
-                            <span>Back to Qualification</span>
+                            <span>Back to Details</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- STEP 4: Manual Payment Upload -->
-            <div id="step4-manual" style="display: none;">
+            <!-- STEP 3: Manual Payment Upload -->
+            <div id="step3-manual" style="display: none;">
                 <div class="card-modern">
                     <div class="card-body">
                         <h2 class="card-title" style="margin-bottom: 1.5rem;">Bank Transfer Payment</h2>
@@ -261,7 +221,7 @@
                                 <input type="file" name="qualification_certificate" id="manual_qualification_certificate" class="form-input-modern" accept="image/*,.pdf" required>
                                 <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #616161;">
                                     <span class="material-icons" style="font-size: 16px; vertical-align: middle; color: #E67918;">info</span>
-                                    Upload your teaching qualification certificate (same file from Step 2)
+                                    Upload your teaching qualification certificate (PDF or image format)
                                 </p>
                             </div>
 
@@ -278,7 +238,7 @@
                             </div>
 
                             <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr;">
-                                <button type="button" onclick="goToStep3()" class="btn-modern" style="background: #F5F5F5; color: #1A1A1A;">
+                                <button type="button" onclick="goToStep2()" class="btn-modern" style="background: #F5F5F5; color: #1A1A1A;">
                                     <span class="material-icons" style="font-size: 20px;">arrow_back</span>
                                     <span>Back</span>
                                 </button>
@@ -292,8 +252,8 @@
                 </div>
             </div>
 
-            <!-- STEP 4: Paystack Payment -->
-            <div id="step4-paystack" style="display: none;">
+            <!-- STEP 3: Paystack Payment -->
+            <div id="step3-paystack" style="display: none;">
                 <div class="card-modern">
                     <div class="card-body">
                         <h2 class="card-title" style="margin-bottom: 1.5rem;">Online Payment</h2>
@@ -338,12 +298,12 @@
                                 <input type="file" name="qualification_certificate" id="paystack_qualification_certificate" class="form-input-modern" accept="image/*,.pdf" required>
                                 <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #616161;">
                                     <span class="material-icons" style="font-size: 16px; vertical-align: middle; color: #E67918;">info</span>
-                                    Upload your teaching qualification certificate (same file from Step 2)
+                                    Upload your teaching qualification certificate (PDF or image format)
                                 </p>
                             </div>
 
                             <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr;">
-                                <button type="button" onclick="goToStep3()" class="btn-modern" style="background: #F5F5F5; color: #1A1A1A;">
+                                <button type="button" onclick="goToStep2()" class="btn-modern" style="background: #F5F5F5; color: #1A1A1A;">
                                     <span class="material-icons" style="font-size: 20px;">arrow_back</span>
                                     <span>Back</span>
                                 </button>
@@ -401,17 +361,14 @@
         function goToStep1() {
             document.getElementById('step1').style.display = 'block';
             document.getElementById('step2').style.display = 'none';
-            document.getElementById('step3').style.display = 'none';
-            document.getElementById('step4-manual').style.display = 'none';
-            document.getElementById('step4-paystack').style.display = 'none';
+            document.getElementById('step3-manual').style.display = 'none';
+            document.getElementById('step3-paystack').style.display = 'none';
 
             // Update progress indicators
             document.getElementById('step1-indicator').style.background = '#E67918';
             document.getElementById('step1-indicator').style.color = 'white';
             document.getElementById('step2-indicator').style.background = '#E0E0E0';
             document.getElementById('step2-indicator').style.color = '#757575';
-            document.getElementById('step3-indicator').style.background = '#E0E0E0';
-            document.getElementById('step3-indicator').style.color = '#757575';
         }
 
         function goToStep2() {
@@ -433,35 +390,7 @@
                 return;
             }
 
-            // Show step 2
-            document.getElementById('step1').style.display = 'none';
-            document.getElementById('step2').style.display = 'block';
-            document.getElementById('step3').style.display = 'none';
-            document.getElementById('step4-manual').style.display = 'none';
-            document.getElementById('step4-paystack').style.display = 'none';
-
-            // Update progress indicators
-            document.getElementById('step1-indicator').style.background = '#4CAF50';
-            document.getElementById('step2-indicator').style.background = '#E67918';
-            document.getElementById('step2-indicator').style.color = 'white';
-            document.getElementById('step3-indicator').style.background = '#E0E0E0';
-            document.getElementById('step3-indicator').style.color = '#757575';
-
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function goToStep3() {
-            // Validate Step 2 (qualification upload)
-            const qualificationFile = document.getElementById('qualification_certificate').files[0];
-
-            if (!qualificationFile) {
-                alert('Please upload your teaching qualification certificate');
-                return;
-            }
-
             // Calculate amount based on membership type
-            const membershipType = document.getElementById('membership_type').value;
             let amount = 0;
             if (membershipType === 'New Membership') {
                 amount = 5500;
@@ -474,18 +403,16 @@
             document.getElementById('manual-amount').textContent = '₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2});
             document.getElementById('paystack-amount').textContent = '₦' + amount.toLocaleString('en-NG', {minimumFractionDigits: 2});
 
-            // Show step 3
+            // Show step 2
             document.getElementById('step1').style.display = 'none';
-            document.getElementById('step2').style.display = 'none';
-            document.getElementById('step3').style.display = 'block';
-            document.getElementById('step4-manual').style.display = 'none';
-            document.getElementById('step4-paystack').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+            document.getElementById('step3-manual').style.display = 'none';
+            document.getElementById('step3-paystack').style.display = 'none';
 
             // Update progress indicators
             document.getElementById('step1-indicator').style.background = '#4CAF50';
-            document.getElementById('step2-indicator').style.background = '#4CAF50';
-            document.getElementById('step3-indicator').style.background = '#E67918';
-            document.getElementById('step3-indicator').style.color = 'white';
+            document.getElementById('step2-indicator').style.background = '#E67918';
+            document.getElementById('step2-indicator').style.color = 'white';
 
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -496,7 +423,6 @@
             const membershipType = document.getElementById('membership_type').value;
             const stateChapter = document.getElementById('state_chapter').value;
             const eltanYear = document.getElementById('eltan_year').value;
-            const qualificationFile = document.getElementById('qualification_certificate').files[0];
 
             // Set hidden fields for manual payment
             document.getElementById('manual_membership_type').value = membershipType;
@@ -504,8 +430,8 @@
             document.getElementById('manual_eltan_year').value = eltanYear;
 
             // Show manual payment step
-            document.getElementById('step3').style.display = 'none';
-            document.getElementById('step4-manual').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3-manual').style.display = 'block';
 
             // Start countdown timer
             startCountdown(15 * 60); // 15 minutes in seconds
@@ -519,7 +445,6 @@
             const membershipType = document.getElementById('membership_type').value;
             const stateChapter = document.getElementById('state_chapter').value;
             const eltanYear = document.getElementById('eltan_year').value;
-            const qualificationFile = document.getElementById('qualification_certificate').files[0];
 
             // Get display texts
             const membershipTypeText = document.getElementById('membership_type').selectedOptions[0].text;
@@ -536,8 +461,8 @@
             document.getElementById('paystack-eltan-year').textContent = eltanYear;
 
             // Show Paystack payment step
-            document.getElementById('step3').style.display = 'none';
-            document.getElementById('step4-paystack').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3-paystack').style.display = 'block';
 
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
