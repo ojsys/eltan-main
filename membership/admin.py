@@ -542,14 +542,38 @@ class ExcoMemberAdmin(admin.ModelAdmin):
 
 @admin.register(Newsletter)
 class NewsletterAdmin(admin.ModelAdmin):
-    list_display = ('title', 'month_year', 'file_size', 'upload_date', 'is_published')
-    list_filter = ('year', 'month', 'is_published')
+    list_display = ('title', 'month_year', 'file_size', 'upload_date', 'is_published', 'is_featured')
+    list_filter = ('year', 'month', 'is_published', 'is_featured')
     search_fields = ('title', 'description')
     ordering = ('-year', '-month')
-    
+    list_editable = ('is_published', 'is_featured')
+    readonly_fields = ('upload_date', 'file_size')
+
+    fieldsets = (
+        ('Newsletter Information', {
+            'fields': ('title', 'month', 'year', 'description')
+        }),
+        ('Files', {
+            'fields': ('pdf_file', 'thumbnail'),
+            'description': 'Upload the newsletter PDF file and an optional thumbnail image.'
+        }),
+        ('Publication Settings', {
+            'fields': ('is_published', 'is_featured', 'upload_date', 'file_size'),
+            'classes': ('collapse',)
+        }),
+    )
+
     def month_year(self, obj):
         return f"{obj.get_month_display()} {obj.year}"
     month_year.short_description = "Period"
+
+    def save_model(self, request, obj, form, change):
+        """Provide helpful feedback when saving"""
+        super().save_model(request, obj, form, change)
+        if not change:  # New newsletter
+            self.message_user(request, f"Newsletter '{obj.title}' uploaded successfully!", messages.SUCCESS)
+        else:
+            self.message_user(request, f"Newsletter '{obj.title}' updated successfully!", messages.SUCCESS)
 
 
 

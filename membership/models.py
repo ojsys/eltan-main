@@ -885,8 +885,15 @@ class Newsletter(models.Model):
     def file_size(self):
         """Return file size in MB"""
         if self.pdf_file:
-            return f"{self.pdf_file.size / 1048576:.2f} MB"
-        return "0 MB"
+            try:
+                # Check if file exists before accessing size
+                if self.pdf_file.storage.exists(self.pdf_file.name):
+                    return f"{self.pdf_file.size / 1048576:.2f} MB"
+                else:
+                    return "File not found"
+            except (OSError, ValueError, AttributeError):
+                return "Error reading file"
+        return "No file"
 
 
 
