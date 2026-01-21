@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Member Search{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Search ELTAN Members</h3>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'member_search' %}" method="get" class="form-inline justify-content-center mb-4">
+                        <div class="form-group mx-sm-3 mb-2">
+                            <label for="query" class="sr-only">Search</label>
+                            <input type="text" class="form-control" id="query" name="query" placeholder="Enter ELTAN No., Name, or Email" value="{{ query|default:'' }}">
+                        </div>
+                        <button type="submit" class="btn btn-primary mb-2">Search</button>
+                    </form>
+
+                    {% if query %}
+                        <h4 class="mb-3">Search Results for "{{ query }}"</h4>
+                        {% if results %}
+                            <ul class="list-group">
+                                {% for user in results %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+                                            {% if user.eltan_number %}
+                                                <br><small>ELTAN No: {{ user.eltan_number }}</small>
+                                            {% endif %}
+                                            <br><small>Email: {{ user.email }}</small>
+                                        </div>
+                                        {% if user.is_subscribed %}
+                                            <span class="badge badge-success badge-pill">Subscribed</span>
+                                        {% else %}
+                                            <span class="badge badge-warning badge-pill">Not Subscribed</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="alert alert-info text-center" role="alert">
+                                No members found matching your query.
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info text-center" role="alert">
+                            Enter a name, ELTAN number, or email to search for a member.
+                        </div>
+                    {% endif %}
+
+                    <div class="mt-4 text-center">
+                        <p>Are you an ELTAN member and need to register or looking to join?</p>
+                        <a href="{% url 'register' %}" class="btn btn-success">Register Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

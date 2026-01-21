@@ -86,8 +86,34 @@ def register(request):
 
 
 
+from django.shortcuts import render, redirect
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, MemberSignupForm
+from django.contrib.auth import login as auth_login, logout
+from django.contrib import messages
+from membership.models import Subscription, MemberProfile
+from .models import CustomUser
+from django.db.models import Q
+from django.core.mail import send_mail
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+def member_search(request):
+    query = request.GET.get('query')
+    results = []
+    if query:
+        results = CustomUser.objects.filter(
+            Q(eltan_number__icontains=query) |
+            Q(email__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query)
+        )
+    return render(request, 'account/member_search.html', {'results': results, 'query': query})
+
 
 
