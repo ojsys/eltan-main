@@ -52,10 +52,6 @@
                                 {{ homepage.hero_cta_text|default:"Get Started" }}
                                 <span class="material-icons btn-icon">arrow_forward</span>
                             </a>
-                            <a href="{% url 'member_search' %}" class="btn-modern btn-outline-modern">
-                                Search Member
-                                <span class="material-icons btn-icon">search</span>
-                            </a>
                             {% if s.cta_text and s.cta_link %}
                                 <a href="{{ s.cta_link }}" class="btn btn-secondary btn-large">{{ s.cta_text }}</a>
                             {% elif active_conference %}
@@ -99,10 +95,6 @@
                     <a href="{{ homepage.hero_cta_link|default:"/register/" }}" class="btn btn-primary btn-large">
                         {{ homepage.hero_cta_text|default:"Get Started" }}
                         <span class="material-icons btn-icon">arrow_forward</span>
-                    </a>
-                    <a href="{% url 'member_search' %}" class="btn-modern btn-outline-modern">
-                        Search Member
-                        <span class="material-icons btn-icon">search</span>
                     </a>
                     {% if active_conference %}
                         <a href="{% url 'conference_detail' active_conference.pk %}"
@@ -192,6 +184,19 @@
             </div>
 
             <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <span class="material-icons">search</span>
+                    </div>
+                    <h3 class="feature-title">Member Search</h3>
+                    <p class="feature-description">
+                        Search for a registered member of ELTAN to verify their membership status.
+                    </p>
+                    <a href="{% url 'member_search' %}" class="feature-link">
+                        Search Now
+                        <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                    </a>
+                </div>
                 {% if features %}
                     {% for feature in features %}
                     <div class="feature-card">
