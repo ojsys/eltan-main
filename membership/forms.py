@@ -177,7 +177,7 @@ class SubscriptionForm(forms.ModelForm):
             "membership_type": "Membership Type",
             "state_chapter": "State Chapter",
             "eltan_year": "ELTAN Year",
-            "qualification_certificate": "Teaching Qualification Certificate",
+            "qualification_certificate": "Educational Qualification Certificate",
             "payment_proof": "Upload Proof"
         }
         
