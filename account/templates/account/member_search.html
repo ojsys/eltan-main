@@ -16,7 +16,7 @@
                         <div class="input-group mb-3 mr-md-2">
                             <input type="text" class="form-control form-control-lg" id="query" name="query" placeholder="Enter ELTAN No., Name, or Email" value="{{ query|default:'' }}">
                         </div>
-                        <button type="submit" class="btn btn-primary btn-lg mb-3 mb-md-0">Search</button>
+                        <button type="submit" class="btn-modern btn-primary-modern mb-3 mb-md-0">Search</button>
                     </form>
 
                     {% if query %}
@@ -41,19 +41,19 @@
                                 {% endfor %}
                             </ul>
                         {% else %}
-                            <div class="alert alert-info text-center mt-4" role="alert">
+                            <div class="alert alert-info alert-modern text-center mt-4" role="alert">
                                 No members found matching your query.
                             </div>
                         {% endif %}
                     {% else %}
-                        <div class="alert alert-info text-center mt-4" role="alert">
+                        <div class="alert alert-info alert-modern text-center mt-4" role="alert">
                             Enter a name, ELTAN number, or email to search for a member.
                         </div>
                     {% endif %}
 
                     <div class="mt-5 text-center">
                         <p class="lead">Are you an ELTAN member and need to register or looking to join?</p>
-                        <a href="{% url 'register' %}" class="btn btn-success btn-lg">Register Now</a>
+                        <a href="{% url 'register' %}" class="btn-modern btn-primary-modern">Register Now</a>
                     </div>
                 </div>
             </div>

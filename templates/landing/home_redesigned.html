@@ -96,12 +96,15 @@
                         {{ homepage.hero_cta_text|default:"Get Started" }}
                         <span class="material-icons btn-icon">arrow_forward</span>
                     </a>
-                    <a href="{{ homepage.secondary_cta_link|default:"#features" }}" class="btn btn-secondary btn-large">{{ homepage.secondary_cta_text|default:"Learn More" }}</a>
+                    <a href="{% url 'member_search' %}" class="btn-modern btn-outline-modern">
+                        Search Member
+                        <span class="material-icons btn-icon">search</span>
+                    </a>
                     {% if active_conference %}
                         <a href="{% url 'conference_detail' active_conference.pk %}"
                            class="btn btn-secondary btn-large">Register for Conference</a>
                     {% else %}
-                        <a href="{% url 'conference_list' %}" class="btn btn-secondary btn-large">View Conferences</a>
+                        <a href="{{ homepage.secondary_cta_link|default:"#features" }}" class="btn btn-secondary btn-large">{{ homepage.secondary_cta_text|default:"Learn More" }}</a>
                     {% endif %}
                 </div>
             </div>
