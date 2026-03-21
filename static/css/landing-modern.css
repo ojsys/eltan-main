@@ -1185,11 +1185,11 @@ body {
 }
 
 .event-image {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
+    width: calc(100% + 2 * var(--spacing-xl));
+    margin: calc(-1 * var(--spacing-xl)) calc(-1 * var(--spacing-xl)) var(--spacing-md);
+    height: 220px;
     display: block;
-    border-radius: var(--radius-lg);
+    border-radius: 0;
     background: linear-gradient(135deg, var(--eltan-orange), var(--eltan-blue));
     background-size: cover;
     background-position: center;

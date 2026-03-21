@@ -91,6 +91,59 @@
         {% endif %}
     </section>
 
+    <!-- Upcoming Events Section -->
+    {% if upcoming_events %}
+    <section class="content-container" style="margin-top: 3rem;">
+        <div class="section-divider">
+            <h2>Upcoming Events</h2>
+            <p>Workshops, seminars and other professional development events</p>
+            <div class="divider-line"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2rem; margin-top: 3rem;">
+            {% for event in upcoming_events %}
+            <div class="card-modern" style="display: flex; flex-direction: column; overflow: hidden;">
+                {% if event.event_image %}
+                    <img src="{{ event.event_image.url }}" alt="{{ event.event_title }}" style="width: 100%; height: 200px; object-fit: cover;">
+                {% else %}
+                    <div style="height: 200px; background: linear-gradient(135deg, #E67918 0%, #FF9147 100%); display: flex; align-items: center; justify-content: center;">
+                        <span class="material-icons" style="font-size: 60px; color: white;">event</span>
+                    </div>
+                {% endif %}
+
+                <div class="card-body">
+                    <div class="card-meta" style="margin-bottom: 0.75rem;">
+                        <div class="meta-item">
+                            <span class="material-icons" style="font-size: 16px;">calendar_today</span>
+                            <span>{{ event.event_date|date:"F d, Y" }}{% if event.event_end_date %} – {{ event.event_end_date|date:"F d, Y" }}{% endif %}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="material-icons" style="font-size: 16px;">location_on</span>
+                            <span>{{ event.event_location }}</span>
+                        </div>
+                    </div>
+
+                    <h3 class="card-title" style="font-size: 1.25rem;">{{ event.event_title }}</h3>
+
+                    {% if event.short_description %}
+                    <p class="card-text" style="font-size: 0.9rem;">{{ event.short_description }}</p>
+                    {% endif %}
+
+                    {% if event.registration_link %}
+                    <div style="margin-top: 1.5rem;">
+                        <a href="{{ event.registration_link }}" target="_blank" class="btn-modern btn-primary-modern">
+                            <span>Register</span>
+                            <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <!-- Past Events Section -->
     {% if past_conferences %}
     <section class="content-container" style="margin-top: 4rem;">

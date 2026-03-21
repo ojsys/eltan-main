@@ -1338,11 +1338,23 @@ def events(request):
             is_active=True
         ).order_by('-start_date')[:10]
 
+    upcoming_events = Events.objects.filter(
+        event_date__gte=today,
+        is_published=True
+    ).order_by('event_date')
+
+    past_events = Events.objects.filter(
+        event_date__lt=today,
+        is_published=True
+    ).order_by('-event_date')[:10]
+
     context = {
         'title': 'ELTAN - Events',
         'events': events,
         'conferences': conferences,
         'past_conferences': past_conferences,
+        'upcoming_events': upcoming_events,
+        'past_events': past_events,
         'has_upcoming': conferences,
         'has_past': past_conferences.exists() if hasattr(past_conferences, 'exists') else bool(past_conferences)
     }
