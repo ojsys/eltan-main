@@ -84,7 +84,7 @@ class FeatureAdmin(admin.ModelAdmin):
             'fields': ('title', 'icon', 'description', 'image', 'link')
         }),
         ('Display Settings', {
-            'fields': ('is_active', 'order')
+            'fields': ('is_active',)
         }),
     )
 
@@ -112,7 +112,7 @@ class StatisticAdmin(admin.ModelAdmin):
             'fields': ('color',)
         }),
         ('Display Settings', {
-            'fields': ('is_active', 'order')
+            'fields': ('is_active',)
         }),
     )
 
@@ -152,7 +152,7 @@ class FAQAdmin(admin.ModelAdmin):
             'fields': ('question', 'answer', 'category')
         }),
         ('Display Settings', {
-            'fields': ('is_active', 'order')
+            'fields': ('is_active',)
         }),
     )
 
@@ -171,7 +171,7 @@ class TestimonialAdmin(admin.ModelAdmin):
             'fields': ('name', 'role', 'content', 'image', 'rating')
         }),
         ('Display Settings', {
-            'fields': ('is_active', 'order')
+            'fields': ('is_active',)
         }),
     )
 
