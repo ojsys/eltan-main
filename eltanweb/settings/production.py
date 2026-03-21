@@ -13,6 +13,7 @@ ALLOWED_HOSTS = [
     'www.eltanigeria.org',
     'eltanigeria.org',
     'web.eltanigeria.org',
+    'www.web.eltanigeria.org',
 ]
 
 # Database - MySQL for production (cPanel)
