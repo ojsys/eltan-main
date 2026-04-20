@@ -1,10 +1,12 @@
 from django.db import migrations
 
+# All strings are ASCII-safe (no ₦, –, —, curly quotes) so this migration
+# runs cleanly on MySQL databases using latin1 / utf8 (non-mb4) charsets.
 DEFAULT_PACKAGES = [
     {
         'tier': 'platinum',
         'tier_label': 'Platinum Sponsor',
-        'price_range': '₦700,000+',
+        'price_range': 'NGN 700,000+',
         'is_featured': True,
         'cta_label': 'Become a Platinum Sponsor',
         'order': 1,
@@ -22,7 +24,7 @@ DEFAULT_PACKAGES = [
     {
         'tier': 'gold',
         'tier_label': 'Gold Sponsor',
-        'price_range': '₦500,000 – ₦699,000',
+        'price_range': 'NGN 500,000 - NGN 699,000',
         'is_featured': False,
         'cta_label': 'Become a Gold Sponsor',
         'order': 2,
@@ -39,7 +41,7 @@ DEFAULT_PACKAGES = [
     {
         'tier': 'silver',
         'tier_label': 'Silver Sponsor',
-        'price_range': '₦350,000 – ₦499,000',
+        'price_range': 'NGN 350,000 - NGN 499,000',
         'is_featured': False,
         'cta_label': 'Become a Silver Sponsor',
         'order': 3,
@@ -55,7 +57,7 @@ DEFAULT_PACKAGES = [
     {
         'tier': 'bronze',
         'tier_label': 'Bronze Sponsor',
-        'price_range': '₦150,000 – ₦349,000',
+        'price_range': 'NGN 150,000 - NGN 349,000',
         'is_featured': False,
         'cta_label': 'Become a Bronze Sponsor',
         'order': 4,
@@ -73,9 +75,14 @@ DEFAULT_PACKAGES = [
         'cta_label': 'Express Interest',
         'order': 5,
         'benefits': (
-            "ELTAN warmly welcomes non-cash contributions. In-kind sponsors receive benefits matched to the value of their contribution — including logo display, exhibition space, and formal acknowledgements.\n"
-            "Acceptable contributions include: conference materials (e.g., bags, notepads, pens), refreshments and catering, technical support (AV equipment, printing, photography).\n"
-            "Custom sponsorship packages are also available upon request. We are happy to design an arrangement that aligns with your organisation's specific goals and budget."
+            "ELTAN warmly welcomes non-cash contributions. In-kind sponsors receive "
+            "benefits matched to the value of their contribution - including logo display, "
+            "exhibition space, and formal acknowledgements.\n"
+            "Acceptable contributions include: conference materials (e.g., bags, notepads, "
+            "pens), refreshments and catering, technical support (AV equipment, printing, "
+            "photography).\n"
+            "Custom sponsorship packages are also available upon request. We are happy to "
+            "design an arrangement that aligns with your organisation's specific goals and budget."
         ),
     },
 ]
@@ -86,7 +93,6 @@ def seed_packages(apps, schema_editor):
     SponsorshipPackage = apps.get_model('membership', 'SponsorshipPackage')
 
     for conference in EltanConference.objects.all():
-        # Only seed if the conference has no packages yet
         if not SponsorshipPackage.objects.filter(conference=conference).exists():
             for pkg in DEFAULT_PACKAGES:
                 SponsorshipPackage.objects.create(conference=conference, **pkg)
@@ -94,8 +100,6 @@ def seed_packages(apps, schema_editor):
 
 def unseed_packages(apps, schema_editor):
     SponsorshipPackage = apps.get_model('membership', 'SponsorshipPackage')
-    # Only remove entries that exactly match the seeded data to avoid destroying
-    # any packages an admin may have manually edited
     for pkg in DEFAULT_PACKAGES:
         SponsorshipPackage.objects.filter(
             tier=pkg['tier'],

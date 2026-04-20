@@ -615,7 +615,7 @@ _DEFAULT_SPONSORSHIP_PACKAGES = [
     {
         'tier': 'platinum',
         'tier_label': 'Platinum Sponsor',
-        'price_range': '₦700,000+',
+        'price_range': 'NGN 700,000+',
         'is_featured': True,
         'cta_label': 'Become a Platinum Sponsor',
         'order': 1,
@@ -633,7 +633,7 @@ _DEFAULT_SPONSORSHIP_PACKAGES = [
     {
         'tier': 'gold',
         'tier_label': 'Gold Sponsor',
-        'price_range': '₦500,000 – ₦699,000',
+        'price_range': 'NGN 500,000 - NGN 699,000',
         'is_featured': False,
         'cta_label': 'Become a Gold Sponsor',
         'order': 2,
@@ -650,7 +650,7 @@ _DEFAULT_SPONSORSHIP_PACKAGES = [
     {
         'tier': 'silver',
         'tier_label': 'Silver Sponsor',
-        'price_range': '₦350,000 – ₦499,000',
+        'price_range': 'NGN 350,000 - NGN 499,000',
         'is_featured': False,
         'cta_label': 'Become a Silver Sponsor',
         'order': 3,
@@ -666,7 +666,7 @@ _DEFAULT_SPONSORSHIP_PACKAGES = [
     {
         'tier': 'bronze',
         'tier_label': 'Bronze Sponsor',
-        'price_range': '₦150,000 – ₦349,000',
+        'price_range': 'NGN 150,000 - NGN 349,000',
         'is_featured': False,
         'cta_label': 'Become a Bronze Sponsor',
         'order': 4,
@@ -684,9 +684,14 @@ _DEFAULT_SPONSORSHIP_PACKAGES = [
         'cta_label': 'Express Interest',
         'order': 5,
         'benefits': (
-            "ELTAN warmly welcomes non-cash contributions. In-kind sponsors receive benefits matched to the value of their contribution — including logo display, exhibition space, and formal acknowledgements.\n"
-            "Acceptable contributions include: conference materials (e.g., bags, notepads, pens), refreshments and catering, technical support (AV equipment, printing, photography).\n"
-            "Custom sponsorship packages are also available upon request. We are happy to design an arrangement that aligns with your organisation's specific goals and budget."
+            "ELTAN warmly welcomes non-cash contributions. In-kind sponsors receive "
+            "benefits matched to the value of their contribution - including logo display, "
+            "exhibition space, and formal acknowledgements.\n"
+            "Acceptable contributions include: conference materials (e.g., bags, notepads, "
+            "pens), refreshments and catering, technical support (AV equipment, printing, "
+            "photography).\n"
+            "Custom sponsorship packages are also available upon request. We are happy to "
+            "design an arrangement that aligns with your organisation's specific goals and budget."
         ),
     },
 ]
