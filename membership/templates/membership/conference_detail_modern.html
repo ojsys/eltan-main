@@ -877,20 +877,6 @@
             {% if forloop.last %}</div></div>{% endif %}
             {% endif %}{% endfor %}
 
-            <!-- Documents -->
-            {% if documents %}
-            <div class="panel-section" style="margin-top:2rem;">
-                <h3 class="panel-section__title">
-                    <span class="material-icons">folder_open</span> Documents
-                </h3>
-                <ul class="footer-links">
-                    {% for d in documents %}
-                        <li><a href="{{ d.document.url }}" target="_blank">{{ d.title }}</a></li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
         </div>
     </section>
 
@@ -1001,6 +987,29 @@
                         </div>
                     </div>
                     {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Conference Documents -->
+            {% if documents %}
+            <div style="margin-top:3rem;">
+                <div class="conf-section__header">
+                    <p class="conf-kicker">Resources</p>
+                    <h2 class="conf-title">Conference Documents</h2>
+                </div>
+                <div class="panel-section">
+                    <ul class="footer-links" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.5rem;">
+                        {% for d in documents %}
+                        <li>
+                            <a href="{{ d.document.url }}" target="_blank"
+                               style="display:inline-flex;align-items:center;gap:.5rem;color:var(--eltan-orange);font-weight:600;text-decoration:none;font-size:.95rem;">
+                                <span class="material-icons" style="font-size:18px;">download</span>
+                                {{ d.title }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
             {% endif %}
