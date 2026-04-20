@@ -361,6 +361,154 @@
         @media (max-width: 640px) {
             .sp-cards { grid-template-columns: 1fr; }
         }
+
+        /* ---- Accommodation cards ---- */
+        .accom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.75rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 680px) { .accom-grid { grid-template-columns: 1fr; } }
+
+        .accom-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.07);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform .3s ease, box-shadow .3s ease;
+            border: 1.5px solid #F0F0F0;
+            position: relative;
+        }
+        .accom-card:hover { transform: translateY(-4px); box-shadow: 0 10px 36px rgba(0,0,0,.11); }
+        .accom-card--recommended {
+            border-color: var(--eltan-orange);
+            box-shadow: 0 4px 20px rgba(230,121,24,.15);
+        }
+        .accom-card--recommended:hover { box-shadow: 0 10px 36px rgba(230,121,24,.2); }
+
+        .accom-badge {
+            position: absolute;
+            top: .75rem;
+            left: .75rem;
+            background: var(--eltan-orange);
+            color: #fff;
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            padding: .28rem .75rem;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            gap: .3rem;
+            z-index: 2;
+        }
+        .accom-badge .material-icons { font-size: 13px; }
+
+        .accom-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+        .accom-img-placeholder {
+            width: 100%;
+            height: 140px;
+            background: linear-gradient(135deg, #F5F5F5 0%, #E8EAF6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .accom-img-placeholder .material-icons { font-size: 52px; color: #C5CAE9; }
+
+        .accom-body { padding: 1.35rem 1.5rem 1.5rem; display: flex; flex-direction: column; gap: .6rem; flex: 1; }
+        .accom-name { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--color-gray-900); }
+
+        .accom-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+        .accom-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--color-gray-600);
+            background: var(--color-gray-100, #F5F5F5);
+            padding: .25rem .65rem;
+            border-radius: 999px;
+        }
+        .accom-meta-item .material-icons { font-size: 14px; }
+        .accom-price { background: #FFF3E0; color: #E65100; }
+        .accom-price .material-icons { color: #E65100; }
+
+        .accom-address, .accom-rooms {
+            display: flex;
+            align-items: flex-start;
+            gap: .4rem;
+            font-size: .85rem;
+            color: var(--color-gray-600);
+            margin: 0;
+            line-height: 1.5;
+        }
+        .accom-address .material-icons,
+        .accom-rooms .material-icons { font-size: 16px; flex-shrink: 0; color: #9E9E9E; margin-top: .05rem; }
+
+        .accom-deadline {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            font-size: .82rem;
+            color: #1565C0;
+            background: #E3F2FD;
+            padding: .45rem .75rem;
+            border-radius: 8px;
+        }
+        .accom-deadline .material-icons { font-size: 16px; flex-shrink: 0; }
+
+        .accom-notes {
+            font-size: .83rem;
+            color: var(--color-gray-500);
+            margin: 0;
+            line-height: 1.55;
+            font-style: italic;
+        }
+
+        .accom-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            margin-top: auto;
+            padding-top: .75rem;
+            border-top: 1px solid #F5F5F5;
+        }
+        .accom-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            font-size: .8rem;
+            font-weight: 600;
+            text-decoration: none;
+            padding: .4rem .85rem;
+            border-radius: 999px;
+            border: 1.5px solid #E0E0E0;
+            color: var(--color-gray-700);
+            background: #fff;
+            transition: all .2s;
+        }
+        .accom-action-btn:hover { border-color: var(--eltan-orange); color: var(--eltan-orange); }
+        .accom-action-btn .material-icons { font-size: 15px; }
+        .accom-action-btn--primary {
+            background: var(--eltan-orange);
+            color: #fff;
+            border-color: var(--eltan-orange);
+        }
+        .accom-action-btn--primary:hover { background: var(--eltan-orange-dark); border-color: var(--eltan-orange-dark); color: #fff; }
     </style>
 </head>
 <body>
@@ -647,106 +795,74 @@
 
         <div class="container" style="padding-top:3rem;padding-bottom:3rem;">
 
-            <!-- Tier cards -->
+            {% if sponsor_packages %}
+            <!-- Tier cards from database -->
             <div class="sp-intro">
                 <p class="conf-kicker">Choose Your Tier</p>
                 <h3 class="conf-title">Sponsorship Packages</h3>
-                <p class="text-body-large" style="max-width:680px;color:var(--color-gray-600);">Four tailored tiers designed to match your organisation&rsquo;s goals and budget. All sponsors receive formal recognition and meaningful visibility.</p>
+                <p class="text-body-large" style="max-width:680px;color:var(--color-gray-600);">Tailored tiers designed to match your organisation&rsquo;s goals and budget. All sponsors receive formal recognition and meaningful visibility.</p>
             </div>
 
+            {% comment %} Separate standard tiers from inkind/custom {% endcomment %}
+            {% with standard_tiers="platinum gold silver bronze" %}
             <div class="sp-cards">
-
-                <!-- Platinum -->
-                <div class="sp-card sp-card--platinum">
-                    <div class="sp-card__ribbon">Most Inclusive</div>
-                    <div class="sp-card__tier">Platinum</div>
-                    <div class="sp-card__price">&#8358;700,000<span>+</span></div>
+                {% for pkg in sponsor_packages %}
+                {% if pkg.tier != 'inkind' and pkg.tier != 'custom' %}
+                <div class="sp-card sp-card--{{ pkg.tier }}">
+                    {% if pkg.is_featured %}<div class="sp-card__ribbon">Most Inclusive</div>{% endif %}
+                    <div class="sp-card__tier">{{ pkg.tier_label }}</div>
+                    <div class="sp-card__price">{{ pkg.price_range }}</div>
                     <ul class="sp-card__features">
-                        <li><span class="material-icons">check_circle</span> Recognition in all event materials</li>
-                        <li><span class="material-icons">check_circle</span> Logo on all banners, posters &amp; digital promos</li>
-                        <li><span class="material-icons">check_circle</span> Full-page advert in conference programme</li>
-                        <li><span class="material-icons">check_circle</span> Speaking slot at the opening session</li>
-                        <li><span class="material-icons">check_circle</span> Exhibition booth &mdash; premium location</li>
-                        <li><span class="material-icons">check_circle</span> 4 complimentary registrations</li>
-                        <li><span class="material-icons">check_circle</span> Company materials in participant bags</li>
-                        <li><span class="material-icons">check_circle</span> Social media recognition before, during &amp; after</li>
+                        {% for benefit in pkg.benefits_list %}
+                        <li><span class="material-icons">check_circle</span> {{ benefit }}</li>
+                        {% endfor %}
                     </ul>
-                    <a href="{% url 'sponsor_application' conference.pk %}?level=platinum" class="btn sp-card__cta">
-                        Become a Platinum Sponsor <span class="material-icons" style="font-size:17px;">arrow_forward</span>
+                    <a href="{% url 'sponsor_application' conference.pk %}?level={{ pkg.tier }}" class="btn sp-card__cta">
+                        {% if pkg.cta_label %}{{ pkg.cta_label }}{% else %}Become a {{ pkg.tier_label }}{% endif %}
+                        <span class="material-icons" style="font-size:17px;">arrow_forward</span>
                     </a>
                 </div>
-
-                <!-- Gold -->
-                <div class="sp-card sp-card--gold">
-                    <div class="sp-card__tier">Gold</div>
-                    <div class="sp-card__price">&#8358;500,000 &ndash; &#8358;699,000</div>
-                    <ul class="sp-card__features">
-                        <li><span class="material-icons">check_circle</span> Recognition as Gold Sponsor in event materials</li>
-                        <li><span class="material-icons">check_circle</span> Logo on banners, posters &amp; digital promotions</li>
-                        <li><span class="material-icons">check_circle</span> Half-page advert in the programme</li>
-                        <li><span class="material-icons">check_circle</span> Exhibition booth</li>
-                        <li><span class="material-icons">check_circle</span> 2 complimentary registrations</li>
-                        <li><span class="material-icons">check_circle</span> Company materials in participant bags</li>
-                        <li><span class="material-icons">check_circle</span> Social media shoutouts</li>
-                    </ul>
-                    <a href="{% url 'sponsor_application' conference.pk %}?level=gold" class="btn sp-card__cta">
-                        Become a Gold Sponsor <span class="material-icons" style="font-size:17px;">arrow_forward</span>
-                    </a>
-                </div>
-
-                <!-- Silver -->
-                <div class="sp-card sp-card--silver">
-                    <div class="sp-card__tier">Silver</div>
-                    <div class="sp-card__price">&#8358;350,000 &ndash; &#8358;499,000</div>
-                    <ul class="sp-card__features">
-                        <li><span class="material-icons">check_circle</span> Recognition as Silver Sponsor</li>
-                        <li><span class="material-icons">check_circle</span> Logo on website &amp; select materials</li>
-                        <li><span class="material-icons">check_circle</span> Quarter-page advert in the programme</li>
-                        <li><span class="material-icons">check_circle</span> Shared exhibition space</li>
-                        <li><span class="material-icons">check_circle</span> 1 complimentary registration</li>
-                        <li><span class="material-icons">check_circle</span> Mention on social media</li>
-                    </ul>
-                    <a href="{% url 'sponsor_application' conference.pk %}?level=silver" class="btn sp-card__cta">
-                        Become a Silver Sponsor <span class="material-icons" style="font-size:17px;">arrow_forward</span>
-                    </a>
-                </div>
-
-                <!-- Bronze -->
-                <div class="sp-card sp-card--bronze">
-                    <div class="sp-card__tier">Bronze</div>
-                    <div class="sp-card__price">&#8358;150,000 &ndash; &#8358;349,000</div>
-                    <ul class="sp-card__features">
-                        <li><span class="material-icons">check_circle</span> Name listed in the programme &amp; on the website</li>
-                        <li><span class="material-icons">check_circle</span> Company materials displayed at registration</li>
-                        <li><span class="material-icons">check_circle</span> Mention during the closing session</li>
-                    </ul>
-                    <a href="{% url 'sponsor_application' conference.pk %}?level=bronze" class="btn sp-card__cta">
-                        Become a Bronze Sponsor <span class="material-icons" style="font-size:17px;">arrow_forward</span>
-                    </a>
-                </div>
-
+                {% endif %}
+                {% endfor %}
             </div><!-- /sp-cards -->
+            {% endwith %}
 
-            <!-- In-Kind card -->
+            <!-- In-Kind / Custom packages -->
+            {% for pkg in sponsor_packages %}
+            {% if pkg.tier == 'inkind' or pkg.tier == 'custom' %}
             <div class="sp-inkind">
                 <div class="sp-inkind__icon">
-                    <span class="material-icons">volunteer_activism</span>
+                    <span class="material-icons">{% if pkg.tier == 'inkind' %}volunteer_activism{% else %}tune{% endif %}</span>
                 </div>
                 <div class="sp-inkind__body">
-                    <h4>In-Kind Sponsorship</h4>
-                    <p>ELTAN warmly welcomes non-cash contributions. In-kind sponsors receive benefits matched to the value of their contribution &mdash; including logo display, exhibition space, and formal acknowledgements.</p>
-                    <p style="margin-top:.5rem;"><strong>Acceptable contributions include:</strong> conference materials (bags, notepads, pens), refreshments &amp; catering, technical support (AV equipment, printing, photography).</p>
+                    <h4>{{ pkg.tier_label }}</h4>
+                    {% for benefit in pkg.benefits_list %}
+                    <p style="{% if not forloop.first %}margin-top:.4rem;{% endif %}">{{ benefit }}</p>
+                    {% endfor %}
                 </div>
                 <div class="sp-inkind__cta">
                     <a href="{% url 'sponsor_application' conference.pk %}" class="btn btn-secondary btn-pill">
-                        <span class="material-icons" style="font-size:17px;">send</span> Express Interest
+                        <span class="material-icons" style="font-size:17px;">send</span>
+                        {% if pkg.cta_label %}{{ pkg.cta_label }}{% else %}Express Interest{% endif %}
                     </a>
                     <p style="font-size:.8rem;color:var(--color-gray-500);margin-top:.5rem;">Custom packages available on request.</p>
                 </div>
             </div>
+            {% endif %}
+            {% endfor %}
+
+            {% else %}
+            <!-- No packages added yet -->
+            <div class="panel-section" style="text-align:center;padding:3rem 2rem;">
+                <span class="material-icons" style="font-size:48px;color:var(--color-gray-300);display:block;margin-bottom:1rem;">workspace_premium</span>
+                <p class="text-body-large" style="color:var(--color-gray-500);">Sponsorship packages will be published soon.</p>
+                <a href="{% url 'sponsor_application' conference.pk %}" class="btn btn-primary btn-pill" style="margin-top:1rem;">
+                    <span class="material-icons" style="font-size:18px;">send</span> Express Interest
+                </a>
+            </div>
+            {% endif %}
 
             <!-- Approved sponsor logos section -->
-            {% with has_approved=False %}
             {% for sp in sponsors %}{% if sp.is_approved %}
             {% if forloop.first %}
             <div class="sp-logos-section">
@@ -760,7 +876,6 @@
                     </a>
             {% if forloop.last %}</div></div>{% endif %}
             {% endif %}{% endfor %}
-            {% endwith %}
 
             <!-- Documents -->
             {% if documents %}
@@ -782,6 +897,8 @@
     <!-- ===== LOC TAB ===== -->
     <section class="conf-tabpanel" id="tab-loc">
         <div class="container">
+
+            <!-- LOC Members -->
             <div class="conf-section__header">
                 <p class="conf-kicker">Local Organizing Committee</p>
                 <h2 class="conf-title">Conference LOC</h2>
@@ -796,8 +913,8 @@
                     <div class="loc-body">
                         <div class="loc-name">{{ m.name }}</div>
                         <div class="loc-role">{{ m.role }}</div>
-                        {% if m.organization %}<div class="text-muted">{{ m.organization }}</div>{% endif %}
-                        {% if m.email %}<div><a href="mailto:{{ m.email }}">{{ m.email }}</a></div>{% endif %}
+                        {% if m.organization %}<div class="text-muted" style="font-size:.85rem;">{{ m.organization }}</div>{% endif %}
+                        {% if m.email %}<div style="margin-top:.4rem;font-size:.85rem;"><a href="mailto:{{ m.email }}" style="color:var(--eltan-orange);">{{ m.email }}</a></div>{% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -807,6 +924,87 @@
                 <p class="text-body-large" style="color:var(--color-gray-500);">LOC details coming soon.</p>
             </div>
             {% endif %}
+
+            <!-- Accommodation section -->
+            {% if accommodations %}
+            <div style="margin-top:3.5rem;">
+                <div class="conf-section__header">
+                    <p class="conf-kicker">Where to Stay</p>
+                    <h2 class="conf-title">Accommodation Options</h2>
+                    <p class="text-body-large" style="max-width:640px;color:var(--color-gray-600);">The following accommodation options are available near the conference venue. We recommend booking early to secure conference rates.</p>
+                </div>
+                <div class="accom-grid">
+                    {% for accom in accommodations %}
+                    <div class="accom-card{% if accom.is_recommended %} accom-card--recommended{% endif %}">
+                        {% if accom.is_recommended %}
+                        <div class="accom-badge">
+                            <span class="material-icons">star</span> ELTAN Recommended
+                        </div>
+                        {% endif %}
+                        {% if accom.image %}
+                        <img src="{{ accom.image.url }}" alt="{{ accom.name }}" class="accom-img">
+                        {% else %}
+                        <div class="accom-img-placeholder">
+                            <span class="material-icons">hotel</span>
+                        </div>
+                        {% endif %}
+                        <div class="accom-body">
+                            <h4 class="accom-name">{{ accom.name }}</h4>
+                            <div class="accom-meta">
+                                {% if accom.distance_from_venue %}
+                                <span class="accom-meta-item">
+                                    <span class="material-icons">place</span> {{ accom.distance_from_venue }}
+                                </span>
+                                {% endif %}
+                                {% if accom.price_range %}
+                                <span class="accom-meta-item accom-price">
+                                    <span class="material-icons">payments</span> {{ accom.price_range }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if accom.address %}
+                            <p class="accom-address">
+                                <span class="material-icons">location_on</span> {{ accom.address }}
+                            </p>
+                            {% endif %}
+                            {% if accom.room_types %}
+                            <p class="accom-rooms">
+                                <span class="material-icons">bed</span> {{ accom.room_types }}
+                            </p>
+                            {% endif %}
+                            {% if accom.booking_deadline %}
+                            <div class="accom-deadline">
+                                <span class="material-icons">schedule</span>
+                                Book by <strong>{{ accom.booking_deadline|date:"F d, Y" }}</strong> for conference rates
+                            </div>
+                            {% endif %}
+                            {% if accom.notes %}
+                            <p class="accom-notes">{{ accom.notes }}</p>
+                            {% endif %}
+                            <div class="accom-actions">
+                                {% if accom.contact_phone %}
+                                <a href="tel:{{ accom.contact_phone }}" class="accom-action-btn">
+                                    <span class="material-icons">phone</span> {{ accom.contact_phone }}
+                                </a>
+                                {% endif %}
+                                {% if accom.contact_email %}
+                                <a href="mailto:{{ accom.contact_email }}" class="accom-action-btn">
+                                    <span class="material-icons">email</span> {{ accom.contact_email }}
+                                </a>
+                                {% endif %}
+                                {% if accom.website %}
+                                <a href="{{ accom.website }}" target="_blank" rel="noopener" class="accom-action-btn accom-action-btn--primary">
+                                    <span class="material-icons">open_in_new</span> Book Now
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </section>
 

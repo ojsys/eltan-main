@@ -551,6 +551,64 @@ class ConferenceLocMember(models.Model):
         return f"{self.name} - {self.role}"
 
 
+class SponsorshipPackage(models.Model):
+    TIER_CHOICES = [
+        ('platinum', 'Platinum'),
+        ('gold', 'Gold'),
+        ('silver', 'Silver'),
+        ('bronze', 'Bronze'),
+        ('inkind', 'In-Kind'),
+        ('custom', 'Custom'),
+    ]
+
+    conference = models.ForeignKey(EltanConference, on_delete=models.CASCADE, related_name='sponsorship_packages')
+    tier = models.CharField(max_length=20, choices=TIER_CHOICES)
+    tier_label = models.CharField(max_length=60, help_text="Display name, e.g. Platinum Sponsor")
+    price_range = models.CharField(max_length=120, help_text="e.g. ₦700,000+ or ₦500,000 – ₦699,000")
+    benefits = models.TextField(
+        help_text="Enter one benefit per line. Each line becomes a bullet point on the frontend."
+    )
+    is_featured = models.BooleanField(default=False, help_text="Shows a 'Most Inclusive' ribbon on the card")
+    cta_label = models.CharField(max_length=100, blank=True, help_text="Button text, e.g. Become a Platinum Sponsor")
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Sponsorship Package'
+        verbose_name_plural = 'Sponsorship Packages'
+
+    def __str__(self):
+        return f"{self.tier_label} — {self.conference.title}"
+
+    def benefits_list(self):
+        return [b.strip() for b in self.benefits.splitlines() if b.strip()]
+
+
+class ConferenceAccommodation(models.Model):
+    conference = models.ForeignKey(EltanConference, on_delete=models.CASCADE, related_name='accommodations')
+    name = models.CharField(max_length=200, help_text="Hotel or accommodation name")
+    address = models.CharField(max_length=300)
+    distance_from_venue = models.CharField(max_length=100, blank=True, help_text="e.g. 5 mins walk, 2 km from venue")
+    price_range = models.CharField(max_length=150, blank=True, help_text="e.g. ₦15,000 – ₦30,000 / night")
+    room_types = models.CharField(max_length=200, blank=True, help_text="e.g. Standard, Deluxe, Suite")
+    contact_phone = models.CharField(max_length=50, blank=True)
+    contact_email = models.EmailField(blank=True)
+    website = models.URLField(blank=True)
+    booking_deadline = models.DateField(null=True, blank=True, help_text="Last date for special/conference rates")
+    notes = models.TextField(blank=True, help_text="Any special notes, booking codes, or additional details")
+    is_recommended = models.BooleanField(default=False, help_text="Mark as ELTAN recommended accommodation")
+    image = models.ImageField(upload_to='conference_accommodation/', blank=True, null=True)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = 'Accommodation'
+        verbose_name_plural = 'Accommodations'
+
+    def __str__(self):
+        return f"{self.name} — {self.conference.title}"
+
+
 ###############Defining Executive Committee (Exco) Models#######################
 class ExcoMember(models.Model):
     """Executive Committee Member - Current and Past Leadership"""

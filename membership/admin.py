@@ -9,7 +9,7 @@ from django.db import models
 from django.http import HttpResponse
 from openpyxl import Workbook
 from datetime import datetime
-from .models import Conference, ConferenceRegistration, EltanConference, EltanConferenceRegistration, ConferenceDocument, MemberProfile, MembershipType, Subscription, Sigs, SigsRegistration, Events, News, Resource, Download, ELTANYearSetting, Newsletter, ConferenceSpeaker, ConferenceSchedule, ConferenceSponsor, ConferenceLocMember, ExcoMember
+from .models import Conference, ConferenceRegistration, EltanConference, EltanConferenceRegistration, ConferenceDocument, MemberProfile, MembershipType, Subscription, Sigs, SigsRegistration, Events, News, Resource, Download, ELTANYearSetting, Newsletter, ConferenceSpeaker, ConferenceSchedule, ConferenceSponsor, ConferenceLocMember, ExcoMember, SponsorshipPackage, ConferenceAccommodation
 
 
 
@@ -189,6 +189,41 @@ class ConferenceDocumentInline(admin.TabularInline):
     fields = ('title', 'document', 'is_public')
 
 
+class SponsorshipPackageInline(admin.StackedInline):
+    model = SponsorshipPackage
+    extra = 0
+    fields = ('tier', 'tier_label', 'price_range', 'benefits', 'is_featured', 'cta_label', 'order')
+    verbose_name = 'Sponsorship Package'
+    verbose_name_plural = 'Sponsorship Packages'
+
+
+class ConferenceAccommodationInline(admin.StackedInline):
+    model = ConferenceAccommodation
+    extra = 0
+    fields = (
+        'name', 'address', 'distance_from_venue', 'price_range', 'room_types',
+        'contact_phone', 'contact_email', 'website', 'booking_deadline',
+        'notes', 'is_recommended', 'image', 'order',
+    )
+    verbose_name = 'Accommodation'
+    verbose_name_plural = 'Accommodation Options'
+
+
+@admin.register(SponsorshipPackage)
+class SponsorshipPackageAdmin(admin.ModelAdmin):
+    list_display = ('tier_label', 'conference', 'price_range', 'is_featured', 'order')
+    list_filter = ('conference', 'tier')
+    ordering = ('conference', 'order')
+
+
+@admin.register(ConferenceAccommodation)
+class ConferenceAccommodationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'conference', 'distance_from_venue', 'price_range', 'is_recommended', 'order')
+    list_filter = ('conference', 'is_recommended')
+    search_fields = ('name', 'address')
+    ordering = ('conference', 'order', 'name')
+
+
 @admin.register(EltanConference)
 class EltanConferenceAdmin(admin.ModelAdmin):
     list_display = ('title', 'start_date', 'end_date', 'registration_status', 'is_active', 'member_fee', 'non_member_fee')
@@ -196,7 +231,7 @@ class EltanConferenceAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'start_date')
     search_fields = ('title', 'theme', 'description')
     actions = None
-    inlines = [ConferenceLocMemberInline, ConferenceSpeakerInline, ConferenceScheduleInline, ConferenceDocumentInline]
+    inlines = [ConferenceLocMemberInline, ConferenceSpeakerInline, ConferenceScheduleInline, ConferenceDocumentInline, SponsorshipPackageInline, ConferenceAccommodationInline]
     fieldsets = (
         ('Conference Info', {
             'fields': ('title', 'theme', 'description', 'image', 'is_active')

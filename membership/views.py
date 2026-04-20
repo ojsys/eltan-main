@@ -1080,7 +1080,7 @@ def conference_page(request, pk):
         abstract_form_link = None
         loc_qs = []
 
-    from .models import ConferenceDocument
+    from .models import ConferenceDocument, SponsorshipPackage, ConferenceAccommodation
     context = {
         'conference': conference,
         'speakers': conference.speakers.all() if hasattr(conference, 'speakers') else [],
@@ -1088,10 +1088,11 @@ def conference_page(request, pk):
         'schedule': conference.schedule.all() if hasattr(conference, 'schedule') else [],
         'abstract_form_link': abstract_form_link or 'https://forms.gle/26eaEr4b1Zm7C9pb6',
         'loc_members': loc_qs,
+        'accommodations': ConferenceAccommodation.objects.filter(conference=conference).order_by('order', 'name'),
         'documents': ConferenceDocument.objects.filter(conference=conference, is_public=True).order_by('-uploaded_at'),
         'sub_themes': sub_themes,
         'cfp_guidelines': cfp_guidelines,
-        'sponsor_packages': sponsor_packages,
+        'sponsor_packages': SponsorshipPackage.objects.filter(conference=conference).order_by('order'),
         'contact_name': contact_name,
         'contact_email': contact_email,
         'contact_phone': contact_phone,
