@@ -1,23 +1,635 @@
-{% extends 'membership/base.html' %}
-{% load crispy_forms_tags %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Become a Sponsor &ndash; {{ conference.title }}</title>
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+    <link href="{% static 'css/conference.css' %}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #F4F6FA; margin: 0; color: #1A1A1A; }
 
-{% block content %}
-<div class="container py-5 mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="mb-0">Become a Sponsor - {{ conference.title }}</h3>
-                </div>
-                <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        {{ form|crispy }}
-                        <button type="submit" class="btn btn-warning">Submit Application</button>
-                    </form>
-                </div>
+        /* ---- Page hero ---- */
+        .spf-hero {
+            background: linear-gradient(135deg, #1A0A3C 0%, #3B1D8C 60%, #E67918 100%);
+            color: #fff;
+            padding: 3.5rem 1.5rem 5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .spf-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .spf-hero__back {
+            position: absolute;
+            top: 1.25rem;
+            left: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            color: rgba(255,255,255,.8);
+            text-decoration: none;
+            font-size: .875rem;
+            font-weight: 600;
+            transition: color .2s;
+        }
+        .spf-hero__back:hover { color: #fff; }
+        .spf-hero__back .material-icons { font-size: 18px; }
+        .spf-hero__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            background: rgba(255,255,255,.15);
+            border: 1px solid rgba(255,255,255,.25);
+            border-radius: 999px;
+            padding: .35rem 1rem;
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+        .spf-hero__badge .material-icons { font-size: 16px; }
+        .spf-hero h1 {
+            font-size: clamp(1.75rem, 4vw, 2.75rem);
+            font-weight: 800;
+            margin: 0 0 .5rem;
+            line-height: 1.2;
+        }
+        .spf-hero__conf {
+            font-size: .95rem;
+            opacity: .85;
+            margin-bottom: 0;
+        }
+
+        /* ---- Main layout ---- */
+        .spf-body {
+            max-width: 1100px;
+            margin: -2.5rem auto 4rem;
+            padding: 0 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .spf-body { grid-template-columns: 1fr; margin-top: -1.5rem; }
+            .spf-sidebar { order: -1; }
+        }
+
+        /* ---- Form card ---- */
+        .spf-form-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(0,0,0,.1);
+            padding: 2.5rem;
+        }
+        .spf-form-card h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin: 0 0 .4rem;
+            color: #1A1A1A;
+        }
+        .spf-form-card > p {
+            color: #616161;
+            font-size: .9rem;
+            margin: 0 0 2rem;
+            line-height: 1.6;
+        }
+
+        /* ---- Form section headers ---- */
+        .spf-section-label {
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: #E67918;
+            margin: 1.75rem 0 1rem;
+            padding-bottom: .4rem;
+            border-bottom: 1px solid #F0F0F0;
+        }
+        .spf-section-label:first-of-type { margin-top: 0; }
+
+        /* ---- Field groups ---- */
+        .spf-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+        @media (max-width: 560px) { .spf-row { grid-template-columns: 1fr; } }
+        .spf-field { display: flex; flex-direction: column; gap: .35rem; }
+        .spf-field label {
+            font-size: .82rem;
+            font-weight: 600;
+            color: #424242;
+        }
+        .spf-field label .spf-required {
+            color: #E53935;
+            margin-left: .2rem;
+        }
+        .spf-field input,
+        .spf-field select {
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1.5px solid #E0E0E0;
+            border-radius: 10px;
+            padding: .7rem 1rem;
+            font-size: .9rem;
+            font-family: 'Poppins', sans-serif;
+            color: #1A1A1A;
+            background: #FAFAFA;
+            transition: border-color .2s, box-shadow .2s, background .2s;
+            width: 100%;
+            outline: none;
+        }
+        .spf-field input:focus,
+        .spf-field select:focus {
+            border-color: #E67918;
+            box-shadow: 0 0 0 3px rgba(230,121,24,.12);
+            background: #fff;
+        }
+        .spf-field input::placeholder { color: #BDBDBD; }
+
+        /* Select chevron */
+        .spf-select-wrap { position: relative; }
+        .spf-select-wrap::after {
+            content: 'expand_more';
+            font-family: 'Material Icons';
+            font-size: 20px;
+            color: #9E9E9E;
+            position: absolute;
+            right: .9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            line-height: 1;
+        }
+        .spf-select-wrap select { padding-right: 2.5rem; cursor: pointer; }
+        .spf-select-wrap select option[value=""] { color: #9E9E9E; }
+
+        /* File upload */
+        .spf-upload-wrap {
+            border: 2px dashed #E0E0E0;
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+            background: #FAFAFA;
+            position: relative;
+        }
+        .spf-upload-wrap:hover, .spf-upload-wrap.drag-over {
+            border-color: #E67918;
+            background: #FFF8F2;
+        }
+        .spf-upload-wrap .material-icons { font-size: 36px; color: #BDBDBD; display: block; margin-bottom: .35rem; }
+        .spf-upload-wrap p { margin: 0; font-size: .82rem; color: #9E9E9E; }
+        .spf-upload-wrap p strong { color: #E67918; }
+        .spf-upload-wrap input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+        .spf-upload-filename {
+            margin-top: .5rem;
+            font-size: .8rem;
+            color: #616161;
+            display: none;
+            align-items: center;
+            gap: .35rem;
+        }
+        .spf-upload-filename.visible { display: flex; justify-content: center; }
+        .spf-upload-filename .material-icons { font-size: 16px; color: #4CAF50; }
+
+        /* Tier selector pills */
+        .spf-tier-pills {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: .75rem;
+            margin-bottom: .25rem;
+        }
+        @media (max-width: 480px) { .spf-tier-pills { grid-template-columns: 1fr; } }
+        .spf-tier-pill {
+            display: flex;
+            flex-direction: column;
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            padding: .9rem 1rem;
+            cursor: pointer;
+            transition: all .2s;
+            background: #FAFAFA;
+            user-select: none;
+        }
+        .spf-tier-pill:hover { border-color: #BDBDBD; background: #fff; }
+        .spf-tier-pill.selected { background: #fff; }
+        .spf-tier-pill.selected.tier-platinum { border-color: #7C5CBF; box-shadow: 0 0 0 3px rgba(124,92,191,.12); }
+        .spf-tier-pill.selected.tier-gold     { border-color: #C8960C; box-shadow: 0 0 0 3px rgba(200,150,12,.12); }
+        .spf-tier-pill.selected.tier-silver   { border-color: #78909C; box-shadow: 0 0 0 3px rgba(120,144,156,.12); }
+        .spf-tier-pill.selected.tier-bronze   { border-color: #D7A07A; box-shadow: 0 0 0 3px rgba(215,160,122,.12); }
+        .spf-tier-pill__name {
+            font-size: .82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            margin-bottom: .2rem;
+        }
+        .spf-tier-pill.tier-platinum .spf-tier-pill__name { color: #5B3CC4; }
+        .spf-tier-pill.tier-gold     .spf-tier-pill__name { color: #856404; }
+        .spf-tier-pill.tier-silver   .spf-tier-pill__name { color: #546E7A; }
+        .spf-tier-pill.tier-bronze   .spf-tier-pill__name { color: #B94A1B; }
+        .spf-tier-pill__price { font-size: .78rem; color: #757575; font-weight: 500; }
+
+        /* Hidden real select (driven by pills) */
+        #id_level { display: none; }
+
+        /* Error display */
+        .spf-field .spf-error {
+            font-size: .78rem;
+            color: #E53935;
+            margin-top: .2rem;
+        }
+
+        /* Submit button */
+        .spf-submit-row {
+            margin-top: 2.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+        }
+        .spf-submit-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            width: 100%;
+            padding: .95rem 1.5rem;
+            background: linear-gradient(135deg, #E67918 0%, #C5630C 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            transition: opacity .2s, transform .15s;
+            box-shadow: 0 4px 16px rgba(230,121,24,.35);
+        }
+        .spf-submit-btn:hover { opacity: .92; transform: translateY(-1px); }
+        .spf-submit-btn:active { transform: translateY(0); }
+        .spf-submit-btn .material-icons { font-size: 20px; }
+        .spf-submit-note {
+            text-align: center;
+            font-size: .78rem;
+            color: #9E9E9E;
+        }
+        .spf-submit-note .material-icons { font-size: 14px; vertical-align: -3px; color: #4CAF50; }
+
+        /* ---- Sidebar ---- */
+        .spf-sidebar { display: flex; flex-direction: column; gap: 1.25rem; }
+
+        .spf-why-card {
+            background: linear-gradient(145deg, #1A0A3C 0%, #3B1D8C 100%);
+            color: #fff;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(59,29,140,.3);
+        }
+        .spf-why-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0 0 1.25rem;
+        }
+        .spf-why-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .85rem; }
+        .spf-why-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: .65rem;
+            font-size: .875rem;
+            line-height: 1.55;
+            opacity: .92;
+        }
+        .spf-why-list .material-icons { font-size: 18px; color: #B39DFF; flex-shrink: 0; margin-top: .05rem; }
+
+        .spf-contact-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,.07);
+        }
+        .spf-contact-card h4 {
+            font-size: .92rem;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin: 0 0 .85rem;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .spf-contact-card h4 .material-icons { font-size: 18px; color: #E67918; }
+        .spf-contact-item {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            font-size: .85rem;
+            color: #424242;
+            padding: .5rem 0;
+            border-bottom: 1px solid #F5F5F5;
+        }
+        .spf-contact-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .spf-contact-item .material-icons { font-size: 16px; color: #9E9E9E; flex-shrink: 0; }
+        .spf-contact-item a { color: #1565C0; text-decoration: none; }
+        .spf-contact-item a:hover { text-decoration: underline; }
+
+        .spf-secure-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            background: #F1F8E9;
+            border: 1px solid #C5E1A5;
+            border-radius: 10px;
+            padding: .75rem 1rem;
+            font-size: .8rem;
+            font-weight: 600;
+            color: #388E3C;
+        }
+        .spf-secure-badge .material-icons { font-size: 18px; }
+    </style>
+</head>
+<body>
+    {% include 'partials/navbar.html' %}
+
+    <!-- Hero -->
+    <div class="spf-hero">
+        <a href="{% url 'conference_detail' conference.pk %}#tab-sponsors" class="spf-hero__back">
+            <span class="material-icons">arrow_back</span> Back to Conference
+        </a>
+        <div class="spf-hero__badge">
+            <span class="material-icons">workspace_premium</span>
+            Sponsorship Application
+        </div>
+        <h1>Become a Sponsor</h1>
+        <p class="spf-hero__conf">{{ conference.title }} &middot; {{ conference.start_date|date:"M d" }}&ndash;{{ conference.end_date|date:"M d, Y" }} &middot; {{ conference.venue }}</p>
+    </div>
+
+    <!-- Body -->
+    <div class="spf-body">
+
+        <!-- Form card -->
+        <div class="spf-form-card">
+            <h2>Your Sponsorship Details</h2>
+            <p>Complete the form below and our team will review your application and get back to you within 2 business days.</p>
+
+            {% if messages %}
+            {% for message in messages %}
+            <div style="display:flex;align-items:flex-start;gap:.75rem;background:#E8F5E9;border:1px solid #A5D6A7;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.5rem;">
+                <span class="material-icons" style="color:#388E3C;font-size:22px;flex-shrink:0;">check_circle</span>
+                <p style="margin:0;font-size:.9rem;color:#2E7D32;">{{ message }}</p>
             </div>
+            {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" id="spf-form" novalidate>
+                {% csrf_token %}
+
+                <!-- Organisation details -->
+                <div class="spf-section-label">Organisation Details</div>
+                <div class="spf-row">
+                    <div class="spf-field">
+                        <label for="id_company_name">Company / Organisation Name <span class="spf-required">*</span></label>
+                        <input type="text" name="company_name" id="id_company_name" placeholder="e.g. Acme Publishing Ltd"
+                               value="{{ form.company_name.value|default_if_none:'' }}" required>
+                        {% if form.company_name.errors %}<p class="spf-error">{{ form.company_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="spf-field">
+                        <label for="id_website">Website <span style="font-weight:400;color:#9E9E9E;">(optional)</span></label>
+                        <input type="url" name="website" id="id_website" placeholder="https://yourcompany.com"
+                               value="{{ form.website.value|default_if_none:'' }}">
+                        {% if form.website.errors %}<p class="spf-error">{{ form.website.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Contact details -->
+                <div class="spf-section-label">Contact Person</div>
+                <div class="spf-row">
+                    <div class="spf-field">
+                        <label for="id_contact_name">Full Name <span class="spf-required">*</span></label>
+                        <input type="text" name="contact_name" id="id_contact_name" placeholder="e.g. Amara Johnson"
+                               value="{{ form.contact_name.value|default_if_none:'' }}" required>
+                        {% if form.contact_name.errors %}<p class="spf-error">{{ form.contact_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="spf-field">
+                        <label for="id_contact_phone">Phone Number <span class="spf-required">*</span></label>
+                        <input type="tel" name="contact_phone" id="id_contact_phone" placeholder="e.g. 08012345678"
+                               value="{{ form.contact_phone.value|default_if_none:'' }}" required>
+                        {% if form.contact_phone.errors %}<p class="spf-error">{{ form.contact_phone.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+                <div class="spf-field" style="margin-top:1.25rem;">
+                    <label for="id_contact_email">Email Address <span class="spf-required">*</span></label>
+                    <input type="email" name="contact_email" id="id_contact_email" placeholder="e.g. contact@yourcompany.com"
+                           value="{{ form.contact_email.value|default_if_none:'' }}" required>
+                    {% if form.contact_email.errors %}<p class="spf-error">{{ form.contact_email.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Sponsorship tier -->
+                <div class="spf-section-label">Sponsorship Tier</div>
+                <div class="spf-field">
+                    <label>Select a tier <span class="spf-required">*</span></label>
+                    <div class="spf-tier-pills">
+                        <div class="spf-tier-pill tier-platinum" data-value="platinum">
+                            <span class="spf-tier-pill__name">Platinum</span>
+                            <span class="spf-tier-pill__price">&#8358;700,000+</span>
+                        </div>
+                        <div class="spf-tier-pill tier-gold" data-value="gold">
+                            <span class="spf-tier-pill__name">Gold</span>
+                            <span class="spf-tier-pill__price">&#8358;500,000 &ndash; &#8358;699,000</span>
+                        </div>
+                        <div class="spf-tier-pill tier-silver" data-value="silver">
+                            <span class="spf-tier-pill__name">Silver</span>
+                            <span class="spf-tier-pill__price">&#8358;350,000 &ndash; &#8358;499,000</span>
+                        </div>
+                        <div class="spf-tier-pill tier-bronze" data-value="bronze">
+                            <span class="spf-tier-pill__name">Bronze</span>
+                            <span class="spf-tier-pill__price">&#8358;150,000 &ndash; &#8358;349,000</span>
+                        </div>
+                    </div>
+                    <!-- Hidden select driven by pill clicks -->
+                    <select name="level" id="id_level">
+                        <option value="">Select a sponsorship tier&hellip;</option>
+                        <option value="platinum">Platinum</option>
+                        <option value="gold">Gold</option>
+                        <option value="silver">Silver</option>
+                        <option value="bronze">Bronze</option>
+                    </select>
+                    {% if form.level.errors %}<p class="spf-error">{{ form.level.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Logo upload -->
+                <div class="spf-section-label">Company Logo</div>
+                <div class="spf-field">
+                    <label>Upload Your Logo <span class="spf-required">*</span></label>
+                    <div class="spf-upload-wrap" id="upload-wrap">
+                        <span class="material-icons">cloud_upload</span>
+                        <p><strong>Click to upload</strong> or drag &amp; drop</p>
+                        <p>PNG, JPG, SVG &mdash; max 5 MB</p>
+                        <input type="file" name="logo" id="id_logo" accept="image/*" required>
+                    </div>
+                    <div class="spf-upload-filename" id="upload-filename">
+                        <span class="material-icons">check_circle</span>
+                        <span id="upload-name-text"></span>
+                    </div>
+                    {% if form.logo.errors %}<p class="spf-error">{{ form.logo.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Submit -->
+                <div class="spf-submit-row">
+                    <button type="submit" class="spf-submit-btn">
+                        <span class="material-icons">send</span>
+                        Submit Sponsorship Application
+                    </button>
+                    <p class="spf-submit-note">
+                        <span class="material-icons">lock</span>
+                        Your information is secure. We will contact you within 2 business days.
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="spf-sidebar">
+
+            <!-- Why sponsor -->
+            <div class="spf-why-card">
+                <h3>Why Sponsor ELTAN?</h3>
+                <ul class="spf-why-list">
+                    <li>
+                        <span class="material-icons">groups</span>
+                        Engage a captive audience of English language teachers and educators across Nigeria.
+                    </li>
+                    <li>
+                        <span class="material-icons">campaign</span>
+                        Premium brand visibility on banners, programmes, digital channels, and social media.
+                    </li>
+                    <li>
+                        <span class="material-icons">workspace_premium</span>
+                        Formal recognition as a valued partner, boosting credibility in the education sector.
+                    </li>
+                    <li>
+                        <span class="material-icons">handshake</span>
+                        Build lasting relationships with educational institutions and decision-makers.
+                    </li>
+                    <li>
+                        <span class="material-icons">volunteer_activism</span>
+                        Support the development of quality English education in Nigeria.
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Contact -->
+            {% if conference.contact_name or conference.contact_email or conference.contact_phone %}
+            <div class="spf-contact-card">
+                <h4><span class="material-icons">contact_support</span> Questions? Reach Us</h4>
+                {% if conference.contact_name %}
+                <div class="spf-contact-item">
+                    <span class="material-icons">person</span>
+                    {{ conference.contact_name }}
+                </div>
+                {% endif %}
+                {% if conference.contact_email %}
+                <div class="spf-contact-item">
+                    <span class="material-icons">email</span>
+                    <a href="mailto:{{ conference.contact_email }}">{{ conference.contact_email }}</a>
+                </div>
+                {% endif %}
+                {% if conference.contact_phone %}
+                <div class="spf-contact-item">
+                    <span class="material-icons">phone</span>
+                    {{ conference.contact_phone }}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Secure badge -->
+            <div class="spf-secure-badge">
+                <span class="material-icons">verified_user</span>
+                Your data is handled securely &amp; with respect.
+            </div>
+
         </div>
     </div>
-</div>
-{% endblock %}
+
+    {% include 'partials/footer.html' %}
+
+    <script>
+    (function () {
+        /* ---- Tier pill selection ---- */
+        var pills = document.querySelectorAll('.spf-tier-pill');
+        var select = document.getElementById('id_level');
+
+        function selectTier(value) {
+            pills.forEach(function (p) { p.classList.remove('selected'); });
+            if (value) {
+                var pill = document.querySelector('.spf-tier-pill[data-value="' + value + '"]');
+                if (pill) pill.classList.add('selected');
+            }
+            select.value = value || '';
+        }
+
+        pills.forEach(function (pill) {
+            pill.addEventListener('click', function () {
+                selectTier(pill.dataset.value);
+            });
+        });
+
+        // Pre-select if server gave us an initial value (from ?level= or POST error)
+        var initial = select.value || '{{ form.level.value|default_if_none:"" }}';
+        if (initial) selectTier(initial);
+
+        /* ---- File upload label ---- */
+        var fileInput = document.getElementById('id_logo');
+        var uploadWrap = document.getElementById('upload-wrap');
+        var filenameEl = document.getElementById('upload-filename');
+        var nameText = document.getElementById('upload-name-text');
+
+        fileInput.addEventListener('change', function () {
+            if (fileInput.files && fileInput.files[0]) {
+                nameText.textContent = fileInput.files[0].name;
+                filenameEl.classList.add('visible');
+                uploadWrap.style.borderColor = '#4CAF50';
+                uploadWrap.style.background = '#F1F8E9';
+            }
+        });
+
+        ['dragover', 'dragenter'].forEach(function (evt) {
+            uploadWrap.addEventListener(evt, function (e) {
+                e.preventDefault();
+                uploadWrap.classList.add('drag-over');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (evt) {
+            uploadWrap.addEventListener(evt, function () {
+                uploadWrap.classList.remove('drag-over');
+            });
+        });
+    })();
+    </script>
+</body>
+</html>

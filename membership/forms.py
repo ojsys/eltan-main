@@ -102,13 +102,20 @@ class ConferenceRegistrationForm(forms.ModelForm):
 class SponsorApplicationForm(forms.ModelForm):
     class Meta:
         model = ConferenceSponsor
-        fields = ['company_name', 'contact_name', 'contact_email', 'contact_phone', 
-                 'level', 'logo', 'website']
-        
+        fields = ['company_name', 'contact_name', 'contact_email', 'contact_phone',
+                  'level', 'logo', 'website']
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].widget.attrs['class'] = 'form-control'
+        # Replace the blank "------" choice with a proper prompt
+        level_field = self.fields['level']
+        choices = [('', 'Select a sponsorship tier…')] + [
+            (k, v) for k, v in level_field.choices if k != ''
+        ]
+        level_field.choices = choices
+        level_field.widget.choices = choices
 
 
 class MemberProfileUpdateForm(forms.ModelForm):

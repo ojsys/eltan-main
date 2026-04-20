@@ -1101,7 +1101,7 @@ def conference_page(request, pk):
 
 def sponsor_application(request, pk):
     conference = get_object_or_404(EltanConference, pk=pk)
-    
+
     if request.method == 'POST':
         form = SponsorApplicationForm(request.POST, request.FILES)
         if form.is_valid():
@@ -1111,11 +1111,13 @@ def sponsor_application(request, pk):
             messages.success(request, 'Your sponsorship application has been submitted successfully.')
             return redirect('conference_detail', pk=pk)
     else:
-        form = SponsorApplicationForm()
-    
+        level = request.GET.get('level', '')
+        initial = {'level': level} if level else {}
+        form = SponsorApplicationForm(initial=initial)
+
     return render(request, 'membership/sponsor_form.html', {
         'form': form,
-        'conference': conference
+        'conference': conference,
     })
 
 
