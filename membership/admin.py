@@ -159,6 +159,36 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 
 
+class ConferenceLocMemberInline(admin.StackedInline):
+    model = ConferenceLocMember
+    extra = 1
+    fields = ('name', 'role', 'organization', 'email', 'phone', 'image', 'order')
+    ordering = ('order', 'name')
+    verbose_name = 'LOC Member'
+    verbose_name_plural = 'Local Organizing Committee (LOC) Members'
+
+
+class ConferenceSpeakerInline(admin.StackedInline):
+    model = ConferenceSpeaker
+    extra = 0
+    fields = ('name', 'title', 'image', 'presentation_title', 'order')
+    ordering = ('order', 'name')
+    verbose_name = 'Speaker'
+    verbose_name_plural = 'Speakers'
+
+
+class ConferenceScheduleInline(admin.TabularInline):
+    model = ConferenceSchedule
+    extra = 0
+    fields = ('date', 'start_time', 'end_time', 'session_title', 'location', 'speaker')
+
+
+class ConferenceDocumentInline(admin.TabularInline):
+    model = ConferenceDocument
+    extra = 0
+    fields = ('title', 'document', 'is_public')
+
+
 @admin.register(EltanConference)
 class EltanConferenceAdmin(admin.ModelAdmin):
     list_display = ('title', 'start_date', 'end_date', 'registration_status', 'is_active', 'member_fee', 'non_member_fee')
@@ -166,6 +196,34 @@ class EltanConferenceAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'start_date')
     search_fields = ('title', 'theme', 'description')
     actions = None
+    inlines = [ConferenceLocMemberInline, ConferenceSpeakerInline, ConferenceScheduleInline, ConferenceDocumentInline]
+    fieldsets = (
+        ('Conference Info', {
+            'fields': ('title', 'theme', 'description', 'image', 'is_active')
+        }),
+        ('Dates & Venue', {
+            'fields': ('start_date', 'end_date', 'venue')
+        }),
+        ('Registration', {
+            'fields': ('registration_start', 'registration_end', 'early_bird_end', 'is_early_bird_active',
+                       'abstract_form_link')
+        }),
+        ('Fees', {
+            'fields': ('member_fee', 'member_early_bird_fee', 'non_member_fee', 'non_member_early_bird_fee',
+                       'international_delegate_fee')
+        }),
+        ('Payment Links', {
+            'fields': ('member_payment_link', 'non_member_payment_link'),
+            'classes': ('collapse',),
+        }),
+        ('Contact', {
+            'fields': ('contact_name', 'contact_email', 'contact_phone'),
+        }),
+        ('Content Tabs', {
+            'fields': ('sub_themes', 'cfp_guidelines', 'sponsor_packages'),
+            'description': 'These fields populate the Sub-Themes, Call for Papers, and Sponsors tabs on the conference portal.',
+        }),
+    )
     
     def get_queryset(self, request):
         """Avoid selecting newly added columns if migrations haven't been applied yet."""
@@ -177,7 +235,7 @@ class EltanConferenceAdmin(admin.ModelAdmin):
                 'id', 'title', 'theme', 'image', 'start_date', 'end_date', 'venue',
                 'registration_start', 'registration_end', 'early_bird_end', 'is_active',
                 'member_fee', 'member_early_bird_fee', 'non_member_fee', 'non_member_early_bird_fee',
-                'international_delegate_fee'
+                'international_delegate_fee', 'sponsor_packages'
             )
         except DBOperationalError:
             messages.error(request, 'Conference list is limited until database migrations are applied. Please run migrations to enable new fields.')

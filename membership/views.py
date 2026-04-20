@@ -1056,6 +1056,7 @@ def conference_page(request, pk):
         conference = get_object_or_404(EltanConference, pk=pk)
         sub_themes = getattr(conference, 'sub_themes', None)
         cfp_guidelines = getattr(conference, 'cfp_guidelines', None)
+        sponsor_packages = getattr(conference, 'sponsor_packages', None)
         contact_name = getattr(conference, 'contact_name', '')
         contact_email = getattr(conference, 'contact_email', '')
         contact_phone = getattr(conference, 'contact_phone', '')
@@ -1072,6 +1073,7 @@ def conference_page(request, pk):
         ).get(pk=pk)
         sub_themes = None
         cfp_guidelines = None
+        sponsor_packages = None
         contact_name = ''
         contact_email = ''
         contact_phone = ''
@@ -1089,6 +1091,7 @@ def conference_page(request, pk):
         'documents': ConferenceDocument.objects.filter(conference=conference, is_public=True).order_by('-uploaded_at'),
         'sub_themes': sub_themes,
         'cfp_guidelines': cfp_guidelines,
+        'sponsor_packages': sponsor_packages,
         'contact_name': contact_name,
         'contact_email': contact_email,
         'contact_phone': contact_phone,

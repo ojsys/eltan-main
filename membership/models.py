@@ -304,6 +304,61 @@ class EltanConference(models.Model):
     contact_phone = models.CharField(max_length=30, blank=True)
     sub_themes = RichTextField(blank=True, help_text="List of sub-themes (HTML allowed)")
     cfp_guidelines = RichTextField(blank=True, help_text="Call for papers guidelines/content (HTML allowed)")
+    sponsor_packages = RichTextField(
+        blank=True,
+        help_text="Sponsorship package tiers and benefits displayed on the Sponsors tab",
+        default="""<h3>Sponsorship Categories</h3>
+<p>ELTAN offers four sponsorship tiers, each with a tailored package of recognition and benefits. Your sponsorship will not only support the success of this event but also offer your organisation meaningful visibility and engagement with a key audience.</p>
+
+<h4>1. Platinum Sponsor &ndash; &#8358;700,000 and above</h4>
+<ul>
+<li>Recognition as Platinum Sponsor in all event materials</li>
+<li>Logo placement on all banners, posters, and digital promotions</li>
+<li>Full-page advert in the conference programme</li>
+<li>Speaking opportunity during the opening session</li>
+<li>Exhibition booth in premium location</li>
+<li>4 complimentary registrations</li>
+<li>Social media recognition before, during, and after the event</li>
+<li>Company materials included in participant bags</li>
+</ul>
+
+<h4>2. Gold Sponsor &ndash; &#8358;500,000 &ndash; &#8358;699,000</h4>
+<ul>
+<li>Recognition as Gold Sponsor in event materials</li>
+<li>Logo on banners, posters, and digital promotions</li>
+<li>Half-page advert in the programme</li>
+<li>Exhibition booth</li>
+<li>2 complimentary registrations</li>
+<li>Social media shoutouts</li>
+<li>Company materials included in participant bags</li>
+</ul>
+
+<h4>3. Silver Sponsor &ndash; &#8358;350,000 &ndash; &#8358;499,000</h4>
+<ul>
+<li>Recognition as Silver Sponsor</li>
+<li>Logo on event website and select materials</li>
+<li>Quarter-page advert in the programme</li>
+<li>1 complimentary registration</li>
+<li>Shared exhibition space</li>
+<li>Mention on social media</li>
+</ul>
+
+<h4>4. Bronze Sponsor &ndash; &#8358;150,000 &ndash; &#8358;349,000</h4>
+<ul>
+<li>Name listed in the programme and on the website</li>
+<li>Company materials displayed at registration</li>
+<li>Mention during the closing session</li>
+</ul>
+
+<h3>In-Kind Sponsorship</h3>
+<p>ELTAN warmly welcomes contributions in forms other than cash. In-kind sponsors receive benefits matched to the value of their contribution, which may include logo display, exhibition space, and formal acknowledgements. Acceptable in-kind contributions include:</p>
+<ul>
+<li>Conference materials (e.g., bags, notepads, pens)</li>
+<li>Refreshments and catering</li>
+<li>Technical support (AV equipment, printing, photography)</li>
+</ul>
+<p>Custom sponsorship packages are also available upon request. We are happy to design an arrangement that aligns with your organisation&rsquo;s specific goals and budget.</p>"""
+    )
     
     # Different fee categories
     member_fee = models.DecimalField(max_digits=10, decimal_places=2)

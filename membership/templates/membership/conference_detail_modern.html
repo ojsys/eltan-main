@@ -136,6 +136,42 @@
 
         /* Sticky right column */
         .content-illustration { display: flex; flex-direction: column; gap: 0; }
+
+        /* Sponsor logos with tier badge */
+        .sponsor-logo-wrap {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .5rem;
+            text-decoration: none;
+            padding: .75rem;
+            border-radius: var(--radius-lg);
+            background: var(--color-white);
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow .2s, transform .2s;
+        }
+        .sponsor-logo-wrap:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+        .sponsor-logo-wrap .sponsor-logo { max-height: 72px; width: auto; object-fit: contain; }
+        .sponsor-tier {
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            padding: .15rem .55rem;
+            border-radius: 999px;
+        }
+        .sponsor-tier--platinum { background: #E8E0FF; color: #5B3CC4; }
+        .sponsor-tier--gold     { background: #FFF3CD; color: #856404; }
+        .sponsor-tier--silver   { background: #E9ECEF; color: #495057; }
+        .sponsor-tier--bronze   { background: #FDEADC; color: #B94A1B; }
+
+        /* Sponsorship packages rich text styling */
+        .sponsor-packages-content h3 { font-size: 1.25rem; font-weight: 700; margin: 1.5rem 0 .5rem; color: var(--color-gray-900); }
+        .sponsor-packages-content h4 { font-size: 1.05rem; font-weight: 700; margin: 1.25rem 0 .4rem; color: var(--eltan-orange); }
+        .sponsor-packages-content ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+        .sponsor-packages-content ul li { margin-bottom: .3rem; color: var(--color-gray-700); line-height: 1.6; }
+        .sponsor-packages-content p { color: var(--color-gray-700); line-height: 1.7; margin-bottom: .75rem; }
     </style>
 </head>
 <body>
@@ -409,21 +445,56 @@
     <section class="conf-tabpanel" id="tab-sponsors">
         <div class="container">
             <div class="conf-section__header">
-                <p class="conf-kicker">Sponsors</p>
-                <h2 class="conf-title">Our Partners</h2>
+                <p class="conf-kicker">Sponsors &amp; Packages</p>
+                <h2 class="conf-title">Partner With Us</h2>
             </div>
-            <div class="sponsor-grid">
-                {% for sp in sponsors %}
-                    {% if sp.is_approved %}
+
+            <!-- Approved sponsor logos -->
+            {% with approved_sponsors=sponsors|dictsort:"level" %}
+            {% if approved_sponsors %}
+            {% for sp in approved_sponsors %}{% if sp.is_approved %}{% if forloop.first %}
+            <div style="margin-bottom:2.5rem;">
+                <h3 class="panel-section__title" style="border:none;padding:0;margin-bottom:1.25rem;">
+                    <span class="material-icons">handshake</span> Our Sponsors
+                </h3>
+                <div class="sponsor-grid">
+            {% endif %}
+                    <a href="{{ sp.website|default:'#' }}" target="_blank" rel="noopener" title="{{ sp.company_name }}" class="sponsor-logo-wrap">
                         <img src="{{ sp.logo.url }}" alt="{{ sp.company_name }}" class="sponsor-logo">
-                    {% endif %}
-                {% empty %}
-                    <p class="text-body-large" style="color:var(--color-gray-500);">Sponsorship opportunities available.</p>
-                {% endfor %}
+                        <span class="sponsor-tier sponsor-tier--{{ sp.level }}">{{ sp.get_level_display }}</span>
+                    </a>
+            {% if forloop.last %}</div></div>{% endif %}
+            {% endif %}{% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Sponsorship packages content -->
+            {% if sponsor_packages %}
+            <div class="panel-section">
+                <h3 class="panel-section__title">
+                    <span class="material-icons">workspace_premium</span> Sponsorship Packages
+                </h3>
+                <div class="text-body-large sponsor-packages-content">
+                    {{ sponsor_packages|safe }}
+                </div>
+                <div style="margin-top:1.5rem;">
+                    <a href="{% url 'sponsor_application' conference.pk %}" class="btn btn-primary btn-pill">
+                        <span class="material-icons" style="font-size:18px;">send</span>
+                        Apply to Sponsor This Conference
+                    </a>
+                </div>
             </div>
+            {% else %}
+            <div class="panel-section">
+                <p class="text-body-large" style="color:var(--color-gray-500);">Sponsorship packages coming soon.</p>
+            </div>
+            {% endif %}
+
             {% if documents %}
-            <div class="mt-xl">
-                <h3 class="text-heading-2">Documents</h3>
+            <div class="panel-section" style="margin-top:1.5rem;">
+                <h3 class="panel-section__title">
+                    <span class="material-icons">folder_open</span> Documents
+                </h3>
                 <ul class="footer-links">
                     {% for d in documents %}
                         <li><a href="{{ d.document.url }}" target="_blank">{{ d.title }}</a></li>
