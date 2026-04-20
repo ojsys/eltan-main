@@ -11,6 +11,132 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        /* Lightbox */
+        .conf-lightbox-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.88);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            cursor: zoom-out;
+        }
+        .conf-lightbox-overlay.open { display: flex; }
+        .conf-lightbox-overlay img {
+            max-width: 90vw;
+            max-height: 88vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 32px 80px rgba(0,0,0,.6);
+            cursor: default;
+        }
+        .conf-lightbox-close {
+            position: fixed;
+            top: 1rem;
+            right: 1.25rem;
+            background: rgba(255,255,255,.15);
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            line-height: 1;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s;
+        }
+        .conf-lightbox-close:hover { background: rgba(255,255,255,.3); }
+
+        /* Conference image thumbnail */
+        .conf-image-thumb {
+            margin-top: 1.25rem;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            cursor: zoom-in;
+            position: relative;
+        }
+        .conf-image-thumb img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            transition: transform .35s ease, filter .35s ease;
+        }
+        .conf-image-thumb:hover img {
+            transform: scale(1.04);
+            filter: brightness(.88);
+        }
+        .conf-image-thumb__hint {
+            position: absolute;
+            bottom: .6rem;
+            right: .6rem;
+            background: rgba(0,0,0,.55);
+            color: #fff;
+            font-size: .75rem;
+            font-weight: 600;
+            padding: .25rem .6rem;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            gap: .3rem;
+            pointer-events: none;
+        }
+        .conf-image-thumb__hint .material-icons { font-size: 14px; }
+
+        /* Tab panel sections */
+        .conf-tabpanel .panel-section {
+            background: var(--color-white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 2rem 2.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .conf-tabpanel .panel-section:last-child { margin-bottom: 0; }
+        .panel-section__title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--color-gray-900);
+            margin: 0 0 1rem 0;
+            padding-bottom: .75rem;
+            border-bottom: 2px solid var(--color-gray-100);
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .panel-section__title .material-icons {
+            color: var(--eltan-orange);
+            font-size: 22px;
+        }
+
+        /* Key info grid on overview */
+        .conf-keyinfo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .conf-keyinfo-item {
+            background: var(--color-gray-50, #F8F9FA);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+        }
+        .conf-keyinfo-item .material-icons { color: var(--eltan-orange); font-size: 22px; margin-top: .1rem; }
+        .conf-keyinfo-item__label { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--color-gray-500, #9E9E9E); margin-bottom: .2rem; }
+        .conf-keyinfo-item__value { font-weight: 600; color: var(--color-gray-900); font-size: .95rem; }
+
+        /* Sticky right column */
+        .content-illustration { display: flex; flex-direction: column; gap: 0; }
+    </style>
 </head>
 <body>
     {% include 'partials/navbar.html' %}
@@ -29,15 +155,15 @@
             </div>
             <h1 class="conf-hero__title">{{ conference.title }}</h1>
             <p class="conf-hero__meta">
-                {{ conference.theme }} · {{ conference.start_date|date:"M d" }} – {{ conference.end_date|date:"M d, Y" }} · {{ conference.venue }}
+                {{ conference.theme }} &middot; {{ conference.start_date|date:"M d" }} &ndash; {{ conference.end_date|date:"M d, Y" }} &middot; {{ conference.venue }}
             </p>
             <div class="conf-hero__cta">
                 {% if conference.is_open_for_registration %}
                     <a href="{% url 'conference_register' conference.pk %}?type=member" class="btn btn-primary btn-pill">Register as Member</a>
-                    <a href="{% url 'conference_register' conference.pk %}?type=non-member" class="btn btn-secondary btn-pill">Non‑Member</a>
+                    <a href="{% url 'conference_register' conference.pk %}?type=non-member" class="btn btn-secondary btn-pill">Non&#8209;Member</a>
                     <a href="{% url 'conference_register' conference.pk %}?type=international" class="btn btn-secondary btn-pill">International</a>
                 {% else %}
-                    <span class="btn btn-secondary btn-pill" style="opacity: .8; cursor: not-allowed;">Registration Closed</span>
+                    <span class="btn btn-secondary btn-pill" style="opacity:.8;cursor:not-allowed;">Registration Closed</span>
                 {% endif %}
             </div>
         </div>
@@ -46,50 +172,86 @@
     <!-- Tabs -->
     <div class="conf-tabs">
         <div class="container">
-            <a href="#tab-overview" class="conf-tab active" data-target="tab-overview"><span class="material-icons">info</span> Overview</a>
-            <a href="#tab-speakers" class="conf-tab" data-target="tab-speakers"><span class="material-icons">groups</span> Speakers</a>
-            <a href="#tab-schedule" class="conf-tab" data-target="tab-schedule"><span class="material-icons">schedule</span> Schedule</a>
-            <a href="#tab-sponsors" class="conf-tab" data-target="tab-sponsors"><span class="material-icons">handshake</span> Sponsors</a>
-            <a href="#tab-loc" class="conf-tab" data-target="tab-loc"><span class="material-icons">diversity_3</span> LOC</a>
-            {% if abstract_form_link %}
-            <a href="{{ abstract_form_link }}" target="_blank" class="conf-tab" style="text-decoration:none;"><span class="material-icons">upload_file</span> Submit Abstract</a>
+            <a href="#tab-overview"   class="conf-tab active" data-target="tab-overview"><span class="material-icons">info</span> Overview</a>
+            {% if sub_themes %}
+            <a href="#tab-subthemes"  class="conf-tab" data-target="tab-subthemes"><span class="material-icons">format_list_bulleted</span> Sub&#8209;Themes</a>
             {% endif %}
+            {% if cfp_guidelines %}
+            <a href="#tab-cfp"        class="conf-tab" data-target="tab-cfp"><span class="material-icons">upload_file</span> Call for Papers</a>
+            {% endif %}
+            <a href="#tab-speakers"   class="conf-tab" data-target="tab-speakers"><span class="material-icons">groups</span> Speakers</a>
+            <a href="#tab-schedule"   class="conf-tab" data-target="tab-schedule"><span class="material-icons">schedule</span> Schedule</a>
+            <a href="#tab-sponsors"   class="conf-tab" data-target="tab-sponsors"><span class="material-icons">handshake</span> Sponsors</a>
+            <a href="#tab-loc"        class="conf-tab" data-target="tab-loc"><span class="material-icons">diversity_3</span> LOC</a>
         </div>
     </div>
 
-    <!-- Overview and Registration -->
+    <!-- ===== OVERVIEW TAB ===== -->
     <section class="conf-tabpanel active" id="tab-overview">
         <div class="container">
             <div class="overview-grid">
+
+                <!-- Left: About + key info -->
                 <div class="content-text">
-                    <div class="conf-section__header">
-                        <p class="conf-kicker">Overview</p>
-                        <h2 class="conf-title">About the Conference</h2>
+                    <!-- Key info strip -->
+                    <div class="conf-keyinfo">
+                        <div class="conf-keyinfo-item">
+                            <span class="material-icons">event</span>
+                            <div>
+                                <div class="conf-keyinfo-item__label">Date</div>
+                                <div class="conf-keyinfo-item__value">{{ conference.start_date|date:"M d" }} &ndash; {{ conference.end_date|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+                        <div class="conf-keyinfo-item">
+                            <span class="material-icons">location_on</span>
+                            <div>
+                                <div class="conf-keyinfo-item__label">Venue</div>
+                                <div class="conf-keyinfo-item__value">{{ conference.venue }}</div>
+                            </div>
+                        </div>
+                        <div class="conf-keyinfo-item">
+                            <span class="material-icons">app_registration</span>
+                            <div>
+                                <div class="conf-keyinfo-item__label">Registration</div>
+                                <div class="conf-keyinfo-item__value">{{ conference.registration_start|date:"M d" }} &ndash; {{ conference.registration_end|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="text-body-large">
-                        {{ conference.description|safe }}
+
+                    <!-- About the conference -->
+                    <div class="panel-section">
+                        <h3 class="panel-section__title">
+                            <span class="material-icons">info</span>
+                            About the Conference
+                        </h3>
+                        <div class="text-body-large">
+                            {{ conference.description|safe }}
+                        </div>
                     </div>
-                    {% if sub_themes %}
-                    <div class="mt-lg">
-                        <h3 class="text-heading-2">Sub-Themes</h3>
-                        <div class="text-body-large">{{ sub_themes|safe }}</div>
-                    </div>
-                    {% endif %}
-                    {% if cfp_guidelines %}
-                    <div class="mt-lg">
-                        <h3 class="text-heading-2">Call for Papers</h3>
-                        <div class="text-body-large">{{ cfp_guidelines|safe }}</div>
-                        {% if abstract_form_link %}
-                        <a href="{{ abstract_form_link }}" target="_blank" class="btn btn-secondary mt-md">Submit Abstract</a>
+
+                    <!-- Quick links to other tabs (only if content exists) -->
+                    {% if sub_themes or cfp_guidelines %}
+                    <div style="display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1rem;">
+                        {% if sub_themes %}
+                        <a href="#tab-subthemes" class="btn btn-outline-primary btn-pill" data-target="tab-subthemes" style="font-size:.9rem;">
+                            <span class="material-icons" style="font-size:18px;">format_list_bulleted</span> View Sub-Themes
+                        </a>
+                        {% endif %}
+                        {% if cfp_guidelines %}
+                        <a href="#tab-cfp" class="btn btn-outline-primary btn-pill" data-target="tab-cfp" style="font-size:.9rem;">
+                            <span class="material-icons" style="font-size:18px;">upload_file</span> Call for Papers
+                        </a>
                         {% endif %}
                     </div>
                     {% endif %}
                 </div>
+
+                <!-- Right: Registration card + image -->
                 <div class="content-illustration">
                     <div class="conf-reg-card">
                         <h3 class="text-heading-2" style="margin-bottom:.25rem;">Registration</h3>
                         {% if conference.is_early_bird_active %}
-                        <div class="conf-badge-info" style="margin: .5rem 0 1rem 0;">
+                        <div class="conf-badge-info" style="margin:.5rem 0 1rem 0;">
                             <span class="material-icons" style="color:#1565C0">info</span>
                             <div>
                                 <strong>Early Bird Rates Available!</strong><br>
@@ -98,26 +260,26 @@
                         </div>
                         {% endif %}
                         <ul class="conf-reg-list">
-                            <li><strong>Member:</strong> ₦{{ conference.member_fee }}</li>
-                            <li><strong>Member (Early Bird):</strong> ₦{{ conference.member_early_bird_fee }}</li>
-                            <li><strong>Non‑Member:</strong> ₦{{ conference.non_member_fee }}</li>
-                            <li><strong>Non‑Member (Early Bird):</strong> ₦{{ conference.non_member_early_bird_fee }}</li>
+                            <li><strong>Member:</strong> &#8358;{{ conference.member_fee }}</li>
+                            <li><strong>Member (Early Bird):</strong> &#8358;{{ conference.member_early_bird_fee }}</li>
+                            <li><strong>Non&#8209;Member:</strong> &#8358;{{ conference.non_member_fee }}</li>
+                            <li><strong>Non&#8209;Member (Early Bird):</strong> &#8358;{{ conference.non_member_early_bird_fee }}</li>
                             {% if conference.international_delegate_fee %}
                             <li><strong>International Delegate:</strong> ${{ conference.international_delegate_fee }}</li>
                             {% endif %}
                         </ul>
-                        <div style="display: grid; gap: .5rem;">
+                        <div style="display:grid;gap:.5rem;">
                             {% if conference.is_open_for_registration %}
-                                <a href="{% url 'conference_register' conference.pk %}?type=member" class="btn btn-primary btn-pill">Register as Member</a>
-                                <a href="{% url 'conference_register' conference.pk %}?type=non-member" class="btn btn-secondary btn-pill">Register as Non‑Member</a>
+                                <a href="{% url 'conference_register' conference.pk %}?type=member"       class="btn btn-primary btn-pill">Register as Member</a>
+                                <a href="{% url 'conference_register' conference.pk %}?type=non-member"   class="btn btn-secondary btn-pill">Register as Non&#8209;Member</a>
                                 <a href="{% url 'conference_register' conference.pk %}?type=international" class="btn btn-secondary btn-pill">International Delegate</a>
                             {% else %}
-                                <span class="btn btn-secondary btn-pill" style="opacity: .7; cursor: not-allowed;">Registration Closed</span>
+                                <span class="btn btn-secondary btn-pill" style="opacity:.7;cursor:not-allowed;">Registration Closed</span>
                             {% endif %}
                         </div>
                         {% if contact_name or contact_email or contact_phone %}
                         <div class="mt-md">
-                            <p class="text-body-large" style="font-size: .95rem;">
+                            <p class="text-body-large" style="font-size:.9rem;">
                                 <strong>Contact:</strong> {{ contact_name }}
                                 {% if contact_phone %}<br>Phone: {{ contact_phone }}{% endif %}
                                 {% if contact_email %}<br>Email: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% endif %}
@@ -125,12 +287,61 @@
                         </div>
                         {% endif %}
                     </div>
+
+                    <!-- Conference image thumbnail (below reg card) -->
+                    {% if conference.image %}
+                    <div class="conf-image-thumb" id="conf-img-trigger" role="button" tabindex="0" aria-label="View conference image">
+                        <img src="{{ conference.image.url }}" alt="{{ conference.title }}">
+                        <span class="conf-image-thumb__hint">
+                            <span class="material-icons">zoom_in</span> View full image
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
+
             </div>
         </div>
     </section>
 
-    <!-- Speakers -->
+    <!-- ===== SUB-THEMES TAB ===== -->
+    {% if sub_themes %}
+    <section class="conf-tabpanel" id="tab-subthemes">
+        <div class="container">
+            <div class="conf-section__header">
+                <p class="conf-kicker">Sub-Themes</p>
+                <h2 class="conf-title">Conference Sub-Themes</h2>
+            </div>
+            <div class="panel-section">
+                <div class="text-body-large">{{ sub_themes|safe }}</div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- ===== CALL FOR PAPERS TAB ===== -->
+    {% if cfp_guidelines %}
+    <section class="conf-tabpanel" id="tab-cfp">
+        <div class="container">
+            <div class="conf-section__header">
+                <p class="conf-kicker">Call for Papers</p>
+                <h2 class="conf-title">Abstract Submission Guidelines</h2>
+            </div>
+            <div class="panel-section">
+                <div class="text-body-large">{{ cfp_guidelines|safe }}</div>
+                {% if abstract_form_link %}
+                <div style="margin-top:1.5rem;">
+                    <a href="{{ abstract_form_link }}" target="_blank" class="btn btn-primary btn-pill">
+                        <span class="material-icons" style="font-size:18px;">upload_file</span>
+                        Submit Your Abstract
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- ===== SPEAKERS TAB ===== -->
     <section class="conf-tabpanel" id="tab-speakers">
         <div class="container">
             <div class="conf-section__header">
@@ -144,24 +355,26 @@
                     {% if s.image %}
                     <img src="{{ s.image.url }}" alt="{{ s.name }}" class="speaker-card__img">
                     {% else %}
-                    <div style="width: 100%; height: 400px; background: linear-gradient(135deg, #E67918 0%, #1565C0 100%); display: flex; align-items: center; justify-content: center;">
-                        <span class="material-icons" style="font-size: 100px; color: white; opacity: 0.9;">person</span>
+                    <div style="width:100%;height:400px;background:linear-gradient(135deg,#E67918 0%,#1565C0 100%);display:flex;align-items:center;justify-content:center;">
+                        <span class="material-icons" style="font-size:100px;color:white;opacity:.9;">person</span>
                     </div>
                     {% endif %}
                     <div class="speaker-card__body">
                         <div class="speaker-card__name">{{ s.name }}</div>
-                        <div class="speaker-card__meta">{{ s.title }}{% if s.presentation_title %} • {{ s.presentation_title }}{% endif %}</div>
+                        <div class="speaker-card__meta">{{ s.title }}{% if s.presentation_title %} &bull; {{ s.presentation_title }}{% endif %}</div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-body-large">Speakers will be announced soon.</p>
+            <div class="panel-section">
+                <p class="text-body-large" style="color:var(--color-gray-500);">Speakers will be announced soon.</p>
+            </div>
             {% endif %}
         </div>
     </section>
 
-    <!-- Schedule -->
+    <!-- ===== SCHEDULE TAB ===== -->
     <section class="conf-tabpanel" id="tab-schedule">
         <div class="container">
             <div class="conf-section__header">
@@ -174,23 +387,25 @@
                         <div class="timeline-item">
                             <div class="timeline-time">
                                 <div>{{ item.date|date:"M d" }}</div>
-                                <small>{{ item.start_time }}–{{ item.end_time }}</small>
+                                <small>{{ item.start_time }}&ndash;{{ item.end_time }}</small>
                             </div>
                             <div class="timeline-card">
                                 <div class="timeline-title">{{ item.session_title }}</div>
-                                <div class="timeline-meta">{{ item.location }}{% if item.speaker %} • {{ item.speaker.name }}{% endif %}</div>
+                                <div class="timeline-meta">{{ item.location }}{% if item.speaker %} &bull; {{ item.speaker.name }}{% endif %}</div>
                                 {% if item.description %}<div class="text-muted" style="margin-top:.25rem;">{{ item.description }}</div>{% endif %}
                             </div>
                         </div>
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="text-body-large">Schedule will be published soon.</p>
+            <div class="panel-section">
+                <p class="text-body-large" style="color:var(--color-gray-500);">Schedule will be published soon.</p>
+            </div>
             {% endif %}
         </div>
     </section>
 
-    <!-- Sponsors & Documents -->
+    <!-- ===== SPONSORS TAB ===== -->
     <section class="conf-tabpanel" id="tab-sponsors">
         <div class="container">
             <div class="conf-section__header">
@@ -203,7 +418,7 @@
                         <img src="{{ sp.logo.url }}" alt="{{ sp.company_name }}" class="sponsor-logo">
                     {% endif %}
                 {% empty %}
-                    <p class="text-body-large">Sponsorship opportunities available.</p>
+                    <p class="text-body-large" style="color:var(--color-gray-500);">Sponsorship opportunities available.</p>
                 {% endfor %}
             </div>
             {% if documents %}
@@ -219,7 +434,7 @@
         </div>
     </section>
 
-    <!-- LOC Members -->
+    <!-- ===== LOC TAB ===== -->
     <section class="conf-tabpanel" id="tab-loc">
         <div class="container">
             <div class="conf-section__header">
@@ -243,7 +458,9 @@
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-body-large">LOC details coming soon.</p>
+            <div class="panel-section">
+                <p class="text-body-large" style="color:var(--color-gray-500);">LOC details coming soon.</p>
+            </div>
             {% endif %}
         </div>
     </section>
@@ -251,38 +468,75 @@
     {% if conference.is_open_for_registration %}
     <div class="floating-cta">
         <a href="{% url 'conference_register' conference.pk %}?type=member" class="btn btn-primary btn-pill">
-            <span class="material-icons" style="font-size: 18px;">how_to_reg</span> Register Now
+            <span class="material-icons" style="font-size:18px;">how_to_reg</span> Register Now
         </a>
     </div>
     {% endif %}
 
+    <!-- Lightbox -->
+    {% if conference.image %}
+    <div class="conf-lightbox-overlay" id="conf-lightbox" role="dialog" aria-modal="true" aria-label="Conference image">
+        <button class="conf-lightbox-close" id="conf-lightbox-close" aria-label="Close">&times;</button>
+        <img src="{{ conference.image.url }}" alt="{{ conference.title }}" id="conf-lightbox-img">
+    </div>
+    {% endif %}
+
     {% include 'partials/footer.html' %}
+
     <script>
-      (function(){
+    (function () {
+        /* ---- Tab navigation ---- */
         const tabs = document.querySelectorAll('.conf-tab[data-target]');
         const panes = document.querySelectorAll('.conf-tabpanel');
         const tabsWrap = document.querySelector('.conf-tabs');
 
-        function activate(target){
-          panes.forEach(p=>p.classList.remove('active'));
-          tabs.forEach(t=>t.classList.remove('active'));
-          const pane = document.getElementById(target);
-          const tab = Array.from(tabs).find(t=>t.dataset.target===target);
-          if (pane) pane.classList.add('active');
-          if (tab) tab.classList.add('active');
-          // Keep page near the tabs for better UX
-          if (tabsWrap) window.scrollTo({ top: tabsWrap.offsetTop + 1, behavior: 'instant' in window ? 'instant' : 'auto' });
+        function activate(target) {
+            panes.forEach(p => p.classList.remove('active'));
+            tabs.forEach(t => t.classList.remove('active'));
+            const pane = document.getElementById(target);
+            const tab = Array.from(tabs).find(t => t.dataset.target === target);
+            if (pane) pane.classList.add('active');
+            if (tab) tab.classList.add('active');
+            if (tabsWrap) window.scrollTo({ top: tabsWrap.offsetTop + 1, behavior: ('instant' in window) ? 'instant' : 'auto' });
         }
 
-        // Hash-based activation (primary driver)
-        function fromHash(){
-          const hash = (location.hash || '').replace('#','');
-          const target = hash ? (hash.startsWith('tab-') ? hash : ('tab-' + hash)) : 'tab-overview';
-          if (document.getElementById(target)) activate(target);
+        function fromHash() {
+            const hash = (location.hash || '').replace('#', '');
+            const target = hash ? (hash.startsWith('tab-') ? hash : ('tab-' + hash)) : 'tab-overview';
+            if (document.getElementById(target)) activate(target);
         }
+
         window.addEventListener('hashchange', fromHash);
         fromHash();
-      })();
+
+        // Also wire up in-page "View Sub-Themes / Call for Papers" buttons
+        document.querySelectorAll('a[data-target]').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                const target = el.dataset.target;
+                if (document.getElementById(target)) {
+                    e.preventDefault();
+                    history.pushState(null, '', '#' + target);
+                    activate(target);
+                }
+            });
+        });
+
+        /* ---- Lightbox ---- */
+        var overlay = document.getElementById('conf-lightbox');
+        var trigger = document.getElementById('conf-img-trigger');
+        var closeBtn = document.getElementById('conf-lightbox-close');
+
+        if (overlay && trigger) {
+            function openLightbox() { overlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+            function closeLightbox() { overlay.classList.remove('open'); document.body.style.overflow = ''; }
+
+            trigger.addEventListener('click', openLightbox);
+            trigger.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(); } });
+            closeBtn.addEventListener('click', closeLightbox);
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) closeLightbox(); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLightbox(); });
+        }
+    })();
     </script>
 </body>
 </html>
