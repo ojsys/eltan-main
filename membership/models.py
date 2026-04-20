@@ -5,6 +5,8 @@ from django.conf import settings
 from ckeditor.fields import RichTextField
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from account.models import CustomUser
 from dateutil.relativedelta import relativedelta
 
@@ -607,6 +609,95 @@ class ConferenceAccommodation(models.Model):
 
     def __str__(self):
         return f"{self.name} — {self.conference.title}"
+
+
+_DEFAULT_SPONSORSHIP_PACKAGES = [
+    {
+        'tier': 'platinum',
+        'tier_label': 'Platinum Sponsor',
+        'price_range': '₦700,000+',
+        'is_featured': True,
+        'cta_label': 'Become a Platinum Sponsor',
+        'order': 1,
+        'benefits': (
+            "Recognition as Platinum Sponsor in all event materials\n"
+            "Logo placement on all banners, posters, and digital promotions\n"
+            "Full-page advert in the conference programme\n"
+            "Speaking opportunity during the opening session\n"
+            "Exhibition booth in premium location\n"
+            "4 complimentary registrations\n"
+            "Social media recognition before, during, and after the event\n"
+            "Company materials included in participant bags"
+        ),
+    },
+    {
+        'tier': 'gold',
+        'tier_label': 'Gold Sponsor',
+        'price_range': '₦500,000 – ₦699,000',
+        'is_featured': False,
+        'cta_label': 'Become a Gold Sponsor',
+        'order': 2,
+        'benefits': (
+            "Recognition as Gold Sponsor in event materials\n"
+            "Logo on banners, posters, and digital promotions\n"
+            "Half-page advert in the programme\n"
+            "Exhibition booth\n"
+            "2 complimentary registrations\n"
+            "Social media shoutouts\n"
+            "Company materials included in participant bags"
+        ),
+    },
+    {
+        'tier': 'silver',
+        'tier_label': 'Silver Sponsor',
+        'price_range': '₦350,000 – ₦499,000',
+        'is_featured': False,
+        'cta_label': 'Become a Silver Sponsor',
+        'order': 3,
+        'benefits': (
+            "Recognition as Silver Sponsor\n"
+            "Logo on event website and select materials\n"
+            "Quarter-page advert in the programme\n"
+            "1 complimentary registration\n"
+            "Shared exhibition space\n"
+            "Mention on social media"
+        ),
+    },
+    {
+        'tier': 'bronze',
+        'tier_label': 'Bronze Sponsor',
+        'price_range': '₦150,000 – ₦349,000',
+        'is_featured': False,
+        'cta_label': 'Become a Bronze Sponsor',
+        'order': 4,
+        'benefits': (
+            "Name listed in the programme and on the website\n"
+            "Company materials displayed at registration\n"
+            "Mention during the closing session"
+        ),
+    },
+    {
+        'tier': 'inkind',
+        'tier_label': 'In-Kind Sponsorship',
+        'price_range': 'Value-matched benefits',
+        'is_featured': False,
+        'cta_label': 'Express Interest',
+        'order': 5,
+        'benefits': (
+            "ELTAN warmly welcomes non-cash contributions. In-kind sponsors receive benefits matched to the value of their contribution — including logo display, exhibition space, and formal acknowledgements.\n"
+            "Acceptable contributions include: conference materials (e.g., bags, notepads, pens), refreshments and catering, technical support (AV equipment, printing, photography).\n"
+            "Custom sponsorship packages are also available upon request. We are happy to design an arrangement that aligns with your organisation's specific goals and budget."
+        ),
+    },
+]
+
+
+@receiver(post_save, sender='membership.EltanConference')
+def create_default_sponsorship_packages(sender, instance, created, **kwargs):
+    """Auto-seed default sponsorship packages when a new conference is created."""
+    if created:
+        for pkg in _DEFAULT_SPONSORSHIP_PACKAGES:
+            SponsorshipPackage.objects.create(conference=instance, **pkg)
 
 
 ###############Defining Executive Committee (Exco) Models#######################
