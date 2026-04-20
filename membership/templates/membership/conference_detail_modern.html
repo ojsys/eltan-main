@@ -137,7 +137,7 @@
         /* Sticky right column */
         .content-illustration { display: flex; flex-direction: column; gap: 0; }
 
-        /* Sponsor logos with tier badge */
+        /* ---- Sponsor logos with tier badge ---- */
         .sponsor-logo-wrap {
             position: relative;
             display: flex;
@@ -161,17 +161,206 @@
             padding: .15rem .55rem;
             border-radius: 999px;
         }
-        .sponsor-tier--platinum { background: #E8E0FF; color: #5B3CC4; }
+        .sponsor-tier--platinum { background: #EDE7FF; color: #5B3CC4; }
         .sponsor-tier--gold     { background: #FFF3CD; color: #856404; }
         .sponsor-tier--silver   { background: #E9ECEF; color: #495057; }
         .sponsor-tier--bronze   { background: #FDEADC; color: #B94A1B; }
 
-        /* Sponsorship packages rich text styling */
-        .sponsor-packages-content h3 { font-size: 1.25rem; font-weight: 700; margin: 1.5rem 0 .5rem; color: var(--color-gray-900); }
-        .sponsor-packages-content h4 { font-size: 1.05rem; font-weight: 700; margin: 1.25rem 0 .4rem; color: var(--eltan-orange); }
-        .sponsor-packages-content ul { padding-left: 1.5rem; margin-bottom: 1rem; }
-        .sponsor-packages-content ul li { margin-bottom: .3rem; color: var(--color-gray-700); line-height: 1.6; }
-        .sponsor-packages-content p { color: var(--color-gray-700); line-height: 1.7; margin-bottom: .75rem; }
+        /* ---- Sponsors tab hero banner ---- */
+        .sp-hero {
+            background: linear-gradient(135deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
+            color: #fff;
+            padding: 3.5rem 1rem 3rem;
+        }
+        .sp-hero-cta {
+            background: var(--eltan-orange);
+            color: #fff;
+            border-color: var(--eltan-orange);
+        }
+        .sp-hero-cta:hover { background: var(--eltan-orange-dark); border-color: var(--eltan-orange-dark); }
+
+        /* ---- Section intro ---- */
+        .sp-intro { margin-bottom: 2rem; }
+        .sp-intro .conf-title { margin-bottom: .5rem; }
+
+        /* ---- Tier cards grid ---- */
+        .sp-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+            align-items: start;
+        }
+
+        .sp-card {
+            border-radius: 16px;
+            padding: 2rem 1.75rem 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,.08);
+            transition: transform .3s ease, box-shadow .3s ease;
+        }
+        .sp-card:hover { transform: translateY(-6px); box-shadow: 0 12px 40px rgba(0,0,0,.14); }
+
+        /* Tier colour themes */
+        .sp-card--platinum {
+            background: linear-gradient(145deg, #1A0A3C 0%, #3B1D8C 100%);
+            color: #fff;
+            border: 2px solid #7C5CBF;
+        }
+        .sp-card--gold {
+            background: linear-gradient(145deg, #3D2A00 0%, #7A5200 100%);
+            color: #fff;
+            border: 2px solid #C8960C;
+        }
+        .sp-card--silver {
+            background: #fff;
+            color: var(--color-gray-900);
+            border: 2px solid #B0BEC5;
+        }
+        .sp-card--bronze {
+            background: #fff;
+            color: var(--color-gray-900);
+            border: 2px solid #D7A07A;
+        }
+
+        /* "Most inclusive" ribbon */
+        .sp-card__ribbon {
+            position: absolute;
+            top: 14px;
+            right: -30px;
+            background: var(--eltan-orange);
+            color: #fff;
+            font-size: .68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            padding: .3rem 2.5rem;
+            transform: rotate(35deg);
+            box-shadow: 0 2px 8px rgba(0,0,0,.25);
+        }
+
+        /* Tier label */
+        .sp-card__tier {
+            font-size: .78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            margin-bottom: .6rem;
+            opacity: .85;
+        }
+        .sp-card--platinum .sp-card__tier { color: #C9B8FF; }
+        .sp-card--gold     .sp-card__tier { color: #FFD97D; }
+        .sp-card--silver   .sp-card__tier { color: var(--color-gray-500); }
+        .sp-card--bronze   .sp-card__tier { color: #B94A1B; }
+
+        /* Price */
+        .sp-card__price {
+            font-size: 1.35rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid rgba(255,255,255,.15);
+        }
+        .sp-card--silver .sp-card__price,
+        .sp-card--bronze .sp-card__price { border-color: var(--color-gray-200); }
+        .sp-card__price span { font-size: 1.1rem; opacity: .8; }
+
+        /* Features list */
+        .sp-card__features {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.75rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: .65rem;
+            flex: 1;
+        }
+        .sp-card__features li {
+            display: flex;
+            align-items: flex-start;
+            gap: .55rem;
+            font-size: .9rem;
+            line-height: 1.5;
+        }
+        .sp-card__features .material-icons {
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-top: .05rem;
+        }
+        .sp-card--platinum .sp-card__features .material-icons { color: #B39DFF; }
+        .sp-card--gold     .sp-card__features .material-icons { color: #FFD97D; }
+        .sp-card--silver   .sp-card__features .material-icons { color: #78909C; }
+        .sp-card--bronze   .sp-card__features .material-icons { color: #D7A07A; }
+
+        /* CTA button per card */
+        .sp-card__cta {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .45rem;
+            padding: .75rem 1rem;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: .88rem;
+            text-decoration: none;
+            transition: all .25s ease;
+            margin-top: auto;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .sp-card--platinum .sp-card__cta { background: rgba(255,255,255,.15); color: #fff; border-color: rgba(255,255,255,.4); }
+        .sp-card--platinum .sp-card__cta:hover { background: #fff; color: #3B1D8C; }
+        .sp-card--gold     .sp-card__cta { background: rgba(255,255,255,.15); color: #fff; border-color: rgba(255,255,255,.4); }
+        .sp-card--gold     .sp-card__cta:hover { background: #FFD97D; color: #3D2A00; }
+        .sp-card--silver   .sp-card__cta { background: var(--color-gray-900); color: #fff; }
+        .sp-card--silver   .sp-card__cta:hover { background: var(--eltan-orange); }
+        .sp-card--bronze   .sp-card__cta { background: var(--eltan-orange); color: #fff; }
+        .sp-card--bronze   .sp-card__cta:hover { background: var(--eltan-orange-dark); }
+
+        /* ---- In-Kind card ---- */
+        .sp-inkind {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 1.5rem;
+            align-items: center;
+            background: #F0F7FF;
+            border: 1.5px solid #BBDEFB;
+            border-radius: 16px;
+            padding: 2rem 2.25rem;
+            margin-bottom: 3rem;
+        }
+        @media (max-width: 768px) {
+            .sp-inkind { grid-template-columns: 1fr; text-align: center; }
+            .sp-inkind__icon { margin: 0 auto; }
+            .sp-inkind__cta { display: flex; flex-direction: column; align-items: center; }
+        }
+        .sp-inkind__icon {
+            width: 64px; height: 64px;
+            background: linear-gradient(135deg, #1565C0, #5E92F3);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .sp-inkind__icon .material-icons { color: #fff; font-size: 32px; }
+        .sp-inkind__body h4 { font-size: 1.15rem; font-weight: 700; margin: 0 0 .5rem; color: #1565C0; }
+        .sp-inkind__body p  { color: var(--color-gray-700); line-height: 1.65; margin: 0; font-size: .95rem; }
+        .sp-inkind__cta { text-align: center; }
+        .sp-inkind__cta .btn { white-space: nowrap; }
+
+        /* ---- Logos section ---- */
+        .sp-logos-section {
+            padding: 3rem 0 1rem;
+            border-top: 1px solid var(--color-gray-200);
+        }
+
+        @media (max-width: 640px) {
+            .sp-cards { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -443,20 +632,126 @@
 
     <!-- ===== SPONSORS TAB ===== -->
     <section class="conf-tabpanel" id="tab-sponsors">
-        <div class="container">
-            <div class="conf-section__header">
-                <p class="conf-kicker">Sponsors &amp; Packages</p>
-                <h2 class="conf-title">Partner With Us</h2>
+
+        <!-- Hero intro banner -->
+        <div class="sp-hero">
+            <div class="container">
+                <p class="conf-kicker" style="color:rgba(255,255,255,.75);">Sponsorship Opportunities</p>
+                <h2 style="font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;margin:.25rem 0 .75rem;">Partner With ELTAN</h2>
+                <p style="max-width:640px;opacity:.9;line-height:1.7;margin-bottom:1.5rem;">Your sponsorship directly supports English language teachers across Nigeria while positioning your organisation in front of a highly engaged professional audience. Choose the tier that fits your goals.</p>
+                <a href="{% url 'sponsor_application' conference.pk %}" class="btn btn-primary btn-pill sp-hero-cta">
+                    <span class="material-icons" style="font-size:18px;">send</span> Apply to Sponsor
+                </a>
+            </div>
+        </div>
+
+        <div class="container" style="padding-top:3rem;padding-bottom:3rem;">
+
+            <!-- Tier cards -->
+            <div class="sp-intro">
+                <p class="conf-kicker">Choose Your Tier</p>
+                <h3 class="conf-title">Sponsorship Packages</h3>
+                <p class="text-body-large" style="max-width:680px;color:var(--color-gray-600);">Four tailored tiers designed to match your organisation&rsquo;s goals and budget. All sponsors receive formal recognition and meaningful visibility.</p>
             </div>
 
-            <!-- Approved sponsor logos -->
-            {% with approved_sponsors=sponsors|dictsort:"level" %}
-            {% if approved_sponsors %}
-            {% for sp in approved_sponsors %}{% if sp.is_approved %}{% if forloop.first %}
-            <div style="margin-bottom:2.5rem;">
-                <h3 class="panel-section__title" style="border:none;padding:0;margin-bottom:1.25rem;">
-                    <span class="material-icons">handshake</span> Our Sponsors
-                </h3>
+            <div class="sp-cards">
+
+                <!-- Platinum -->
+                <div class="sp-card sp-card--platinum">
+                    <div class="sp-card__ribbon">Most Inclusive</div>
+                    <div class="sp-card__tier">Platinum</div>
+                    <div class="sp-card__price">&#8358;700,000<span>+</span></div>
+                    <ul class="sp-card__features">
+                        <li><span class="material-icons">check_circle</span> Recognition in all event materials</li>
+                        <li><span class="material-icons">check_circle</span> Logo on all banners, posters &amp; digital promos</li>
+                        <li><span class="material-icons">check_circle</span> Full-page advert in conference programme</li>
+                        <li><span class="material-icons">check_circle</span> Speaking slot at the opening session</li>
+                        <li><span class="material-icons">check_circle</span> Exhibition booth &mdash; premium location</li>
+                        <li><span class="material-icons">check_circle</span> 4 complimentary registrations</li>
+                        <li><span class="material-icons">check_circle</span> Company materials in participant bags</li>
+                        <li><span class="material-icons">check_circle</span> Social media recognition before, during &amp; after</li>
+                    </ul>
+                    <a href="{% url 'sponsor_application' conference.pk %}?level=platinum" class="btn sp-card__cta">
+                        Become a Platinum Sponsor <span class="material-icons" style="font-size:17px;">arrow_forward</span>
+                    </a>
+                </div>
+
+                <!-- Gold -->
+                <div class="sp-card sp-card--gold">
+                    <div class="sp-card__tier">Gold</div>
+                    <div class="sp-card__price">&#8358;500,000 &ndash; &#8358;699,000</div>
+                    <ul class="sp-card__features">
+                        <li><span class="material-icons">check_circle</span> Recognition as Gold Sponsor in event materials</li>
+                        <li><span class="material-icons">check_circle</span> Logo on banners, posters &amp; digital promotions</li>
+                        <li><span class="material-icons">check_circle</span> Half-page advert in the programme</li>
+                        <li><span class="material-icons">check_circle</span> Exhibition booth</li>
+                        <li><span class="material-icons">check_circle</span> 2 complimentary registrations</li>
+                        <li><span class="material-icons">check_circle</span> Company materials in participant bags</li>
+                        <li><span class="material-icons">check_circle</span> Social media shoutouts</li>
+                    </ul>
+                    <a href="{% url 'sponsor_application' conference.pk %}?level=gold" class="btn sp-card__cta">
+                        Become a Gold Sponsor <span class="material-icons" style="font-size:17px;">arrow_forward</span>
+                    </a>
+                </div>
+
+                <!-- Silver -->
+                <div class="sp-card sp-card--silver">
+                    <div class="sp-card__tier">Silver</div>
+                    <div class="sp-card__price">&#8358;350,000 &ndash; &#8358;499,000</div>
+                    <ul class="sp-card__features">
+                        <li><span class="material-icons">check_circle</span> Recognition as Silver Sponsor</li>
+                        <li><span class="material-icons">check_circle</span> Logo on website &amp; select materials</li>
+                        <li><span class="material-icons">check_circle</span> Quarter-page advert in the programme</li>
+                        <li><span class="material-icons">check_circle</span> Shared exhibition space</li>
+                        <li><span class="material-icons">check_circle</span> 1 complimentary registration</li>
+                        <li><span class="material-icons">check_circle</span> Mention on social media</li>
+                    </ul>
+                    <a href="{% url 'sponsor_application' conference.pk %}?level=silver" class="btn sp-card__cta">
+                        Become a Silver Sponsor <span class="material-icons" style="font-size:17px;">arrow_forward</span>
+                    </a>
+                </div>
+
+                <!-- Bronze -->
+                <div class="sp-card sp-card--bronze">
+                    <div class="sp-card__tier">Bronze</div>
+                    <div class="sp-card__price">&#8358;150,000 &ndash; &#8358;349,000</div>
+                    <ul class="sp-card__features">
+                        <li><span class="material-icons">check_circle</span> Name listed in the programme &amp; on the website</li>
+                        <li><span class="material-icons">check_circle</span> Company materials displayed at registration</li>
+                        <li><span class="material-icons">check_circle</span> Mention during the closing session</li>
+                    </ul>
+                    <a href="{% url 'sponsor_application' conference.pk %}?level=bronze" class="btn sp-card__cta">
+                        Become a Bronze Sponsor <span class="material-icons" style="font-size:17px;">arrow_forward</span>
+                    </a>
+                </div>
+
+            </div><!-- /sp-cards -->
+
+            <!-- In-Kind card -->
+            <div class="sp-inkind">
+                <div class="sp-inkind__icon">
+                    <span class="material-icons">volunteer_activism</span>
+                </div>
+                <div class="sp-inkind__body">
+                    <h4>In-Kind Sponsorship</h4>
+                    <p>ELTAN warmly welcomes non-cash contributions. In-kind sponsors receive benefits matched to the value of their contribution &mdash; including logo display, exhibition space, and formal acknowledgements.</p>
+                    <p style="margin-top:.5rem;"><strong>Acceptable contributions include:</strong> conference materials (bags, notepads, pens), refreshments &amp; catering, technical support (AV equipment, printing, photography).</p>
+                </div>
+                <div class="sp-inkind__cta">
+                    <a href="{% url 'sponsor_application' conference.pk %}" class="btn btn-secondary btn-pill">
+                        <span class="material-icons" style="font-size:17px;">send</span> Express Interest
+                    </a>
+                    <p style="font-size:.8rem;color:var(--color-gray-500);margin-top:.5rem;">Custom packages available on request.</p>
+                </div>
+            </div>
+
+            <!-- Approved sponsor logos section -->
+            {% with has_approved=False %}
+            {% for sp in sponsors %}{% if sp.is_approved %}
+            {% if forloop.first %}
+            <div class="sp-logos-section">
+                <p class="conf-kicker" style="text-align:center;">Our Sponsors</p>
+                <h3 class="conf-title" style="text-align:center;margin-bottom:1.75rem;">Thank You to Our Partners</h3>
                 <div class="sponsor-grid">
             {% endif %}
                     <a href="{{ sp.website|default:'#' }}" target="_blank" rel="noopener" title="{{ sp.company_name }}" class="sponsor-logo-wrap">
@@ -465,33 +760,11 @@
                     </a>
             {% if forloop.last %}</div></div>{% endif %}
             {% endif %}{% endfor %}
-            {% endif %}
             {% endwith %}
 
-            <!-- Sponsorship packages content -->
-            {% if sponsor_packages %}
-            <div class="panel-section">
-                <h3 class="panel-section__title">
-                    <span class="material-icons">workspace_premium</span> Sponsorship Packages
-                </h3>
-                <div class="text-body-large sponsor-packages-content">
-                    {{ sponsor_packages|safe }}
-                </div>
-                <div style="margin-top:1.5rem;">
-                    <a href="{% url 'sponsor_application' conference.pk %}" class="btn btn-primary btn-pill">
-                        <span class="material-icons" style="font-size:18px;">send</span>
-                        Apply to Sponsor This Conference
-                    </a>
-                </div>
-            </div>
-            {% else %}
-            <div class="panel-section">
-                <p class="text-body-large" style="color:var(--color-gray-500);">Sponsorship packages coming soon.</p>
-            </div>
-            {% endif %}
-
+            <!-- Documents -->
             {% if documents %}
-            <div class="panel-section" style="margin-top:1.5rem;">
+            <div class="panel-section" style="margin-top:2rem;">
                 <h3 class="panel-section__title">
                     <span class="material-icons">folder_open</span> Documents
                 </h3>
@@ -502,6 +775,7 @@
                 </ul>
             </div>
             {% endif %}
+
         </div>
     </section>
 
