@@ -663,11 +663,24 @@ def conference_register(request, pk):
         form = ConferenceRegistrationForm(request.POST)
         if form.is_valid():
             is_presenting = form.cleaned_data['is_presenting']
-            email = form.cleaned_data.get('email')
-            first_name = form.cleaned_data.get('first_name')
-            last_name = form.cleaned_data.get('last_name')
-            phone = form.cleaned_data.get('phone')
-            
+            email = form.cleaned_data.get('email') or ''
+            first_name = form.cleaned_data.get('first_name') or ''
+            last_name = form.cleaned_data.get('last_name') or ''
+            phone = form.cleaned_data.get('phone') or ''
+
+            # Fall back to authenticated user's profile data for missing fields
+            if request.user.is_authenticated:
+                if not email:
+                    email = request.user.email
+                if not first_name:
+                    first_name = request.user.first_name
+                if not last_name:
+                    last_name = request.user.last_name
+
+            if not email or '@' not in email:
+                messages.error(request, "A valid email address is required to proceed.")
+                return redirect('conference_register', pk=conference.pk)
+
             # Store form data in session for use after payment
             request.session['registration_data'] = {
                 'is_presenting': is_presenting,
@@ -677,11 +690,19 @@ def conference_register(request, pk):
                 'phone': phone,
                 'registration_type': request.POST.get('registration_type', registration_type),
             }
-            
+            request.session.modified = True
+
             # Redirect to payment initiation
             return redirect('initiate_conference_registration', pk=conference.pk)
     else:
-        form = ConferenceRegistrationForm()
+        initial = {}
+        if request.user.is_authenticated:
+            initial = {
+                'email': request.user.email,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+            }
+        form = ConferenceRegistrationForm(initial=initial)
 
     context = {
         'conference': conference,

@@ -1,91 +1,597 @@
-{% extends "membership/base.html" %}
 {% load static %}
-{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conference Registration &ndash; {{ conference.title }}</title>
+    <link href="{% static 'css/public-modern.css' %}" rel="stylesheet">
+    <link href="{% static 'css/conference.css' %}" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: #F4F6FA; margin: 0; color: #1A1A1A; }
 
-{% block title %}
-    Conference Registration
-{% endblock title %}
+        /* ---- Hero ---- */
+        .crf-hero {
+            background: linear-gradient(135deg, #1A0A3C 0%, #3B1D8C 60%, #E67918 100%);
+            color: #fff;
+            padding: 3.5rem 1.5rem 5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .crf-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .crf-hero__back {
+            position: absolute;
+            top: 1.25rem;
+            left: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            color: rgba(255,255,255,.8);
+            text-decoration: none;
+            font-size: .875rem;
+            font-weight: 600;
+            transition: color .2s;
+        }
+        .crf-hero__back:hover { color: #fff; }
+        .crf-hero__back .material-icons { font-size: 18px; }
+        .crf-hero__badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            background: rgba(255,255,255,.15);
+            border: 1px solid rgba(255,255,255,.25);
+            border-radius: 999px;
+            padding: .35rem 1rem;
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+        .crf-hero__badge .material-icons { font-size: 16px; }
+        .crf-hero h1 {
+            font-size: clamp(1.75rem, 4vw, 2.75rem);
+            font-weight: 800;
+            margin: 0 0 .5rem;
+            line-height: 1.2;
+        }
+        .crf-hero__conf {
+            font-size: .95rem;
+            opacity: .85;
+            margin-bottom: 0;
+        }
 
-{% block content %}
-<div class="container py-5 mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card">
-                <div class="card-header bg-warning text-white">
-                    <h3 class="mb-0">Conference Registration</h3>
-                </div>
-                <div class="card-body">
-                    <!-- Conference Details -->
-                    <div class="mb-4">
-                        <h4>{{ conference.title }}</h4>
-                        <p class="text-muted">{{ conference.theme }}</p>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <p><strong>Date:</strong> {{ conference.start_date|date:"F d" }} - {{ conference.end_date|date:"F d, Y" }}</p>
-                                <p><strong>Venue:</strong> {{ conference.venue }}</p>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="alert alert-info mb-0">
-                                    <h5 class="alert-heading">Registration Fee:</h5>
-                                    {% if registration_type == 'non_member2' %}
-                                        <p class="mb-0">₦{{ conference.international_delegate_fee }} (International Delegate Fee - $50)</p>
-                                    {% else %}
-                                        {% if is_early_bird %}
-                                            {% if registration_type == 'member' %}
-                                                <p class="mb-0">₦{{ conference.member_early_bird_fee }} (Member Early Bird Rate)</p>
-                                            {% else %}
-                                                <p class="mb-0">₦{{ conference.non_member_early_bird_fee }} (Non-Member Early Bird Rate)</p>
-                                            {% endif %}
-                                        {% else %}
-                                            {% if registration_type == 'member' %}
-                                                <p class="mb-0">₦{{ conference.member_fee }} (Member Rate)</p>
-                                            {% else %}
-                                                <p class="mb-0">₦{{ conference.non_member_fee }} (Non-Member Rate)</p>
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endif %}
+        /* ---- Layout ---- */
+        .crf-body {
+            max-width: 1100px;
+            margin: 3rem auto 4rem;
+            padding: 0 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 2rem;
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .crf-body { grid-template-columns: 1fr; margin-top: 2.5rem; }
+            .crf-sidebar { order: -1; }
+        }
 
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        /* ---- Form card ---- */
+        .crf-form-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(0,0,0,.1);
+            padding: 2.5rem;
+        }
+        .crf-form-card h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin: 0 0 .4rem;
+            color: #1A1A1A;
+        }
+        .crf-form-card > p {
+            color: #616161;
+            font-size: .9rem;
+            margin: 0 0 2rem;
+            line-height: 1.6;
+        }
 
-                    {% if conference.is_early_bird_active %}
-                        <div class="alert alert-warning mb-4">
-                            <i class="bi bi-clock"></i>
-                            Early Bird Registration ends on {{ conference.early_bird_end|date }}!
-                        </div>
-                    {% endif %}
+        /* Section labels */
+        .crf-section-label {
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: #E67918;
+            margin: 1.75rem 0 1rem;
+            padding-bottom: .4rem;
+            border-bottom: 1px solid #F0F0F0;
+        }
+        .crf-section-label:first-of-type { margin-top: 0; }
 
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <input type="hidden" name="registration_type" value="{{ registration_type }}">
-                        {% crispy form %}
-                    </form>
-                </div>
+        /* Field groups */
+        .crf-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+        @media (max-width: 560px) { .crf-row { grid-template-columns: 1fr; } }
+        .crf-field { display: flex; flex-direction: column; gap: .35rem; }
+        .crf-field label {
+            font-size: .82rem;
+            font-weight: 600;
+            color: #424242;
+        }
+        .crf-field label .crf-required { color: #E53935; margin-left: .2rem; }
+        .crf-field input[type="text"],
+        .crf-field input[type="email"],
+        .crf-field input[type="tel"] {
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1.5px solid #E0E0E0;
+            border-radius: 10px;
+            padding: .7rem 1rem;
+            font-size: .9rem;
+            font-family: 'Poppins', sans-serif;
+            color: #1A1A1A;
+            background: #FAFAFA;
+            transition: border-color .2s, box-shadow .2s, background .2s;
+            width: 100%;
+            outline: none;
+        }
+        .crf-field input:focus {
+            border-color: #E67918;
+            box-shadow: 0 0 0 3px rgba(230,121,24,.12);
+            background: #fff;
+        }
+        .crf-field input::placeholder { color: #BDBDBD; }
+        .crf-field .crf-error {
+            font-size: .78rem;
+            color: #E53935;
+            margin-top: .1rem;
+        }
+
+        /* Presenting toggle */
+        .crf-presenting-toggle {
+            display: flex;
+            align-items: flex-start;
+            gap: .85rem;
+            background: #FAFAFA;
+            border: 1.5px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            transition: border-color .2s, background .2s;
+        }
+        .crf-presenting-toggle:hover { border-color: #BDBDBD; background: #fff; }
+        .crf-presenting-toggle.active {
+            border-color: #E67918;
+            background: #FFF8F2;
+            box-shadow: 0 0 0 3px rgba(230,121,24,.1);
+        }
+        .crf-presenting-toggle input[type="checkbox"] { display: none; }
+        .crf-check-icon {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #BDBDBD;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all .2s;
+            margin-top: 1px;
+        }
+        .crf-presenting-toggle.active .crf-check-icon {
+            background: #E67918;
+            border-color: #E67918;
+        }
+        .crf-check-icon .material-icons { font-size: 15px; color: #fff; display: none; }
+        .crf-presenting-toggle.active .crf-check-icon .material-icons { display: block; }
+        .crf-presenting-text strong { font-size: .9rem; font-weight: 600; color: #1A1A1A; display: block; margin-bottom: .2rem; }
+        .crf-presenting-text span { font-size: .82rem; color: #757575; line-height: 1.5; }
+
+        /* Submit */
+        .crf-submit-row {
+            margin-top: 2.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+        }
+        .crf-submit-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            width: 100%;
+            padding: .95rem 1.5rem;
+            background: linear-gradient(135deg, #E67918 0%, #C5630C 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            transition: opacity .2s, transform .15s;
+            box-shadow: 0 4px 16px rgba(230,121,24,.35);
+        }
+        .crf-submit-btn:hover { opacity: .92; transform: translateY(-1px); }
+        .crf-submit-btn:active { transform: translateY(0); }
+        .crf-submit-btn .material-icons { font-size: 20px; }
+        .crf-submit-note {
+            text-align: center;
+            font-size: .78rem;
+            color: #9E9E9E;
+        }
+        .crf-submit-note .material-icons { font-size: 14px; vertical-align: -3px; color: #4CAF50; }
+
+        /* Alert messages */
+        .crf-alert {
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: .9rem;
+        }
+        .crf-alert.error { background: #FFEBEE; border: 1px solid #FFCDD2; color: #C62828; }
+        .crf-alert.error .material-icons { color: #E53935; font-size: 20px; flex-shrink: 0; }
+
+        /* ---- Sidebar ---- */
+        .crf-sidebar { display: flex; flex-direction: column; gap: 1.25rem; }
+
+        /* Fee card */
+        .crf-fee-card {
+            background: linear-gradient(145deg, #1A0A3C 0%, #3B1D8C 100%);
+            color: #fff;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(59,29,140,.3);
+        }
+        .crf-fee-card h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .crf-fee-card h3 .material-icons { font-size: 20px; color: #B39DFF; }
+        .crf-fee-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .65rem 0;
+            border-bottom: 1px solid rgba(255,255,255,.1);
+            font-size: .875rem;
+        }
+        .crf-fee-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .crf-fee-row__label { opacity: .8; }
+        .crf-fee-row__amount { font-weight: 700; color: #FFC966; }
+        .crf-fee-row.active .crf-fee-row__label { opacity: 1; font-weight: 600; }
+        .crf-fee-row.active .crf-fee-row__amount { color: #FFD700; font-size: 1rem; }
+        .crf-fee-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            background: rgba(255,201,102,.2);
+            border: 1px solid rgba(255,201,102,.4);
+            border-radius: 999px;
+            padding: .2rem .75rem;
+            font-size: .72rem;
+            font-weight: 700;
+            color: #FFD700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-top: .75rem;
+        }
+        .crf-fee-badge .material-icons { font-size: 13px; }
+
+        /* Included card */
+        .crf-info-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,.07);
+        }
+        .crf-info-card h4 {
+            font-size: .92rem;
+            font-weight: 700;
+            color: #1A1A1A;
+            margin: 0 0 .85rem;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .crf-info-card h4 .material-icons { font-size: 18px; color: #E67918; }
+        .crf-included-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .65rem; }
+        .crf-included-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: .6rem;
+            font-size: .855rem;
+            color: #424242;
+            line-height: 1.5;
+        }
+        .crf-included-list .material-icons { font-size: 16px; color: #4CAF50; flex-shrink: 0; margin-top: .1rem; }
+
+        /* Contact card */
+        .crf-contact-item {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            font-size: .85rem;
+            color: #424242;
+            padding: .5rem 0;
+            border-bottom: 1px solid #F5F5F5;
+        }
+        .crf-contact-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .crf-contact-item .material-icons { font-size: 16px; color: #9E9E9E; flex-shrink: 0; }
+        .crf-contact-item a { color: #1565C0; text-decoration: none; }
+        .crf-contact-item a:hover { text-decoration: underline; }
+
+        /* Secure badge */
+        .crf-secure-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            background: #F1F8E9;
+            border: 1px solid #C5E1A5;
+            border-radius: 10px;
+            padding: .75rem 1rem;
+            font-size: .8rem;
+            font-weight: 600;
+            color: #388E3C;
+        }
+        .crf-secure-badge .material-icons { font-size: 18px; }
+    </style>
+</head>
+<body>
+    {% include 'partials/navbar.html' %}
+
+    <!-- Hero -->
+    <div class="crf-hero">
+        <a href="{% url 'conference_detail' conference.pk %}" class="crf-hero__back">
+            <span class="material-icons">arrow_back</span> Back to Conference
+        </a>
+        <div class="crf-hero__badge">
+            <span class="material-icons">how_to_reg</span>
+            Conference Registration
+        </div>
+        <h1>Register to Attend</h1>
+        <p class="crf-hero__conf">{{ conference.title }} &middot; {{ conference.start_date|date:"M d" }}&ndash;{{ conference.end_date|date:"M d, Y" }} &middot; {{ conference.venue }}</p>
+    </div>
+
+    <!-- Body -->
+    <div class="crf-body">
+
+        <!-- Form -->
+        <div class="crf-form-card">
+            <h2>Your Registration Details</h2>
+            <p>Fill in the details below to secure your place at the conference. You will be directed to our secure payment gateway after submission.</p>
+
+            {% if messages %}
+            {% for message in messages %}
+            <div class="crf-alert error">
+                <span class="material-icons">error_outline</span>
+                <p style="margin:0;">{{ message }}</p>
             </div>
+            {% endfor %}
+            {% endif %}
+
+            <form method="post" id="crf-form" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="registration_type" value="{{ registration_type }}">
+
+                <!-- Personal details -->
+                <div class="crf-section-label">Personal Details</div>
+                <div class="crf-row">
+                    <div class="crf-field">
+                        <label for="id_first_name">First Name <span class="crf-required">*</span></label>
+                        <input type="text" name="first_name" id="id_first_name"
+                               placeholder="e.g. Amara"
+                               value="{{ form.first_name.value|default_if_none:'' }}" required>
+                        {% if form.first_name.errors %}<p class="crf-error">{{ form.first_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="crf-field">
+                        <label for="id_last_name">Last Name <span class="crf-required">*</span></label>
+                        <input type="text" name="last_name" id="id_last_name"
+                               placeholder="e.g. Johnson"
+                               value="{{ form.last_name.value|default_if_none:'' }}" required>
+                        {% if form.last_name.errors %}<p class="crf-error">{{ form.last_name.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <div class="crf-row" style="margin-top:1.25rem;">
+                    <div class="crf-field">
+                        <label for="id_email">Email Address <span class="crf-required">*</span></label>
+                        <input type="email" name="email" id="id_email"
+                               placeholder="e.g. amara@example.com"
+                               value="{{ form.email.value|default_if_none:'' }}" required>
+                        {% if form.email.errors %}<p class="crf-error">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="crf-field">
+                        <label for="id_phone">Phone Number <span class="crf-required">*</span></label>
+                        <input type="tel" name="phone" id="id_phone"
+                               placeholder="e.g. 08012345678"
+                               value="{{ form.phone.value|default_if_none:'' }}" required>
+                        {% if form.phone.errors %}<p class="crf-error">{{ form.phone.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Presentation -->
+                <div class="crf-section-label">Presentation</div>
+                <label class="crf-presenting-toggle" id="presenting-toggle">
+                    <input type="checkbox" name="is_presenting" id="id_is_presenting"
+                           {% if form.is_presenting.value %}checked{% endif %}>
+                    <div class="crf-check-icon">
+                        <span class="material-icons">check</span>
+                    </div>
+                    <div class="crf-presenting-text">
+                        <strong>I will be presenting a paper</strong>
+                        <span>Check this box if you are presenting at the conference. Your abstract or paper submission should be submitted separately via the Call for Papers.</span>
+                    </div>
+                </label>
+
+                <!-- Submit -->
+                <div class="crf-submit-row">
+                    <button type="submit" class="crf-submit-btn">
+                        <span class="material-icons">payment</span>
+                        Proceed to Payment
+                    </button>
+                    <p class="crf-submit-note">
+                        <span class="material-icons">lock</span>
+                        Payments are processed securely via Paystack.
+                    </p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="crf-sidebar">
+
+            <!-- Fee card -->
+            <div class="crf-fee-card">
+                <h3><span class="material-icons">receipt_long</span> Registration Fee</h3>
+
+                {% if registration_type == 'non_member2' %}
+                    <div class="crf-fee-row active">
+                        <span class="crf-fee-row__label">International Delegate</span>
+                        <span class="crf-fee-row__amount">&#8358;{{ conference.international_delegate_fee }}</span>
+                    </div>
+                {% else %}
+                    {% if is_early_bird %}
+                        {% if registration_type == 'member' %}
+                        <div class="crf-fee-row active">
+                            <span class="crf-fee-row__label">Member (Early Bird)</span>
+                            <span class="crf-fee-row__amount">&#8358;{{ conference.member_early_bird_fee }}</span>
+                        </div>
+                        <div class="crf-fee-row">
+                            <span class="crf-fee-row__label">Non-Member (Early Bird)</span>
+                            <span class="crf-fee-row__amount">&#8358;{{ conference.non_member_early_bird_fee }}</span>
+                        </div>
+                        {% else %}
+                        <div class="crf-fee-row">
+                            <span class="crf-fee-row__label">Member (Early Bird)</span>
+                            <span class="crf-fee-row__amount">&#8358;{{ conference.member_early_bird_fee }}</span>
+                        </div>
+                        <div class="crf-fee-row active">
+                            <span class="crf-fee-row__label">Non-Member (Early Bird)</span>
+                            <span class="crf-fee-row__amount">&#8358;{{ conference.non_member_early_bird_fee }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="crf-fee-badge">
+                            <span class="material-icons">bolt</span>
+                            Early Bird — ends {{ conference.early_bird_end|date:"M d, Y" }}
+                        </div>
+                    {% else %}
+                        {% if registration_type == 'member' %}
+                        <div class="crf-fee-row active">
+                            <span class="crf-fee-row__label">Member Rate</span>
+                            <span class="crf-fee-row__amount">&#8358;{{ conference.member_fee }}</span>
+                        </div>
+                        <div class="crf-fee-row">
+                            <span class="crf-fee-row__label">Non-Member Rate</span>
+                            <span class="crf-fee-row__amount">&#8358;{{ conference.non_member_fee }}</span>
+                        </div>
+                        {% else %}
+                        <div class="crf-fee-row">
+                            <span class="crf-fee-row__label">Member Rate</span>
+                            <span class="crf-fee-row__amount">&#8358;{{ conference.member_fee }}</span>
+                        </div>
+                        <div class="crf-fee-row active">
+                            <span class="crf-fee-row__label">Non-Member Rate</span>
+                            <span class="crf-fee-row__amount">&#8358;{{ conference.non_member_fee }}</span>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- What's included -->
+            <div class="crf-info-card">
+                <h4><span class="material-icons">checklist</span> What's Included</h4>
+                <ul class="crf-included-list">
+                    <li><span class="material-icons">check_circle</span> Access to all conference sessions &amp; keynotes</li>
+                    <li><span class="material-icons">check_circle</span> Conference programme &amp; materials</li>
+                    <li><span class="material-icons">check_circle</span> Lunch and refreshments</li>
+                    <li><span class="material-icons">check_circle</span> Certificate of attendance</li>
+                    <li><span class="material-icons">check_circle</span> Networking opportunities with educators</li>
+                </ul>
+            </div>
+
+            <!-- Contact -->
+            {% if conference.contact_name or conference.contact_email or conference.contact_phone %}
+            <div class="crf-info-card">
+                <h4><span class="material-icons">contact_support</span> Need Help?</h4>
+                {% if conference.contact_name %}
+                <div class="crf-contact-item">
+                    <span class="material-icons">person</span>
+                    {{ conference.contact_name }}
+                </div>
+                {% endif %}
+                {% if conference.contact_email %}
+                <div class="crf-contact-item">
+                    <span class="material-icons">email</span>
+                    <a href="mailto:{{ conference.contact_email }}">{{ conference.contact_email }}</a>
+                </div>
+                {% endif %}
+                {% if conference.contact_phone %}
+                <div class="crf-contact-item">
+                    <span class="material-icons">phone</span>
+                    {{ conference.contact_phone }}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Secure -->
+            <div class="crf-secure-badge">
+                <span class="material-icons">verified_user</span>
+                Secure payment powered by Paystack
+            </div>
+
         </div>
     </div>
-</div>
 
-    {% block extra_js %}
+    {% include 'partials/footer.html' %}
+
     <script>
-        // Show/hide presenting fields based on checkbox
-        document.getElementById('id_is_presenting').addEventListener('change', function() {
-            const presentingSection = document.getElementById('presenting-section');
-            presentingSection.style.display = this.checked ? 'block' : 'none';
+    (function () {
+        var toggle = document.getElementById('presenting-toggle');
+        var checkbox = document.getElementById('id_is_presenting');
+
+        function syncToggle() {
+            if (checkbox.checked) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
+
+        toggle.addEventListener('click', function (e) {
+            if (e.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            syncToggle();
         });
-    
-        // Show/hide non-member fields based on registration type
-        document.getElementById('non-member-section').style.display = 
-            '{{ registration_type }}' === 'non_member' ? 'block' : 'none';
-    
-        // Initial hide of presenting fields if not checked
-        document.addEventListener('DOMContentLoaded', function() {
-            const isPresenting = document.getElementById('id_is_presenting');
-            const presentingSection = document.getElementById('presenting-section');
-            presentingSection.style.display = isPresenting.checked ? 'block' : 'none';
-        });
+
+        syncToggle();
+    })();
     </script>
-    {% endblock %}
-{% endblock %}
+</body>
+</html>
