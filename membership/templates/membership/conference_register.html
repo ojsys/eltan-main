@@ -576,20 +576,10 @@
         var checkbox = document.getElementById('id_is_presenting');
 
         function syncToggle() {
-            if (checkbox.checked) {
-                toggle.classList.add('active');
-            } else {
-                toggle.classList.remove('active');
-            }
+            toggle.classList.toggle('active', checkbox.checked);
         }
 
-        toggle.addEventListener('click', function (e) {
-            if (e.target !== checkbox) {
-                checkbox.checked = !checkbox.checked;
-            }
-            syncToggle();
-        });
-
+        checkbox.addEventListener('change', syncToggle);
         syncToggle();
     })();
     </script>

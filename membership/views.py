@@ -834,19 +834,22 @@ def initiate_conference_registration(request, pk):
         
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack API Error: {str(e)}")
-        messages.error(request, "Payment service temporarily unavailable")
+        try:
+            logger.error(f"Paystack response body: {e.response.text if hasattr(e, 'response') and e.response is not None else 'N/A'}")
+        except Exception:
+            pass
+        messages.error(request, "Payment service temporarily unavailable. Please try again.")
     except KeyError as e:
         logger.error(f"Missing key in Paystack response: {str(e)}")
-        messages.error(request, "Payment processing error")
+        messages.error(request, "Payment processing error. Please try again.")
     except ValueError as e:
         logger.error(f"Validation Error: {str(e)}")
         messages.error(request, str(e))
     except Exception as e:
-        logger.critical(f"Unexpected Error: {type(e).__name__}: {str(e)}")
-        logger.critical(f"Exception traceback:", exc_info=True)
-        messages.error(request, "An unexpected error occurred")
+        logger.critical(f"Unexpected Error: {type(e).__name__}: {str(e)}", exc_info=True)
+        messages.error(request, "An unexpected error occurred. Please try again.")
 
-    return redirect('conference_detail', pk=pk)
+    return redirect('conference_register', pk=pk)
     
 ############ SEnd Registration Email ####################    
 

@@ -514,6 +514,18 @@
 <body>
     {% include 'partials/navbar.html' %}
 
+    {% if messages %}
+    <div style="position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:999;width:min(520px,92vw);display:flex;flex-direction:column;gap:.6rem;">
+        {% for message in messages %}
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.9rem 1.25rem;border-radius:12px;font-family:'Poppins',sans-serif;font-size:.875rem;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,.18);
+            {% if message.tags == 'error' %}background:#C62828;color:#fff;{% else %}background:#2E7D32;color:#fff;{% endif %}">
+            <span class="material-icons" style="font-size:20px;flex-shrink:0;">{% if message.tags == 'error' %}error_outline{% else %}check_circle{% endif %}</span>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Hero -->
     <section class="conf-hero" id="overview">
         {% if conference.image %}
