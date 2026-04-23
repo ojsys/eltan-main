@@ -9,6 +9,26 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from account.models import CustomUser
 from dateutil.relativedelta import relativedelta
+from PIL import Image as PilImage
+
+# Raise PIL's decompression bomb limit to 300MP to accommodate large images
+PilImage.MAX_IMAGE_PIXELS = 300_000_000
+
+_MAX_IMAGE_DIMENSION = 2000  # px — images larger than this are downscaled on save
+
+
+def _resize_image_field(instance, field_name):
+    """Resize an ImageField on a model instance if it exceeds _MAX_IMAGE_DIMENSION."""
+    field = getattr(instance, field_name)
+    if not field:
+        return
+    try:
+        img = PilImage.open(field.path)
+        if img.width > _MAX_IMAGE_DIMENSION or img.height > _MAX_IMAGE_DIMENSION:
+            img.thumbnail((_MAX_IMAGE_DIMENSION, _MAX_IMAGE_DIMENSION), PilImage.LANCZOS)
+            img.save(field.path)
+    except Exception:
+        pass
 
 
 # class ELTANYearSetting(models.Model):
@@ -110,6 +130,10 @@ class MemberProfile(models.Model):
     profile_pic = models.ImageField(upload_to='profile_pics', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _resize_image_field(self, 'profile_pic')
 
     def __str__(self):
         return self.user.first_name + ' ' + self.user.last_name
@@ -254,7 +278,7 @@ class Certificate(models.Model):
     pdf_file = models.FileField(upload_to='certificates/')
     
     def __str__(self):
-        return f"Certificate for {self.subscription.user.username} - {self.subscription.eltan_year}"
+        return f"Certificate for {self.subscription.user.email} - {self.subscription.eltan_year}"
         
     class Meta:
         db_table = 'membership_certificate'
@@ -491,7 +515,11 @@ class ConferenceSpeaker(models.Model):
 
     class Meta:
         ordering = ['order']
-        
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _resize_image_field(self, 'image')
+
     def __str__(self):
         return self.name
 
@@ -528,8 +556,11 @@ class ConferenceSponsor(models.Model):
     level = models.CharField(max_length=20, choices=SPONSOR_LEVELS)
     logo = models.ImageField(upload_to='sponsor_logos/')
     website = models.URLField(blank=True)
-    is_approved = models.BooleanField(default=False) 
- 
+    is_approved = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _resize_image_field(self, 'logo')
 
     def __str__(self):
         return f'{self.company_name} - {self.contact_name}'
@@ -548,6 +579,10 @@ class ConferenceLocMember(models.Model):
         ordering = ['order', 'name']
         verbose_name = 'LOC Member'
         verbose_name_plural = 'LOC Members'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _resize_image_field(self, 'image')
 
     def __str__(self):
         return f"{self.name} - {self.role}"
@@ -606,6 +641,10 @@ class ConferenceAccommodation(models.Model):
         ordering = ['order', 'name']
         verbose_name = 'Accommodation'
         verbose_name_plural = 'Accommodations'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _resize_image_field(self, 'image')
 
     def __str__(self):
         return f"{self.name} — {self.conference.title}"
@@ -864,6 +903,7 @@ class ExcoMember(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+        _resize_image_field(self, 'photo')
 
 
 ###############Defining SIGs Models#######################
@@ -996,6 +1036,7 @@ class News(models.Model):
             from django.utils.text import slugify
             self.slug = slugify(self.headline)
         super().save(*args, **kwargs)
+        _resize_image_field(self, 'featured_img')
         
         
 ##################### Resources Model ###################################
