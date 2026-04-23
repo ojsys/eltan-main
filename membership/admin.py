@@ -74,28 +74,51 @@ class MemberProfileAdmin(admin.ModelAdmin):
 
 
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ['user', 'get_eltan_number', 'membership_type', 'start_date', 'end_date', 
-                   'payment_status', 'amount_paid', 'payment_proof_thumbnail']
-    actions = ['export_to_excel']
-    
-    # Add search fields
-    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'user__eltan_number', 
+    list_display = [
+        'user', 'get_eltan_number', 'membership_type', 'start_date', 'end_date',
+        'payment_status', 'amount_paid', 'cert_status_badge', 'qualification_cert_link',
+        'payment_proof_thumbnail',
+    ]
+    actions = ['approve_certificate', 'reject_certificate', 'export_to_excel']
+
+    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'user__eltan_number',
                      'membership_type', 'payment_status', 'state_chapter']
-    
-    # Add list filters
-    list_filter = ['payment_status', 'membership_type', 'eltan_year', 'state_chapter']
-    
+
+    list_filter = ['payment_status', 'certificate_status', 'membership_type', 'eltan_year', 'state_chapter']
+
+    readonly_fields = ('payment_proof_full', 'qualification_cert_preview')
+
     def get_eltan_number(self, obj):
-        """Retrieve ELTAN Number from related CustomUser"""
         return obj.user.eltan_number
     get_eltan_number.short_description = 'ELTAN Number'
-    
+
     def amount_paid(self, obj):
-        """Display payment_amount as 'Amount Paid'"""
         return obj.payment_amount
-    amount_paid.short_description = 'Amount Paid' 
-    
-    # Rest of the code remains unchanged
+    amount_paid.short_description = 'Amount Paid'
+
+    def cert_status_badge(self, obj):
+        colors = {
+            'pending':  ('#f59e0b', '#fffbeb', 'PENDING'),
+            'approved': ('#16a34a', '#f0fdf4', 'APPROVED'),
+            'rejected': ('#dc2626', '#fef2f2', 'REJECTED'),
+        }
+        color, bg, label = colors.get(obj.certificate_status, ('#6b7280', '#f9fafb', obj.certificate_status.upper()))
+        return format_html(
+            '<span style="background:{}; color:{}; padding:3px 10px; border-radius:12px; '
+            'font-size:11px; font-weight:600; border:1px solid {};">{}</span>',
+            bg, color, color, label,
+        )
+    cert_status_badge.short_description = 'Cert Status'
+
+    def qualification_cert_link(self, obj):
+        if obj.qualification_certificate:
+            return format_html(
+                '<a href="{}" target="_blank" style="font-size:12px;">View Certificate</a>',
+                obj.qualification_certificate.url,
+            )
+        return format_html('<span style="color:#9ca3af; font-size:12px;">None uploaded</span>')
+    qualification_cert_link.short_description = 'Qualification Cert'
+
     def payment_proof_thumbnail(self, obj):
         if obj.payment_proof:
             return format_html(
@@ -103,12 +126,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-height: 50px; border-radius: 4px; border: 1px solid #ddd;"/>'
                 '</a>',
                 obj.payment_proof.url,
-                obj.payment_proof.url
+                obj.payment_proof.url,
             )
         return "No proof uploaded"
     payment_proof_thumbnail.short_description = 'Payment Proof'
-
-    readonly_fields = ('payment_proof_full',)
 
     def payment_proof_full(self, obj):
         if obj.payment_proof:
@@ -116,18 +137,51 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 '<div style="max-width: 100%; margin-top: 10px;">'
                 '<img src="{}" style="max-width: 100%; max-height: 600px; border-radius: 8px;"/>'
                 '</div>',
-                obj.payment_proof.url
+                obj.payment_proof.url,
             )
         return "No proof uploaded"
-    payment_proof_full.short_description = 'Payment Proof'
+    payment_proof_full.short_description = 'Payment Proof (Full)'
+
+    def qualification_cert_preview(self, obj):
+        if obj.qualification_certificate:
+            url = obj.qualification_certificate.url
+            name = obj.qualification_certificate.name.split('/')[-1]
+            return format_html(
+                '<a href="{}" target="_blank" style="display:inline-block; padding:8px 16px; '
+                'background:#1d4ed8; color:white; border-radius:6px; text-decoration:none; '
+                'font-size:13px;">Open: {}</a>',
+                url, name,
+            )
+        return format_html('<span style="color:#9ca3af;">No certificate uploaded</span>')
+    qualification_cert_preview.short_description = 'Qualification Certificate'
+
+    # --- Actions ---
+
+    def approve_certificate(self, request, queryset):
+        updated = queryset.update(certificate_status='approved')
+        self.message_user(
+            request,
+            f'{updated} subscription(s) approved — members can now access their membership.',
+            messages.SUCCESS,
+        )
+    approve_certificate.short_description = 'Approve certificate & activate subscription'
+
+    def reject_certificate(self, request, queryset):
+        updated = queryset.update(certificate_status='rejected')
+        self.message_user(
+            request,
+            f'{updated} subscription(s) rejected — members will not be activated.',
+            messages.WARNING,
+        )
+    reject_certificate.short_description = 'Reject certificate & block subscription'
 
     def export_to_excel(self, request, queryset):
         wb = Workbook()
         ws = wb.active
         ws.title = "Subscriptions"
         headers = [
-            'Member Name', 'Email', 'Eltan Number','Membership Type', 'Start Date',
-            'End Date', 'Payment Status', 'Payment Amount', 'State Chapter'
+            'Member Name', 'Email', 'Eltan Number', 'Membership Type', 'Start Date',
+            'End Date', 'Payment Status', 'Certificate Status', 'Payment Amount', 'State Chapter',
         ]
         ws.append(headers)
         for obj in queryset:
@@ -139,8 +193,9 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 obj.start_date.strftime('%Y-%m-%d'),
                 obj.end_date.strftime('%Y-%m-%d') if obj.end_date else '',
                 obj.payment_status,
+                obj.certificate_status,
                 str(obj.payment_amount) if obj.payment_amount else '',
-                obj.state_chapter
+                obj.state_chapter,
             ]
             ws.append(row)
         response = HttpResponse(

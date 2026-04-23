@@ -207,6 +207,12 @@ class Subscription(models.Model):
         ('paystack', 'Online Payment (Paystack)'),
     ]
 
+    CERT_STATUS_CHOICES = [
+        ('pending', 'Pending Verification'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     membership_type = models.CharField(max_length=50, default="New Membership (5,500)", choices=MEMBER_CHOICES)
     start_date = models.DateField(auto_now_add=True)
@@ -225,6 +231,12 @@ class Subscription(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='manual', help_text="Payment method used for this subscription")
     paystack_reference = models.CharField(max_length=100, null=True, blank=True, help_text="Paystack transaction reference")
     qualification_certificate = models.FileField(upload_to='qualifications/', null=True, blank=True, help_text="Teaching qualification certificate for English language")
+    certificate_status = models.CharField(
+        max_length=20,
+        choices=CERT_STATUS_CHOICES,
+        default='pending',
+        help_text="Admin must approve the qualification certificate before the subscription becomes active",
+    )
 
     def calculate_eltan_dates(self):
         """Calculate the correct ELTAN year dates based on registration date"""
@@ -257,7 +269,8 @@ class Subscription(models.Model):
     def is_active(self):
         today = timezone.now().date()
         return (
-            self.payment_status == 'paid' and 
+            self.payment_status == 'paid' and
+            self.certificate_status == 'approved' and
             self.start_date <= today <= self.end_date
         )
 

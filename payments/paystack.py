@@ -163,26 +163,18 @@ class PaystackAPI:
         return True
     
     def _handle_successful_payment(self, subscription, payment_data: Dict) -> bool:
-        """Handle successful payment"""
+        """Handle successful payment — marks payment as paid but holds activation pending certificate review."""
         try:
-            # Update subscription
             subscription.payment_status = 'paid'
-            subscription.membership_status = 'active'
-            subscription.payment_verified = True
-            subscription.payment_verified_at = timezone.now()
             subscription.paystack_reference = payment_data.get('reference')
-            subscription.transaction_id = payment_data.get('id')
+            # certificate_status stays 'pending' — admin must approve before subscription is active
             subscription.save()
-            
-            # Send confirmation email
+
             self._send_payment_confirmation_email(subscription)
-            
-            # Generate certificate if needed
-            self._generate_membership_certificate(subscription)
-            
-            logger.info(f"Payment processed successfully for subscription {subscription.id}")
+
+            logger.info(f"Payment received for subscription {subscription.id} — awaiting certificate verification")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error processing successful payment: {e}")
             return False

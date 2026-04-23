@@ -82,20 +82,17 @@ def payment_callback(request):
                 subscription = EnhancedSubscription.objects.get(
                     payment_reference=reference
                 )
-                
-                # Update subscription status
+
+                # Mark payment as received — certificate_status stays 'pending' until admin approves
                 subscription.payment_status = 'paid'
-                subscription.membership_status = 'active'
-                subscription.payment_verified = True
                 subscription.paystack_reference = reference
-                subscription.transaction_id = response.get('id')
                 subscription.save()
-                
+
                 messages.success(
-                    request, 
-                    f'Payment successful! Your {subscription.membership_type.name} membership is now active.'
+                    request,
+                    'Payment received! Your subscription will be activated once our team verifies your qualification certificate.'
                 )
-                
+
                 return redirect('membership:payment-success', subscription_id=subscription.id)
                 
             except EnhancedSubscription.DoesNotExist:
