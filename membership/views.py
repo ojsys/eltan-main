@@ -1191,6 +1191,15 @@ def makeQRcode(url):
 def generate_certs(request, subscription_id):
     # Get the subscription
     subscription = get_object_or_404(Subscription, id=subscription_id, user=request.user)
+
+    if not subscription.can_download_certificate:
+        if subscription.payment_status != 'paid':
+            messages.error(request, 'You need to complete payment before downloading your certificate.')
+        elif subscription.certificate_status == 'pending':
+            messages.warning(request, 'Your qualification certificate is still under review. You will receive an email once it has been verified.')
+        elif subscription.certificate_status == 'rejected':
+            messages.error(request, 'Your qualification certificate was not approved. Please contact support.')
+        return redirect('list_certificates')
     
     # Get ELTAN year with fallback
     eltan_year = get_subscription_eltan_year(subscription)
@@ -1293,7 +1302,7 @@ def list_certificates(request):
     context = {
         'current_subscription': current_subscription,
         'past_subscriptions': past_subscriptions,
-        'missing_eltan_years': missing_eltan_years,  # These are ELTANYearSetting objects
+        'missing_eltan_years': missing_eltan_years,
     }
 
     return render(request, 'membership/list_certificates.html', context)

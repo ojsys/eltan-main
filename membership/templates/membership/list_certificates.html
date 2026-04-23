@@ -52,10 +52,22 @@
                     </div>
                 </div>
 
-                <a href="{% url 'generate_certificate' current_subscription.id %}" class="btn-modern btn-primary-modern">
-                    <span class="material-icons" style="font-size: 20px;">download</span>
-                    <span>Download Current Certificate</span>
-                </a>
+                {% if current_subscription.can_download_certificate %}
+                    <a href="{% url 'generate_certificate' current_subscription.id %}" class="btn-modern btn-primary-modern">
+                        <span class="material-icons" style="font-size: 20px;">download</span>
+                        <span>Download Current Certificate</span>
+                    </a>
+                {% elif current_subscription.certificate_status == 'pending' %}
+                    <div style="display:flex; align-items:center; gap:0.75rem; padding:0.875rem 1.25rem; background:#fffbeb; border:1px solid #f59e0b; border-radius:10px; color:#92400e;">
+                        <span class="material-icons" style="font-size:20px; color:#f59e0b;">hourglass_top</span>
+                        <span style="font-size:0.9rem; font-weight:500;">Certificate download will be available once your qualification is verified. You will be notified by email.</span>
+                    </div>
+                {% elif current_subscription.certificate_status == 'rejected' %}
+                    <div style="display:flex; align-items:center; gap:0.75rem; padding:0.875rem 1.25rem; background:#fef2f2; border:1px solid #dc2626; border-radius:10px; color:#991b1b;">
+                        <span class="material-icons" style="font-size:20px; color:#dc2626;">cancel</span>
+                        <span style="font-size:0.9rem; font-weight:500;">Your qualification certificate was not approved. Please contact support.</span>
+                    </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -124,11 +136,21 @@
                                 </div>
                             </div>
 
-                            {% if subscription.payment_status == 'paid' %}
+                            {% if subscription.can_download_certificate %}
                                 <a href="{% url 'generate_certificate' subscription.id %}" class="btn-modern btn-outline-modern">
                                     <span class="material-icons" style="font-size: 20px;">download</span>
                                     <span>Download Certificate</span>
                                 </a>
+                            {% elif subscription.payment_status == 'paid' and subscription.certificate_status == 'pending' %}
+                                <div style="display:flex; align-items:center; gap:0.6rem; padding:0.75rem 1rem; background:#fffbeb; border:1px solid #f59e0b; border-radius:10px; color:#92400e; font-size:0.85rem;">
+                                    <span class="material-icons" style="font-size:18px; color:#f59e0b;">hourglass_top</span>
+                                    <span>Awaiting qualification verification</span>
+                                </div>
+                            {% elif subscription.payment_status == 'paid' and subscription.certificate_status == 'rejected' %}
+                                <div style="display:flex; align-items:center; gap:0.6rem; padding:0.75rem 1rem; background:#fef2f2; border:1px solid #dc2626; border-radius:10px; color:#991b1b; font-size:0.85rem;">
+                                    <span class="material-icons" style="font-size:18px; color:#dc2626;">cancel</span>
+                                    <span>Qualification not approved — contact support</span>
+                                </div>
                             {% else %}
                                 <a href="{% url 'complete_subscription_payment' subscription.id %}" class="btn-modern btn-primary-modern">
                                     <span class="material-icons" style="font-size: 20px;">payment</span>

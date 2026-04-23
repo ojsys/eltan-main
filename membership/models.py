@@ -270,9 +270,12 @@ class Subscription(models.Model):
         today = timezone.now().date()
         return (
             self.payment_status == 'paid' and
-            self.certificate_status == 'approved' and
             self.start_date <= today <= self.end_date
         )
+
+    @property
+    def can_download_certificate(self):
+        return self.is_active and self.certificate_status == 'approved'
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name} - {self.membership_type} - {self.eltan_year}"
