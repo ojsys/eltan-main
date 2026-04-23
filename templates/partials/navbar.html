@@ -1,90 +1,194 @@
 {% load static %}
 
-<nav class="modern-nav" id="mainNav">
-  <div class="nav-container">
+<style>
+/* ── ELTAN Navbar ─────────────────────────────────────────── */
+#mainNav {
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0;
+}
 
-    <!-- Logo -->
-    <a href="{% url 'home' %}" class="nav-logo">
+#mainNav .navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.6rem 0;
+    text-decoration: none;
+}
+#mainNav .navbar-brand img {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+}
+#mainNav .navbar-brand span {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #E67918;
+    letter-spacing: -0.01em;
+    line-height: 1;
+}
+
+#mainNav .nav-link {
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.45rem 0.75rem !important;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+}
+#mainNav .nav-link:hover,
+#mainNav .nav-link:focus {
+    color: #E67918;
+    background: rgba(230, 121, 24, 0.07);
+}
+#mainNav .nav-link.active {
+    color: #E67918;
+    font-weight: 600;
+    background: rgba(230, 121, 24, 0.08);
+}
+
+/* CTA buttons */
+#mainNav .btn-login {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1565C0;
+    border: 1.5px solid #1565C0;
+    border-radius: 999px;
+    padding: 0.4rem 1.1rem;
+    transition: background 0.15s, color 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+#mainNav .btn-login:hover { background: #1565C0; color: #fff; }
+
+#mainNav .btn-join {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+    background: #E67918;
+    border: 1.5px solid #E67918;
+    border-radius: 999px;
+    padding: 0.4rem 1.1rem;
+    transition: background 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+#mainNav .btn-join:hover { background: #c5630c; border-color: #c5630c; color: #fff; }
+
+/* Logged-in avatar */
+#mainNav .nav-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #1565C0;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Scroll shadow */
+#mainNav.scrolled { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+
+/* Mobile tweaks */
+@media (max-width: 991px) {
+    #mainNav .navbar-collapse {
+        border-top: 1px solid #f3f4f6;
+        padding: 0.75rem 0 1rem;
+    }
+    #mainNav .navbar-nav { gap: 0.1rem; margin-bottom: 0.75rem; }
+    #mainNav .nav-link { border-radius: 8px; padding: 0.6rem 0.75rem !important; }
+    #mainNav .nav-cta { flex-direction: column; gap: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6; }
+    #mainNav .btn-login,
+    #mainNav .btn-join { justify-content: center; width: 100%; }
+}
+</style>
+
+<nav class="navbar navbar-expand-lg sticky-top" id="mainNav">
+  <div class="container">
+
+    <!-- Brand / Logo -->
+    <a class="navbar-brand" href="{% url 'home' %}">
       {% if site_settings.logo %}
-        <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }} Logo">
+        <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }}">
       {% else %}
-        <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Logo">
+        <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN">
       {% endif %}
       <span>{{ site_settings.site_name|default:"ELTAN" }}</span>
     </a>
 
-    <!-- Hamburger (mobile only) -->
-    <button class="nav-toggle" id="navToggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="navMenu">
-      <span></span>
-      <span></span>
-      <span></span>
+    <!-- Hamburger -->
+    <button class="navbar-toggler border-0" type="button"
+            data-bs-toggle="collapse" data-bs-target="#navbarContent"
+            aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
     </button>
 
-    <!-- Collapsible menu: links + cta together -->
-    <div class="nav-menu" id="navMenu" role="navigation">
-      <ul class="nav-links">
-        <li><a href="{% url 'home' %}"     class="nav-link {% if request.resolver_match.url_name == 'home'     %}active{% endif %}">Home</a></li>
-        <li><a href="{% url 'about' %}"    class="nav-link {% if request.resolver_match.url_name == 'about'    %}active{% endif %}">About</a></li>
-        <li><a href="{% url 'events' %}"   class="nav-link {% if request.resolver_match.url_name == 'events'   %}active{% endif %}">Events</a></li>
-        <li><a href="{% url 'news' %}"     class="nav-link {% if request.resolver_match.url_name == 'news'     %}active{% endif %}">News</a></li>
-        <li><a href="{% url 'sigs' %}"     class="nav-link {% if request.resolver_match.url_name == 'sigs'     %}active{% endif %}">SIGs</a></li>
-        <li><a href="{% url 'resource' %}" class="nav-link {% if request.resolver_match.url_name == 'resource' %}active{% endif %}">Resources</a></li>
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarContent">
+
+      <!-- Nav links — centred -->
+      <ul class="navbar-nav mx-auto gap-1">
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+             href="{% url 'home' %}">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}"
+             href="{% url 'about' %}">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'events' %}active{% endif %}"
+             href="{% url 'events' %}">Events</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'news' %}active{% endif %}"
+             href="{% url 'news' %}">News</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'sigs' %}active{% endif %}"
+             href="{% url 'sigs' %}">SIGs</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'resource' %}active{% endif %}"
+             href="{% url 'resource' %}">Resources</a>
+        </li>
       </ul>
 
-      <div class="nav-cta">
+      <!-- CTA buttons -->
+      <div class="nav-cta d-flex align-items-center gap-2">
         {% if user.is_authenticated %}
-          <a href="{% url 'dash' %}" class="btn-nav-ghost {% if request.resolver_match.url_name == 'dash' %}active{% endif %}">
-            <span class="nav-user-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
+          <a href="{% url 'dash' %}" class="btn-login">
+            <span class="nav-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
             Dashboard
           </a>
-          <a href="{% url 'logout' %}" class="btn-nav-primary">Logout</a>
+          <a href="{% url 'logout' %}" class="btn-join">Logout</a>
         {% else %}
-          <a href="{% url 'login' %}"    class="btn-nav-ghost">Login</a>
-          <a href="{% url 'register' %}" class="btn-nav-primary">Join Now</a>
+          <a href="{% url 'login' %}"    class="btn-login">Login</a>
+          <a href="{% url 'register' %}" class="btn-join">Join Now</a>
         {% endif %}
       </div>
-    </div><!-- /nav-menu -->
 
-  </div>
+    </div><!-- /navbar-collapse -->
+  </div><!-- /container -->
 </nav>
 
 <script>
 (function () {
-  const toggle = document.getElementById('navToggle');
-  const menu   = document.getElementById('navMenu');
-  const nav    = document.getElementById('mainNav');
-
-  // Hamburger open/close
-  toggle.addEventListener('click', function () {
-    const open = menu.classList.toggle('open');
-    toggle.classList.toggle('active', open);
-    toggle.setAttribute('aria-expanded', open);
-    document.body.classList.toggle('nav-open', open);
-  });
-
-  // Close on outside click
-  document.addEventListener('click', function (e) {
-    if (!nav.contains(e.target) && menu.classList.contains('open')) {
-      menu.classList.remove('open');
-      toggle.classList.remove('active');
-      toggle.setAttribute('aria-expanded', 'false');
-      document.body.classList.remove('nav-open');
-    }
-  });
-
-  // Close on nav link click (mobile)
-  menu.querySelectorAll('.nav-link, .btn-nav-ghost, .btn-nav-primary').forEach(function (link) {
-    link.addEventListener('click', function () {
-      menu.classList.remove('open');
-      toggle.classList.remove('active');
-      toggle.setAttribute('aria-expanded', 'false');
-      document.body.classList.remove('nav-open');
-    });
-  });
-
-  // Scroll shadow
+  var nav = document.getElementById('mainNav');
   window.addEventListener('scroll', function () {
-    nav.classList.toggle('scrolled', window.scrollY > 20);
+    nav.classList.toggle('scrolled', window.scrollY > 10);
   }, { passive: true });
 })();
 </script>
