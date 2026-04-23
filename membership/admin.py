@@ -200,7 +200,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
             message = (
                 f"Dear {name},\n\n"
                 f"We are pleased to inform you that your qualification certificate has been reviewed and approved.\n\n"
-                f"Your '{subscription.membership_type}' status for {subscription.eltan_year} is now fully active "
+                f"Your MEMBERSHIP STATUS for {subscription.eltan_year} is now fully active "
                 f"and you can download your ELTAN membership certificate from your dashboard.\n\n"
                 f"Visit your dashboard: {site_url}/certificates/\n\n"
                 f"Thank you for being a valued member of {site_name}.\n\n"
@@ -211,7 +211,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
             message = (
                 f"Dear {name},\n\n"
                 f"We have reviewed your qualification certificate submitted for your "
-                f"'{subscription.membership_type}' status for ({subscription.eltan_year}) "
+                f"MEMBERSHIP STATUS for ({subscription.eltan_year})"
                 f"and unfortunately it could not be approved at this time.\n\n"
                 f"Please contact our support team for further assistance or to resubmit the correct documentation.\n\n"
                 f"Best regards,\n{site_name} Team"
