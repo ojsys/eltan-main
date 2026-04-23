@@ -171,44 +171,18 @@
             transform: scale(1.1);
         }
         
-        /* Modern Navigation */
+        /* Bootstrap navbar overrides — scoped so they don't bleed into .modern-nav */
         .navbar-modern {
             background-color: var(--surface-color);
             box-shadow: var(--elevation-2);
             padding: 16px 0;
             transition: all 0.3s ease;
         }
-        
-        .navbar-modern.scrolled {
-            padding: 8px 0;
-        }
-        
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: var(--primary-color) !important;
-        }
-        
-        .nav-link {
-            font-weight: 500;
-            color: var(--on-surface) !important;
-            position: relative;
-            transition: color 0.3s ease;
-        }
-        
-        .nav-link:hover {
-            color: var(--primary-color) !important;
-        }
-        
-        .nav-link.active::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background-color: var(--primary-color);
-        }
+        .navbar-modern.scrolled { padding: 8px 0; }
+        .navbar-brand { font-weight: 700; font-size: 1.5rem; color: var(--primary-color) !important; }
+        .navbar-modern .nav-link { font-weight: 500; color: var(--on-surface); position: relative; transition: color 0.3s ease; }
+        .navbar-modern .nav-link:hover { color: var(--primary-color); }
+        .navbar-modern .nav-link.active::after { content: ''; position: absolute; bottom: -4px; left: 0; right: 0; height: 2px; background-color: var(--primary-color); }
         
         /* Hero Section */
         .hero-section {

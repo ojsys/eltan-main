@@ -1,6 +1,9 @@
 {% load static %}
+
 <nav class="modern-nav" id="mainNav">
   <div class="nav-container">
+
+    <!-- Logo -->
     <a href="{% url 'home' %}" class="nav-logo">
       {% if site_settings.logo %}
         <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }} Logo">
@@ -10,43 +13,78 @@
       <span>{{ site_settings.site_name|default:"ELTAN" }}</span>
     </a>
 
-    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+    <!-- Hamburger (mobile only) -->
+    <button class="nav-toggle" id="navToggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="navMenu">
       <span></span>
       <span></span>
       <span></span>
     </button>
 
-    <ul class="nav-links" id="navLinks">
-      <li><a href="{% url 'home' %}" class="nav-link">Home</a></li>
-      <li><a href="{% url 'about' %}" class="nav-link">About</a></li>
-      <li><a href="{% url 'events' %}" class="nav-link">Events</a></li>
-      <li><a href="{% url 'news' %}" class="nav-link">News</a></li>
-      <li><a href="{% url 'sigs' %}" class="nav-link">SIGs</a></li>
-      <li><a href="{% url 'resource' %}" class="nav-link">Resources</a></li>
-    </ul>
+    <!-- Collapsible menu: links + cta together -->
+    <div class="nav-menu" id="navMenu" role="navigation">
+      <ul class="nav-links">
+        <li><a href="{% url 'home' %}"     class="nav-link {% if request.resolver_match.url_name == 'home'     %}active{% endif %}">Home</a></li>
+        <li><a href="{% url 'about' %}"    class="nav-link {% if request.resolver_match.url_name == 'about'    %}active{% endif %}">About</a></li>
+        <li><a href="{% url 'events' %}"   class="nav-link {% if request.resolver_match.url_name == 'events'   %}active{% endif %}">Events</a></li>
+        <li><a href="{% url 'news' %}"     class="nav-link {% if request.resolver_match.url_name == 'news'     %}active{% endif %}">News</a></li>
+        <li><a href="{% url 'sigs' %}"     class="nav-link {% if request.resolver_match.url_name == 'sigs'     %}active{% endif %}">SIGs</a></li>
+        <li><a href="{% url 'resource' %}" class="nav-link {% if request.resolver_match.url_name == 'resource' %}active{% endif %}">Resources</a></li>
+      </ul>
 
-    <div class="nav-cta">
-      {% if user.is_authenticated %}
-        <a href="{% url 'dash' %}" class="btn btn-nav-ghost">Dashboard</a>
-        <a href="{% url 'logout' %}" class="btn btn-nav-primary">Logout</a>
-      {% else %}
-        <a href="{% url 'login' %}" class="btn btn-nav-ghost">Login</a>
-        <a href="{% url 'register' %}" class="btn btn-nav-primary">Join Now</a>
-      {% endif %}
-    </div>
+      <div class="nav-cta">
+        {% if user.is_authenticated %}
+          <a href="{% url 'dash' %}" class="btn-nav-ghost {% if request.resolver_match.url_name == 'dash' %}active{% endif %}">
+            <span class="nav-user-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
+            Dashboard
+          </a>
+          <a href="{% url 'logout' %}" class="btn-nav-primary">Logout</a>
+        {% else %}
+          <a href="{% url 'login' %}"    class="btn-nav-ghost">Login</a>
+          <a href="{% url 'register' %}" class="btn-nav-primary">Join Now</a>
+        {% endif %}
+      </div>
+    </div><!-- /nav-menu -->
+
   </div>
 </nav>
 
 <script>
-  // Mobile nav toggle
-  (function(){
-    const toggle = document.getElementById('navToggle');
-    const links = document.getElementById('navLinks');
-    if (toggle && links){
-      toggle.addEventListener('click', function(){
-        this.classList.toggle('active');
-        links.classList.toggle('active');
-      });
+(function () {
+  const toggle = document.getElementById('navToggle');
+  const menu   = document.getElementById('navMenu');
+  const nav    = document.getElementById('mainNav');
+
+  // Hamburger open/close
+  toggle.addEventListener('click', function () {
+    const open = menu.classList.toggle('open');
+    toggle.classList.toggle('active', open);
+    toggle.setAttribute('aria-expanded', open);
+    document.body.classList.toggle('nav-open', open);
+  });
+
+  // Close on outside click
+  document.addEventListener('click', function (e) {
+    if (!nav.contains(e.target) && menu.classList.contains('open')) {
+      menu.classList.remove('open');
+      toggle.classList.remove('active');
+      toggle.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('nav-open');
     }
-  })();
+  });
+
+  // Close on nav link click (mobile)
+  menu.querySelectorAll('.nav-link, .btn-nav-ghost, .btn-nav-primary').forEach(function (link) {
+    link.addEventListener('click', function () {
+      menu.classList.remove('open');
+      toggle.classList.remove('active');
+      toggle.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('nav-open');
+    });
+  });
+
+  // Scroll shadow
+  window.addEventListener('scroll', function () {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  }, { passive: true });
+})();
 </script>
