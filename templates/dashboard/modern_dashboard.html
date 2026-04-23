@@ -1,700 +1,749 @@
 {% extends 'base/modern_base.html' %}
 {% load static %}
 
-{% block title %}Dashboard - {{ site_settings.site_name }}{% endblock %}
+{% block title %}Dashboard — {{ site_settings.site_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .dashboard-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-top: 0; /* Align snug under modern navbar */
+/* ── Layout ──────────────────────────────────────────────── */
+.db-wrap {
+    background: #f4f6fb;
+    min-height: 100vh;
+}
+
+/* ── Hero bar ────────────────────────────────────────────── */
+.db-hero {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0d47a1 100%);
+    color: #fff;
+    padding: 1.75rem 0 3.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.db-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+}
+.db-hero .container { position: relative; z-index: 1; }
+
+.db-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+.db-hero-date {
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* ── Pull-up card container ──────────────────────────────── */
+.db-body {
+    margin-top: -2rem;
+    padding-bottom: 3rem;
+}
+
+/* ── Membership card ─────────────────────────────────────── */
+.db-membership {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.09);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+.db-membership-header {
+    background: linear-gradient(135deg, #1565c0 0%, #283593 100%);
+    color: #fff;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.db-membership-title { font-size: 1rem; font-weight: 600; opacity: .9; margin: 0; }
+.db-membership-number { font-size: 1.5rem; font-weight: 700; margin: 0; }
+
+.db-membership-body { padding: 1.25rem 1.5rem; }
+
+.db-cert-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.db-cert-badge.approved  { background: #e8f5e9; color: #2e7d32; }
+.db-cert-badge.pending   { background: #fff8e1; color: #f57f17; }
+.db-cert-badge.rejected  { background: #fce4ec; color: #c62828; }
+.db-cert-badge.inactive  { background: #f5f5f5; color: #757575; }
+
+.db-progress-track {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 99px;
+    overflow: hidden;
+}
+.db-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), #42a5f5);
+    border-radius: 99px;
+    transition: width 1s ease;
+}
+
+.db-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1rem;
+}
+.db-meta-item label { font-size: 0.72rem; color: #9e9e9e; text-transform: uppercase; letter-spacing: .4px; display: block; margin-bottom: 2px; }
+.db-meta-item span  { font-size: 0.9rem; font-weight: 600; color: #212121; }
+
+/* ── Cert-pending notice ─────────────────────────────────── */
+.db-notice {
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+.db-notice.pending  { background: #fff8e1; border: 1px solid #ffe082; }
+.db-notice.rejected { background: #fce4ec; border: 1px solid #f48fb1; }
+.db-notice .material-icons { flex-shrink: 0; font-size: 1.3rem; margin-top: 1px; }
+.db-notice.pending  .material-icons { color: #f9a825; }
+.db-notice.rejected .material-icons { color: #c62828; }
+.db-notice p { margin: 0; font-size: 0.875rem; line-height: 1.5; }
+.db-notice strong { display: block; margin-bottom: 0.2rem; font-size: 0.9rem; }
+
+/* ── Stats row ───────────────────────────────────────────── */
+.db-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.db-stat-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.db-stat-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #fff;
+    flex-shrink: 0;
+}
+.db-stat-num  { font-size: 1.6rem; font-weight: 700; line-height: 1; color: #212121; }
+.db-stat-lbl  { font-size: 0.72rem; color: #9e9e9e; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+
+/* ── Quick actions ───────────────────────────────────────── */
+.db-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.db-action-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    border: 2px solid transparent;
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.db-action-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+    color: inherit;
+    text-decoration: none;
+}
+.db-action-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    color: #fff;
+}
+.db-action-card h6 { margin: 0; font-size: 0.9rem; font-weight: 600; }
+.db-action-card p  { margin: 0; font-size: 0.78rem; color: #9e9e9e; line-height: 1.4; }
+
+/* ── Two-column main/sidebar ─────────────────────────────── */
+.db-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.25rem;
+    align-items: start;
+}
+.db-sidebar { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* ── Panel (shared for activity, events, news, sigs, tools) ─ */
+.db-panel {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+    overflow: hidden;
+}
+.db-panel-head {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.db-panel-head h5 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.db-panel-head h5 .material-icons { font-size: 1.1rem; color: var(--primary-color); }
+.db-panel-head a { font-size: 0.78rem; color: var(--primary-color); text-decoration: none; font-weight: 500; }
+.db-panel-head a:hover { text-decoration: underline; }
+
+.db-item {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid #f7f7f7;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+.db-item:last-child { border-bottom: none; }
+.db-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: #fff;
+    flex-shrink: 0;
+}
+.db-item-body { flex: 1; min-width: 0; }
+.db-item-body strong { font-size: 0.875rem; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-item-body span   { font-size: 0.75rem; color: #9e9e9e; }
+.db-panel-foot {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid #f0f0f0;
+    text-align: center;
+}
+.db-panel-foot a {
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.db-empty {
+    padding: 2rem 1.25rem;
+    text-align: center;
+    color: #bdbdbd;
+}
+.db-empty .material-icons { font-size: 2.25rem; display: block; margin-bottom: 0.5rem; }
+.db-empty p { margin: 0; font-size: 0.85rem; }
+
+/* ── Sidebar tabs ────────────────────────────────────────── */
+.db-tabs { display: flex; border-bottom: 1px solid #f0f0f0; }
+.db-tab {
+    flex: 1;
+    padding: 0.65rem 0.4rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #9e9e9e;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color .2s, border-color .2s;
+    user-select: none;
+}
+.db-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+.db-tab-body { display: none; }
+.db-tab-body.active { display: block; }
+
+/* ── Tools ───────────────────────────────────────────────── */
+.db-tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background .2s, transform .15s;
+    margin-bottom: 0.6rem;
+}
+.db-tool-btn:last-child { margin-bottom: 0; }
+.db-tool-btn .material-icons { font-size: 1.1rem; }
+.db-tool-btn.primary { background: var(--primary-color); color: #fff; }
+.db-tool-btn.primary:hover { background: #1565c0; color: #fff; text-decoration: none; transform: translateY(-1px); }
+.db-tool-btn.success { background: #2e7d32; color: #fff; }
+.db-tool-btn.success:hover { background: #1b5e20; color: #fff; text-decoration: none; transform: translateY(-1px); }
+.db-tool-btn.outline { background: #f5f5f5; color: #424242; border: 1px solid #e0e0e0; }
+.db-tool-btn.outline:hover { background: #eeeeee; color: #212121; text-decoration: none; transform: translateY(-1px); }
+.db-tool-btn.disabled-look { background: #f5f5f5; color: #bdbdbd; cursor: default; }
+
+/* ── Renewal warning ─────────────────────────────────────── */
+.db-renew-bar {
+    background: #fff3e0;
+    border: 1px solid #ffe0b2;
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.db-renew-bar .material-icons { color: #e65100; font-size: 1.6rem; flex-shrink: 0; }
+.db-renew-bar p { margin: 0; font-size: 0.875rem; color: #bf360c; flex: 1; }
+.db-renew-bar p strong { display: block; font-size: 0.9rem; margin-bottom: 2px; }
+
+/* ── Join banner ─────────────────────────────────────────── */
+.db-join-banner {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-radius: 14px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+.db-join-banner h4 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; color: #0d47a1; }
+.db-join-banner p  { font-size: 0.875rem; color: #1565c0; margin-bottom: 1.25rem; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 991px) {
+    .db-stats   { grid-template-columns: repeat(2, 1fr); }
+    .db-actions { grid-template-columns: repeat(2, 1fr); }
+    .db-grid    { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 575px) {
+    .db-hero { padding: 1.25rem 0 3rem; }
+    .db-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
     }
-    
-    .stats-card {
-        background: white;
-        border-radius: var(--border-radius-lg);
-        padding: 2rem;
-        box-shadow: var(--elevation-2);
-        transition: all 0.3s ease;
-        border-left: 4px solid var(--primary-color);
-    }
-    
-    .stats-card:hover {
-        box-shadow: var(--elevation-3);
-        transform: translateY(-2px);
-    }
-    
-    .stats-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        color: white;
-        margin-bottom: 1rem;
-    }
-    
-    .stats-number {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        margin-bottom: 0.5rem;
-    }
-    
-    .stats-label {
-        color: #6c757d;
-        font-weight: 500;
-        text-transform: uppercase;
-        font-size: 0.875rem;
-        letter-spacing: 0.5px;
-    }
-    
-    .quick-action-card {
-        background: white;
-        border-radius: var(--border-radius-lg);
-        padding: 1.5rem;
-        box-shadow: var(--elevation-1);
-        transition: all 0.3s ease;
-        text-decoration: none;
-        color: inherit;
-        border: 2px solid transparent;
-    }
-    
-    .quick-action-card:hover {
-        box-shadow: var(--elevation-3);
-        transform: translateY(-2px);
-        border-color: var(--primary-color);
-        text-decoration: none;
-        color: inherit;
-    }
-    
-    .action-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        color: white;
-        margin-bottom: 1rem;
-    }
-    
-    .membership-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: var(--border-radius-lg);
-        padding: 2rem;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .membership-card::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 200px;
-        height: 200px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-    }
-    
-    .membership-status {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .status-active {
-        background: rgba(40, 167, 69, 0.2);
-        color: #28a745;
-        border: 1px solid rgba(40, 167, 69, 0.3);
-    }
-    
-    .status-expired {
-        background: rgba(220, 53, 69, 0.2);
-        color: #dc3545;
-        border: 1px solid rgba(220, 53, 69, 0.3);
-    }
-    
-    .status-pending {
-        background: rgba(255, 193, 7, 0.2);
-        color: #ffc107;
-        border: 1px solid rgba(255, 193, 7, 0.3);
-    }
-    
-    .progress-ring {
-        width: 120px;
-        height: 120px;
-    }
-    
-    .progress-ring__circle {
-        stroke: rgba(255, 255, 255, 0.3);
-        stroke-width: 8;
-        fill: transparent;
-        r: 52;
-        cx: 60;
-        cy: 60;
-    }
-    
-    .progress-ring__circle--progress {
-        stroke: white;
-        stroke-linecap: round;
-        transform: rotate(-90deg);
-        transform-origin: 50% 50%;
-        transition: stroke-dasharray 0.3s;
-    }
-    
-    .recent-activity {
-        background: white;
-        border-radius: var(--border-radius-lg);
-        overflow: hidden;
-        box-shadow: var(--elevation-1);
-    }
-    
-    .activity-item {
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid #f8f9fa;
-        display: flex;
-        align-items: center;
-        transition: background-color 0.2s ease;
-    }
-    
-    .activity-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .activity-item:last-child {
-        border-bottom: none;
-    }
-    
-    .activity-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-        color: white;
-        margin-right: 1rem;
-        flex-shrink: 0;
-    }
-    
-    .activity-content {
-        flex: 1;
-    }
-    
-    .activity-title {
-        font-weight: 500;
-        margin-bottom: 0.25rem;
-        color: #495057;
-    }
-    
-    .activity-time {
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
-    
-    @media (max-width: 768px) {
-        .dashboard-header {
-            padding: 1.5rem 0;
-        }
-        
-        .stats-card {
-            margin-bottom: 1rem;
-        }
-        
-        .stats-number {
-            font-size: 2rem;
-        }
-    }
+    .db-stat-card { padding: 0.85rem 0.9rem; gap: 0.75rem; }
+    .db-stat-icon { width: 38px; height: 38px; font-size: 1rem; }
+    .db-stat-num  { font-size: 1.35rem; }
+    .db-actions { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    .db-action-card { padding: 1rem; }
+    .db-meta-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem 0.75rem; }
+    .db-membership-body { padding: 1rem; }
+    .db-membership-header { padding: 1rem; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Dashboard Header -->
-<div class="dashboard-header">
+<div class="db-wrap">
+
+<!-- ── Hero ───────────────────────────────────────────────── -->
+<div class="db-hero">
     <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">Welcome back, {{ user.first_name|default:user.email }}!</h1>
-                <p class="mb-0 opacity-75">Here's an overview of your ELTAN membership and activities</p>
-            </div>
-            <div class="col-md-4 text-md-end">
-                <div class="d-flex align-items-center justify-content-md-end">
-                    <span class="material-icons me-2" style="font-size: 2rem;">dashboard</span>
-                    <div>
-                        <div class="fs-5 fw-bold">{{ current_date|date:"M d, Y" }}</div>
-                        <div class="opacity-75">{{ current_date|date:"l" }}</div>
-                    </div>
+        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-3">
+                <div class="db-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+                <div>
+                    <div style="font-size:0.8rem; opacity:.7; margin-bottom:2px;">Member Dashboard</div>
+                    <h1 style="font-size:1.35rem; font-weight:700; margin:0;">
+                        Welcome back, {{ user.first_name|default:"Member" }}!
+                    </h1>
                 </div>
+            </div>
+            <div class="db-hero-date">
+                <span class="material-icons" style="font-size:1rem;">calendar_today</span>
+                {{ current_date|date:"l, M d Y" }}
             </div>
         </div>
     </div>
 </div>
 
-<div class="container py-5">
-    <!-- Membership Status Card -->
-    {% if active_subscription %}
-    <div class="row mb-5">
-        <div class="col-12">
-            <div class="membership-card" data-aos="fade-up">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                            <div class="d-flex align-items-center mb-3">
-                                <span class="material-icons me-2" style="font-size: 2rem;">card_membership</span>
-                                <div>
-                                <h3 class="mb-1">{{ active_subscription.membership_type }}</h3>
-                                <div class="opacity-75">ELTAN Member #{{ user.eltan_number }}</div>
-                                </div>
-                            </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-sm-6 mb-2">
-                                <strong>Status:</strong> 
-                                <span class="membership-status status-active ms-2">Active</span>
-                            </div>
-                            <div class="col-sm-6 mb-2">
-                                <strong>Valid Until:</strong> {{ active_subscription.end_date|date:"M d, Y" }}
-                            </div>
-                        </div>
-                        
-                        <div class="progress" style="height: 8px; background: rgba(255, 255, 255, 0.2);">
-                            <div class="progress-bar" 
-                                 style="background: rgba(255, 255, 255, 0.8); width: {{ membership_progress }}%"
-                                 role="progressbar"></div>
-                        </div>
-                        <small class="opacity-75 mt-1 d-block">
-                            {{ active_subscription.days_remaining }} days remaining ({{ membership_progress }}% of membership year)
-                        </small>
-                    </div>
-                    
-                    <div class="col-md-4 text-center">
-                        <div class="position-relative d-inline-block">
-                            <svg class="progress-ring" width="120" height="120">
-                                <circle class="progress-ring__circle" stroke-dasharray="326.7256637168334 326.7256637168334"></circle>
-                                <circle class="progress-ring__circle progress-ring__circle--progress" 
-                                        stroke-dasharray="calc({{ membership_progress }} * 326.7256637168334 / 100) 326.7256637168334"></circle>
-                            </svg>
-                            <div class="position-absolute top-50 start-50 translate-middle text-center">
-                                <div class="fs-4 fw-bold">{{ active_subscription.days_remaining }}</div>
-                                <small>days left</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!-- ── Body ───────────────────────────────────────────────── -->
+<div class="db-body">
+<div class="container">
+
+    <!-- Certificate pending/rejected notice -->
+    {% if latest_subscription and latest_subscription.payment_status == 'paid' and latest_subscription.certificate_status != 'approved' %}
+        {% if latest_subscription.certificate_status == 'pending' %}
+        <div class="db-notice pending">
+            <span class="material-icons">hourglass_top</span>
+            <p>
+                <strong>Qualification certificate under review</strong>
+                Your payment has been received. Your membership will be fully activated and your certificate available to download once our team verifies your qualification document. We'll email you when it's done.
+            </p>
         </div>
-    </div>
+        {% elif latest_subscription.certificate_status == 'rejected' %}
+        <div class="db-notice rejected">
+            <span class="material-icons">error_outline</span>
+            <p>
+                <strong>Qualification certificate not approved</strong>
+                Your submitted qualification document could not be verified. Please contact our support team to resubmit the correct documentation.
+            </p>
+        </div>
+        {% endif %}
     {% endif %}
 
-    <!-- Statistics Cards -->
-    <div class="row mb-5">
-        <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="100">
-            <div class="stats-card">
-                <div class="stats-icon bg-primary">
-                    <span class="material-icons">event</span>
-                </div>
-                <div class="stats-number">{{ stats.events_attended|default:0 }}</div>
-                <div class="stats-label">Events Attended</div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="200">
-            <div class="stats-card">
-                <div class="stats-icon bg-success">
-                    <span class="material-icons">download</span>
-                </div>
-                <div class="stats-number">{{ stats.resources_downloaded|default:0 }}</div>
-                <div class="stats-label">Resources Downloaded</div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="300">
-            <div class="stats-card">
-                <div class="stats-icon bg-info">
-                    <span class="material-icons">schedule</span>
-                </div>
-                <div class="stats-number">
-                    {% if active_subscription %}
-                        {{ active_subscription.eltan_year }}
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </div>
-                <div class="stats-label">Membership Year</div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="400">
-            <div class="stats-card">
-                <div class="stats-icon bg-warning">
-                    <span class="material-icons">star</span>
-                </div>
-                <div class="stats-number">{{ stats.certificates_earned|default:0 }}</div>
-                <div class="stats-label">Certificates Earned</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="row mb-5">
-        <div class="col-12">
-            <h3 class="mb-4" data-aos="fade-right">Quick Actions</h3>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="100">
-            <a href="{% url 'subscribe' %}" class="quick-action-card d-block">
-                <div class="action-icon bg-primary">
-                    <span class="material-icons">refresh</span>
-                </div>
-                <h5 class="mb-2">Renew Membership</h5>
-                <p class="text-muted mb-0">Extend your membership for another year</p>
-            </a>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="200">
-            <a href="{% url 'events' %}" class="quick-action-card d-block">
-                <div class="action-icon bg-success">
-                    <span class="material-icons">event</span>
-                </div>
-                <h5 class="mb-2">Browse Events</h5>
-                <p class="text-muted mb-0">Find and register for upcoming events</p>
-            </a>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="300">
-            <a href="{% url 'resource' %}" class="quick-action-card d-block">
-                <div class="action-icon bg-info">
-                    <span class="material-icons">library_books</span>
-                </div>
-                <h5 class="mb-2">Access Resources</h5>
-                <p class="text-muted mb-0">Download teaching materials and journals</p>
-            </a>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="400">
-            <a href="{% url 'profile_update' %}" class="quick-action-card d-block">
-                <div class="action-icon bg-warning">
-                    <span class="material-icons">person</span>
-                </div>
-                <h5 class="mb-2">Update Profile</h5>
-                <p class="text-muted mb-0">Keep your information up to date</p>
-            </a>
-        </div>
-    </div>
-
-    <!-- Content Grid -->
-    <div class="row">
-        <!-- Recent Activity -->
-        <div class="col-lg-8 mb-4" data-aos="fade-right">
-            <div class="recent-activity">
-                <div class="p-4 border-bottom">
-                    <h4 class="mb-0 d-flex align-items-center">
-                        <span class="material-icons me-2">history</span>
-                        Recent Activity
-                    </h4>
-                </div>
-                
-                {% if recent_activities %}
-                    {% for activity in recent_activities %}
-                    <div class="activity-item">
-                        <div class="activity-icon" style="background-color: {{ activity.color }};">
-                            <span class="material-icons">{{ activity.icon }}</span>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">{{ activity.title }}</div>
-                            <div class="activity-time">{{ activity.created_at|timesince }} ago</div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div class="p-4 text-center text-muted">
-                    <span class="material-icons mb-2" style="font-size: 3rem; opacity: 0.3;">inbox</span>
-                    <p class="mb-0">No recent activity</p>
-                </div>
-                {% endif %}
-                
-                <div class="p-3 border-top text-center">
-                    <a href="{% url 'events' %}" class="btn btn-outline-primary">View All Activity</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Upcoming Events & News -->
-        <div class="col-lg-4 mb-4" data-aos="fade-left">
-            <!-- Upcoming Events -->
-            <div class="recent-activity mb-4">
-                <div class="p-4 border-bottom">
-                    <h5 class="mb-0 d-flex align-items-center">
-                        <span class="material-icons me-2">event</span>
-                        Upcoming Events
-                    </h5>
-                </div>
-                
-                {% if upcoming_events %}
-                    {% for event in upcoming_events %}
-                    <div class="activity-item">
-                        <div class="activity-icon bg-primary">
-                            <span class="material-icons">event</span>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">{{ event.event_title }}</div>
-                            <div class="activity-time">{{ event.event_date|date:"M d, Y" }}</div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div class="p-4 text-center text-muted">
-                    <span class="material-icons mb-2" style="font-size: 2rem; opacity: 0.3;">event</span>
-                    <p class="mb-0 small">No upcoming events</p>
-                </div>
-                {% endif %}
-                
-                <div class="p-3 border-top text-center">
-                    <a href="{% url 'events' %}" class="btn btn-outline-primary btn-sm">View All Events</a>
-                </div>
-            </div>
-
-            <!-- Latest News -->
-            <div class="recent-activity">
-                <div class="p-4 border-bottom">
-                    <h5 class="mb-0 d-flex align-items-center">
-                        <span class="material-icons me-2">article</span>
-                        Latest News
-                    </h5>
-                </div>
-                
-                {% if latest_news %}
-                    {% for news in latest_news %}
-                    <div class="activity-item">
-                        <div class="activity-icon bg-info">
-                            <span class="material-icons">article</span>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">{{ news.headline|truncatechars:40 }}</div>
-                            <div class="activity-time">{{ news.date_added|date:"M d, Y" }}</div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div class="p-4 text-center text-muted">
-                    <span class="material-icons mb-2" style="font-size: 2rem; opacity: 0.3;">article</span>
-                    <p class="mb-0 small">No recent news</p>
-                </div>
-                {% endif %}
-                
-                <div class="p-3 border-top text-center">
-                    <a href="{% url 'news' %}" class="btn btn-outline-info btn-sm">View All News</a>
-                </div>
-            </div>
-
-            <!-- My SIGs -->
-            <div class="recent-activity mt-4">
-                <div class="p-4 border-bottom">
-                    <h5 class="mb-0 d-flex align-items-center">
-                        <span class="material-icons me-2">groups</span>
-                        My Special Interest Groups
-                    </h5>
-                </div>
-
-                {% if user_sigs %}
-                    {% for sig in user_sigs %}
-                    <div class="activity-item">
-                        <div class="activity-icon" style="background-color: #E67918;">
-                            <span class="material-icons">{{ sig.icon|default:"groups" }}</span>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">{{ sig.title }}</div>
-                            <div class="activity-time">{{ sig.member_count }} member{{ sig.member_count|pluralize }}</div>
-                        </div>
-                        <a href="{% url 'sig_detail' sig.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div class="p-4 text-center text-muted">
-                    <span class="material-icons mb-2" style="font-size: 2rem; opacity: 0.3;">group_off</span>
-                    <p class="mb-0 small">You haven't joined any SIGs yet</p>
-                </div>
-                {% endif %}
-
-                <div class="p-3 border-top text-center">
-                    <a href="{% url 'sigs' %}" class="btn btn-outline-primary btn-sm">
-                        {% if user_sigs %}Explore More SIGs{% else %}Browse SIGs{% endif %}
-                    </a>
-                </div>
-            </div>
-
-            <!-- Member Tools -->
-            <div class="recent-activity mt-4">
-                <div class="p-4 border-bottom">
-                    <h5 class="mb-0 d-flex align-items-center">
-                        <span class="material-icons me-2">build_circle</span>
-                        Member Tools
-                    </h5>
-                </div>
-
-                <div class="p-4">
-                    {% if active_subscription %}
-                        <a href="{% url 'list_certificates' %}" class="btn btn-primary w-100 mb-3 d-flex align-items-center justify-content-center">
-                            <span class="material-icons me-2">workspace_premium</span>
-                            Download Certificate
-                        </a>
-                    {% else %}
-                        <a href="{% url 'subscribe' %}" class="btn btn-outline-primary w-100 mb-3 d-flex align-items-center justify-content-center">
-                            <span class="material-icons me-2">workspace_premium</span>
-                            Subscribe to Download Certificate
-                        </a>
-                    {% endif %}
-
-                    <a href="https://chat.whatsapp.com/FjROkOB9wf59UGYKPkPVIB?mode=r_t" target="_blank" rel="noopener" class="btn btn-success w-100 mb-3 d-flex align-items-center justify-content-center">
-                        <span class="material-icons me-2">chat</span>
-                        Join Our WhatsApp Community
-                    </a>
-
-                    <a href="{% static 'resources/Constitution.pdf' %}" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center">
-                        <span class="material-icons me-2">description</span>
-                        Download Our Constitution
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Renewal Reminder -->
+    <!-- Renewal reminder -->
     {% if active_subscription and active_subscription.days_remaining <= 30 %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="alert alert-warning d-flex align-items-center" role="alert" data-aos="fade-up">
-                <span class="material-icons me-3" style="font-size: 2rem;">warning</span>
-                <div>
-                    <h5 class="alert-heading mb-2">Membership Renewal Reminder</h5>
-                    <p class="mb-2">Your membership expires in {{ active_subscription.days_remaining }} days. Renew now to continue enjoying all ELTAN benefits.</p>
-                    <a href="{% url 'subscribe' %}" class="btn btn-warning">
-                        <span class="material-icons me-1">refresh</span>Renew Now
-                    </a>
+    <div class="db-renew-bar">
+        <span class="material-icons">warning_amber</span>
+        <p>
+            <strong>Membership expires in {{ active_subscription.days_remaining }} day{{ active_subscription.days_remaining|pluralize }}</strong>
+            Renew now to keep access to all ELTAN benefits without interruption.
+        </p>
+        <a href="{% url 'subscribe' %}" class="db-tool-btn primary" style="margin:0; white-space:nowrap;">
+            <span class="material-icons">refresh</span> Renew
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Membership card -->
+    {% if active_subscription %}
+    <div class="db-membership" data-aos="fade-up">
+        <div class="db-membership-header">
+            <div>
+                <p class="db-membership-title">{{ active_subscription.membership_type }}</p>
+                <p class="db-membership-number">ELTAN #{{ user.eltan_number|default:"—" }}</p>
+            </div>
+            <div style="text-align:right;">
+                {% if active_subscription.certificate_status == 'approved' %}
+                    <span class="db-cert-badge approved"><span class="material-icons" style="font-size:.9rem;">verified</span> Verified</span>
+                {% elif active_subscription.certificate_status == 'pending' %}
+                    <span class="db-cert-badge pending"><span class="material-icons" style="font-size:.9rem;">hourglass_top</span> Pending</span>
+                {% elif active_subscription.certificate_status == 'rejected' %}
+                    <span class="db-cert-badge rejected"><span class="material-icons" style="font-size:.9rem;">cancel</span> Rejected</span>
+                {% endif %}
+                <div style="font-size:.8rem; opacity:.75; margin-top:.4rem;">{{ active_subscription.eltan_year }}</div>
+            </div>
+        </div>
+        <div class="db-membership-body">
+            <div class="db-meta-grid">
+                <div class="db-meta-item">
+                    <label>Valid from</label>
+                    <span>{{ active_subscription.start_date|date:"M d, Y" }}</span>
                 </div>
+                <div class="db-meta-item">
+                    <label>Valid until</label>
+                    <span>{{ active_subscription.end_date|date:"M d, Y" }}</span>
+                </div>
+                <div class="db-meta-item">
+                    <label>State chapter</label>
+                    <span>{{ active_subscription.state_chapter|default:"—" }}</span>
+                </div>
+                <div class="db-meta-item">
+                    <label>Days remaining</label>
+                    <span>{{ active_subscription.days_remaining }} days</span>
+                </div>
+            </div>
+            <div class="db-progress-track">
+                <div class="db-progress-fill" style="width:{{ membership_progress }}%;"></div>
+            </div>
+            <div style="font-size:.75rem; color:#9e9e9e; margin-top:.4rem; text-align:right;">
+                {{ membership_progress }}% of membership year elapsed
             </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- No Active Membership -->
-    {% if not active_subscription %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="alert alert-info d-flex align-items-center" role="alert" data-aos="fade-up">
-                <span class="material-icons me-3" style="font-size: 2rem;">info</span>
-                <div>
-                    <h5 class="alert-heading mb-2">Join ELTAN Today!</h5>
-                    <p class="mb-2">Become a member to access exclusive resources, events, and networking opportunities.</p>
-                    <a href="{% url 'subscribe' %}" class="btn btn-primary me-2">
-                        <span class="material-icons me-1">card_membership</span>View Membership Types
-                    </a>
-                    <a href="{% url 'register' %}" class="btn btn-outline-primary">
-                        <span class="material-icons me-1">person_add</span>Join Now
-                    </a>
-                </div>
+    <!-- Stats -->
+    <div class="db-stats" data-aos="fade-up">
+        <div class="db-stat-card">
+            <div class="db-stat-icon" style="background:#1565c0;">
+                <span class="material-icons">event</span>
+            </div>
+            <div>
+                <div class="db-stat-num" data-count="{{ stats.events_attended|default:0 }}">{{ stats.events_attended|default:0 }}</div>
+                <div class="db-stat-lbl">Events Attended</div>
+            </div>
+        </div>
+        <div class="db-stat-card">
+            <div class="db-stat-icon" style="background:#2e7d32;">
+                <span class="material-icons">download</span>
+            </div>
+            <div>
+                <div class="db-stat-num" data-count="{{ stats.resources_downloaded|default:0 }}">{{ stats.resources_downloaded|default:0 }}</div>
+                <div class="db-stat-lbl">Resources Downloaded</div>
+            </div>
+        </div>
+        <div class="db-stat-card">
+            <div class="db-stat-icon" style="background:#6a1b9a;">
+                <span class="material-icons">workspace_premium</span>
+            </div>
+            <div>
+                <div class="db-stat-num" data-count="{{ stats.certificates_earned|default:0 }}">{{ stats.certificates_earned|default:0 }}</div>
+                <div class="db-stat-lbl">Certificates Earned</div>
+            </div>
+        </div>
+        <div class="db-stat-card">
+            <div class="db-stat-icon" style="background:#e65100;">
+                <span class="material-icons">groups</span>
+            </div>
+            <div>
+                <div class="db-stat-num" data-count="{{ user_sigs|length }}">{{ user_sigs|length }}</div>
+                <div class="db-stat-lbl">SIGs Joined</div>
             </div>
         </div>
     </div>
+
+    <!-- Quick actions -->
+    <div class="db-actions" data-aos="fade-up">
+        <a href="{% url 'subscribe' %}" class="db-action-card">
+            <div class="db-action-icon" style="background:#1565c0;">
+                <span class="material-icons">refresh</span>
+            </div>
+            <h6>Renew Membership</h6>
+            <p>Extend your subscription for another year</p>
+        </a>
+        <a href="{% url 'list_certificates' %}" class="db-action-card">
+            <div class="db-action-icon" style="background:#6a1b9a;">
+                <span class="material-icons">workspace_premium</span>
+            </div>
+            <h6>My Certificates</h6>
+            <p>View and download your membership certificates</p>
+        </a>
+        <a href="{% url 'resource' %}" class="db-action-card">
+            <div class="db-action-icon" style="background:#2e7d32;">
+                <span class="material-icons">library_books</span>
+            </div>
+            <h6>Resources</h6>
+            <p>Access teaching materials and journals</p>
+        </a>
+        <a href="{% url 'profile_update' %}" class="db-action-card">
+            <div class="db-action-icon" style="background:#e65100;">
+                <span class="material-icons">manage_accounts</span>
+            </div>
+            <h6>Update Profile</h6>
+            <p>Keep your contact details current</p>
+        </a>
+    </div>
+
+    <!-- No membership -->
+    {% if not active_subscription %}
+    <div class="db-join-banner" data-aos="fade-up">
+        <span class="material-icons" style="font-size:2.5rem; color:#1565c0; margin-bottom:.75rem; display:block;">card_membership</span>
+        <h4>Join ELTAN Today</h4>
+        <p>Become a member to access exclusive resources, events, and networking opportunities.</p>
+        <a href="{% url 'subscribe' %}" class="db-tool-btn primary" style="display:inline-flex; margin:0 auto;">
+            <span class="material-icons">card_membership</span> View Membership Plans
+        </a>
+    </div>
     {% endif %}
-</div>
+
+    <!-- Two-column grid -->
+    <div class="db-grid" data-aos="fade-up">
+
+        <!-- Events feed -->
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h5><span class="material-icons">event</span> Upcoming Events</h5>
+                <a href="{% url 'events' %}">See all</a>
+            </div>
+            {% if upcoming_events %}
+                {% for event in upcoming_events %}
+                <div class="db-item">
+                    <div class="db-item-icon" style="background:#1565c0;">
+                        <span class="material-icons">event</span>
+                    </div>
+                    <div class="db-item-body">
+                        <strong>{{ event.event_title }}</strong>
+                        <span>{{ event.event_date|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="db-empty">
+                <span class="material-icons">event_busy</span>
+                <p>No upcoming events right now</p>
+            </div>
+            {% endif %}
+            <div class="db-panel-foot">
+                <a href="{% url 'events' %}">Browse all events →</a>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="db-sidebar">
+
+            <!-- Tabbed: News | SIGs | Tools -->
+            <div class="db-panel">
+                <div class="db-tabs">
+                    <div class="db-tab active" data-tab="news">
+                        <span class="material-icons" style="font-size:.95rem; vertical-align:middle;">article</span> News
+                    </div>
+                    <div class="db-tab" data-tab="sigs">
+                        <span class="material-icons" style="font-size:.95rem; vertical-align:middle;">groups</span> SIGs
+                    </div>
+                    <div class="db-tab" data-tab="tools">
+                        <span class="material-icons" style="font-size:.95rem; vertical-align:middle;">build_circle</span> Tools
+                    </div>
+                </div>
+
+                <!-- News tab -->
+                <div class="db-tab-body active" id="tab-news">
+                    {% if latest_news %}
+                        {% for news in latest_news %}
+                        <div class="db-item">
+                            <div class="db-item-icon" style="background:#0277bd;">
+                                <span class="material-icons">article</span>
+                            </div>
+                            <div class="db-item-body">
+                                <strong>{{ news.headline|truncatechars:45 }}</strong>
+                                <span>{{ news.date_added|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="db-empty">
+                        <span class="material-icons">newspaper</span>
+                        <p>No recent news</p>
+                    </div>
+                    {% endif %}
+                    <div class="db-panel-foot"><a href="{% url 'news' %}">All news →</a></div>
+                </div>
+
+                <!-- SIGs tab -->
+                <div class="db-tab-body" id="tab-sigs">
+                    {% if user_sigs %}
+                        {% for sig in user_sigs %}
+                        <div class="db-item">
+                            <div class="db-item-icon" style="background:#e65100;">
+                                <span class="material-icons">{{ sig.icon|default:"groups" }}</span>
+                            </div>
+                            <div class="db-item-body">
+                                <strong>{{ sig.title }}</strong>
+                                <span>{{ sig.member_count }} member{{ sig.member_count|pluralize }}</span>
+                            </div>
+                            <a href="{% url 'sig_detail' sig.pk %}" style="font-size:.75rem; color:var(--primary-color); font-weight:600; text-decoration:none; white-space:nowrap;">View</a>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="db-empty">
+                        <span class="material-icons">group_off</span>
+                        <p>You haven't joined any SIGs yet</p>
+                    </div>
+                    {% endif %}
+                    <div class="db-panel-foot"><a href="{% url 'sigs' %}">Browse SIGs →</a></div>
+                </div>
+
+                <!-- Tools tab -->
+                <div class="db-tab-body" id="tab-tools">
+                    <div style="padding:1rem;">
+                        {% if active_subscription and active_subscription.can_download_certificate %}
+                            <a href="{% url 'list_certificates' %}" class="db-tool-btn primary">
+                                <span class="material-icons">workspace_premium</span> Download Certificate
+                            </a>
+                        {% elif active_subscription %}
+                            <div class="db-tool-btn disabled-look" title="Available once your qualification is verified">
+                                <span class="material-icons">hourglass_top</span> Certificate Pending Verification
+                            </div>
+                        {% else %}
+                            <a href="{% url 'subscribe' %}" class="db-tool-btn primary">
+                                <span class="material-icons">workspace_premium</span> Subscribe for Certificate
+                            </a>
+                        {% endif %}
+
+                        <a href="https://chat.whatsapp.com/FjROkOB9wf59UGYKPkPVIB?mode=r_t" target="_blank" rel="noopener" class="db-tool-btn success">
+                            <span class="material-icons">chat</span> WhatsApp Community
+                        </a>
+
+                        <a href="{% static 'resources/Constitution.pdf' %}" class="db-tool-btn outline">
+                            <span class="material-icons">description</span> Download Constitution
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /sidebar -->
+    </div><!-- /db-grid -->
+
+</div><!-- /container -->
+</div><!-- /db-body -->
+</div><!-- /db-wrap -->
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Dashboard interactivity
-    document.addEventListener('DOMContentLoaded', function() {
-        // Animate counters
-        const counters = document.querySelectorAll('.stats-number');
-        
-        const animateCounter = (counter) => {
-            const target = parseInt(counter.textContent);
-            let current = 0;
-            const increment = target / 50;
-            
-            const updateCounter = () => {
-                if (current < target) {
-                    current += increment;
-                    counter.textContent = Math.ceil(current);
-                    requestAnimationFrame(updateCounter);
-                } else {
-                    counter.textContent = target;
-                }
-            };
-            
-            updateCounter();
+document.addEventListener('DOMContentLoaded', function () {
+
+    // Counter animation
+    document.querySelectorAll('.db-stat-num[data-count]').forEach(el => {
+        const target = parseInt(el.dataset.count, 10);
+        if (!target) return;
+        let current = 0;
+        const step = Math.ceil(target / 40);
+        const tick = () => {
+            current = Math.min(current + step, target);
+            el.textContent = current;
+            if (current < target) requestAnimationFrame(tick);
         };
-        
-        // Intersection Observer for counter animation
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const counter = entry.target.querySelector('.stats-number');
-                    if (counter && !counter.classList.contains('animated')) {
-                        counter.classList.add('animated');
-                        animateCounter(counter);
-                    }
-                }
-            });
+        const io = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) { tick(); io.disconnect(); }
         });
-        
-        document.querySelectorAll('.stats-card').forEach(card => {
-            observer.observe(card);
-        });
-        
-        // Add click ripple effect to action cards
-        document.querySelectorAll('.quick-action-card, .activity-item').forEach(card => {
-            card.addEventListener('click', function(e) {
-                let ripple = document.createElement('span');
-                ripple.classList.add('ripple');
-                this.appendChild(ripple);
-                
-                let x = e.clientX - e.target.offsetLeft;
-                let y = e.clientY - e.target.offsetTop;
-                
-                ripple.style.left = `${x}px`;
-                ripple.style.top = `${y}px`;
-                
-                setTimeout(() => {
-                    ripple.remove();
-                }, 300);
-            });
+        io.observe(el);
+    });
+
+    // Sidebar tabs
+    document.querySelectorAll('.db-tab').forEach(tab => {
+        tab.addEventListener('click', function () {
+            const panel = this.closest('.db-panel');
+            panel.querySelectorAll('.db-tab').forEach(t => t.classList.remove('active'));
+            panel.querySelectorAll('.db-tab-body').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const target = panel.querySelector('#tab-' + this.dataset.tab);
+            if (target) target.classList.add('active');
         });
     });
-</script>
 
-<style>
-    .ripple {
-        position: absolute;
-        border-radius: 50%;
-        background: rgba(25, 118, 210, 0.3);
-        transform: scale(0);
-        animation: ripple-animation 0.3s linear;
-        pointer-events: none;
-    }
-    
-    @keyframes ripple-animation {
-        to {
-            transform: scale(4);
-            opacity: 0;
-        }
-    }
-    
-    .quick-action-card, .activity-item {
-        position: relative;
-        overflow: hidden;
-    }
-</style>
+    // Progress bar animate-in
+    document.querySelectorAll('.db-progress-fill').forEach(bar => {
+        const w = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => { bar.style.width = w; }, 200);
+    });
+
+});
+</script>
 {% endblock %}

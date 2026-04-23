@@ -359,6 +359,9 @@ def dash(request):
         'upcoming_events': upcoming_events,
         'latest_news': latest_news,
         'user_sigs': user_sigs,
+        'current_date': today,
+        # most-recent subscription regardless of payment, so we can show cert-pending notice
+        'latest_subscription': subscription,
     }
 
     # Use the modern dashboard theme
