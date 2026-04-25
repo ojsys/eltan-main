@@ -201,7 +201,7 @@ body {
     position: relative;
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     padding: 0;
     background: linear-gradient(135deg, #F8F9FA 0%, #E8F4F8 100%);
     overflow: hidden;
@@ -212,6 +212,7 @@ body {
     position: relative;
     width: 100%;
     min-height: 100vh;
+    align-self: stretch;
 }
 
 .hero-slide {
@@ -300,6 +301,7 @@ body {
     align-items: center;
     position: relative;
     z-index: 1;
+    padding: 80px 0 60px;
 }
 
 .hero-content {
