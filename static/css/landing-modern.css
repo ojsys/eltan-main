@@ -202,7 +202,7 @@ body {
     min-height: 100vh;
     display: flex;
     align-items: center;
-    padding: var(--spacing-3xl) 0;
+    padding: 0;
     background: linear-gradient(135deg, #F8F9FA 0%, #E8F4F8 100%);
     overflow: hidden;
 }
