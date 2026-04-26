@@ -409,11 +409,11 @@ def subscription(request):
 
             if subscription and subscription.end_date < timezone.now().date():
                 # Renew existing subscription
-                subscription = renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate)
+                subscription = renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate, membership_type=membership_type)
                 return redirect('subscribe_success')
             else:
                 # Create new subscription
-                subscription = create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate, payment_method='manual')
+                subscription = create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate, payment_method='manual', membership_type=membership_type)
                 return redirect('subscription_pending')
 
     context = {
@@ -422,9 +422,10 @@ def subscription(request):
     }
     return render(request, 'membership/subscription.html', context)
 
-def create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate=None, payment_method='manual'):
+def create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate=None, payment_method='manual', membership_type=''):
     subscription = Subscription.objects.create(
         user=user,
+        membership_type=membership_type,
         payment_proof=payment_proof,
         payment_amount=payment_amount,
         state_chapter=state_chapter,
@@ -439,7 +440,8 @@ def create_subscription(user, payment_proof, payment_amount, state_chapter, qual
 
     return subscription
 
-def renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate=None):
+def renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate=None, membership_type=''):
+    subscription.membership_type = membership_type
     subscription.payment_proof = payment_proof
     subscription.payment_amount = payment_amount
     subscription.state_chapter = state_chapter

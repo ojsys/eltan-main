@@ -162,19 +162,40 @@ class SubscriptionForm(forms.ModelForm):
         # Fetching the choices directly from the model field if they are predefined there
         membership_type_field = self.fields['membership_type']
         state_chapter_field = self.fields['state_chapter']
-        
+
         # Filter out any empty choices and set the new choices to the widget
-        non_empty_choices = [choice for choice in membership_type_field.choices if choice[0]!= '']
-        non_empty_choices2 = [item for item in state_chapter_field.choices if item[0]!= '']
-        membership_type_field.choices = non_empty_choices
-        state_chapter_field.choices = non_empty_choices2
+        non_empty_choices = [choice for choice in membership_type_field.choices if choice[0] != '']
+        non_empty_choices2 = [item for item in state_chapter_field.choices if item[0] != '']
+        # Prepend a blank sentinel so the user must actively choose
+        membership_type_field.choices = [('', '— Select Membership Type —')] + non_empty_choices
+        state_chapter_field.choices = [('', '— Select State Chapter —')] + non_empty_choices2
+        membership_type_field.required = True
+        state_chapter_field.required = True
         
         # Set choices for eltan_year from ELTANYearSetting
         from .models import ELTANYearSetting  # Import at the top of the file instead
         eltan_years = ELTANYearSetting.objects.all()
-        self.fields['eltan_year'].choices = [(year.eltan_year, year.eltan_year) for year in eltan_years]
-    
-    
+        self.fields['eltan_year'].choices = [('', '— Select Year —')] + [(year.eltan_year, year.eltan_year) for year in eltan_years]
+        self.fields['eltan_year'].required = True
+
+    def clean_membership_type(self):
+        value = self.cleaned_data.get('membership_type', '').strip()
+        if not value:
+            raise forms.ValidationError('Please select a membership type.')
+        return value
+
+    def clean_state_chapter(self):
+        value = self.cleaned_data.get('state_chapter', '').strip()
+        if not value:
+            raise forms.ValidationError('Please select a state chapter.')
+        return value
+
+    def clean_eltan_year(self):
+        value = self.cleaned_data.get('eltan_year', '').strip()
+        if not value:
+            raise forms.ValidationError('Please select an ELTAN year.')
+        return value
+
     class Meta:
         model = Subscription
         #exclude = ('user', 'payment_id', 'payment_status', 'end_date', )
