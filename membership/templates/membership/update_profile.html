@@ -1,29 +1,400 @@
 {% extends 'membership/base.html' %}
 {% load static %}
-{% load crispy_forms_tags %}
 
-{% block title %}
-    {{ title }} - Update Profile 
-{% endblock title %}
+{% block title %}Update Profile – ELTAN{% endblock %}
 
 {% block content %}
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4"></div>
-            <div class="col-md-4">
-                <h3 class="mt-5 mb-5 text-center">Profile Update for <br>{{ request.user.first_name }} {{ request.user.last_name }}</h3>
-                <hr>
-                <div class="row">
-                    <div class="col-md-12">
-                        <form method="post">
-                            {% csrf_token %}
-                            {{ form | crispy }}
-                            <button type="submit" class="btn btn-warning">Update</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4"></div>
-        </div>
+<style>
+  .profile-page {
+    background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+    min-height: 100vh;
+    padding: 3rem 1rem 4rem;
+  }
+
+  .profile-header {
+    max-width: 760px;
+    margin: 0 auto 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .profile-header-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #E67918, #ff9a45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(230,121,24,0.28);
+  }
+
+  .profile-header-icon .material-icons { color: #fff; font-size: 26px; }
+
+  .profile-header-text h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 .2rem;
+    line-height: 1.2;
+  }
+
+  .profile-header-text p {
+    font-size: .9rem;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .profile-card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    max-width: 760px;
+    margin: 0 auto 1.5rem;
+    overflow: hidden;
+  }
+
+  .profile-section-head {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    background: #fafafa;
+  }
+
+  .profile-section-head .material-icons {
+    font-size: 18px;
+    color: #E67918;
+  }
+
+  .profile-section-head span.label {
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #6b7280;
+  }
+
+  .profile-section-body {
+    padding: 1.75rem;
+  }
+
+  /* Photo upload area */
+  .photo-upload-area {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .photo-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E67918, #ff9a45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .photo-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .photo-upload-info h6 {
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: .25rem;
+    font-size: .95rem;
+  }
+
+  .photo-upload-info p {
+    font-size: .82rem;
+    color: #9ca3af;
+    margin-bottom: .6rem;
+  }
+
+  .photo-file-input {
+    display: none;
+  }
+
+  .photo-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: #fff;
+    color: #E67918;
+    border: 1.5px solid #E67918;
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 700;
+    padding: .4rem 1rem;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+
+  .photo-upload-btn:hover { background: #E67918; color: #fff; }
+
+  /* Form fields */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .form-grid.single { grid-template-columns: 1fr; }
+
+  .form-field { display: flex; flex-direction: column; gap: .35rem; }
+
+  .form-field label {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #374151;
+    letter-spacing: .01em;
+  }
+
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    width: 100%;
+    padding: .65rem .9rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: .9rem;
+    color: #111827;
+    background: #fafafa;
+    transition: border-color .15s, background .15s;
+    outline: none;
+    font-family: inherit;
+  }
+
+  .form-field input:focus,
+  .form-field select:focus,
+  .form-field textarea:focus {
+    border-color: #E67918;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(230,121,24,0.1);
+  }
+
+  .form-field .field-error {
+    font-size: .78rem;
+    color: #ef4444;
+    margin-top: .15rem;
+  }
+
+  /* Submit bar */
+  .profile-submit-bar {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: #E67918;
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 999px;
+    padding: .85rem 2rem;
+    cursor: pointer;
+    transition: background .15s;
+    text-decoration: none;
+  }
+
+  .btn-save:hover { background: #c5630c; color: #fff; }
+
+  .btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: transparent;
+    color: #6b7280;
+    font-size: .9rem;
+    font-weight: 600;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 999px;
+    padding: .8rem 1.5rem;
+    text-decoration: none;
+    transition: border-color .15s, color .15s;
+  }
+
+  .btn-cancel:hover { border-color: #9ca3af; color: #374151; }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .profile-section-body { padding: 1.25rem; }
+    .profile-submit-bar { flex-direction: column; }
+    .btn-save, .btn-cancel { width: 100%; justify-content: center; }
+  }
+</style>
+
+<section class="profile-page">
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <!-- Page header -->
+    <div class="profile-header">
+      <div class="profile-header-icon">
+        <span class="material-icons">manage_accounts</span>
+      </div>
+      <div class="profile-header-text">
+        <h1>Update Your Profile</h1>
+        <p>{{ request.user.first_name }} {{ request.user.last_name }} &middot; {{ request.user.email }}</p>
+      </div>
     </div>
+
+    <!-- Profile Photo -->
+    <div class="profile-card">
+      <div class="profile-section-head">
+        <span class="material-icons">photo_camera</span>
+        <span class="label">Profile Photo</span>
+      </div>
+      <div class="profile-section-body">
+        <div class="photo-upload-area">
+          <div class="photo-avatar" id="avatarPreview">
+            {% if form.instance.profile_pic %}
+              <img src="{{ form.instance.profile_pic.url }}" alt="Profile photo" id="avatarImg">
+            {% else %}
+              <span id="avatarInitials">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</span>
+            {% endif %}
+          </div>
+          <div class="photo-upload-info">
+            <h6>Profile Picture</h6>
+            <p>JPG or PNG · Max 5MB · Recommended 400×400px</p>
+            <label class="photo-upload-btn" for="{{ form.profile_pic.id_for_label }}">
+              <span class="material-icons" style="font-size:15px;">upload</span>
+              Choose Photo
+            </label>
+            {{ form.profile_pic }}
+          </div>
+        </div>
+        {% if form.profile_pic.errors %}
+          <div class="field-error mt-2">{{ form.profile_pic.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Personal Information -->
+    <div class="profile-card">
+      <div class="profile-section-head">
+        <span class="material-icons">person</span>
+        <span class="label">Personal Information</span>
+      </div>
+      <div class="profile-section-body">
+        <div class="form-grid">
+
+          <div class="form-field">
+            <label for="{{ form.gender.id_for_label }}">{{ form.gender.label }}</label>
+            {{ form.gender }}
+            {% if form.gender.errors %}<div class="field-error">{{ form.gender.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="form-field">
+            <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+            {{ form.phone_number }}
+            {% if form.phone_number.errors %}<div class="field-error">{{ form.phone_number.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="form-field">
+            <label for="{{ form.date_of_birth.id_for_label }}">{{ form.date_of_birth.label }}</label>
+            {{ form.date_of_birth }}
+            {% if form.date_of_birth.errors %}<div class="field-error">{{ form.date_of_birth.errors|join:", " }}</div>{% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Address Information -->
+    <div class="profile-card">
+      <div class="profile-section-head">
+        <span class="material-icons">location_on</span>
+        <span class="label">Address Information</span>
+      </div>
+      <div class="profile-section-body">
+        <div class="form-grid single" style="margin-bottom:1.25rem;">
+          <div class="form-field">
+            <label for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
+            {{ form.address }}
+            {% if form.address.errors %}<div class="field-error">{{ form.address.errors|join:", " }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="form-grid">
+
+          <div class="form-field">
+            <label for="{{ form.city.id_for_label }}">{{ form.city.label }}</label>
+            {{ form.city }}
+            {% if form.city.errors %}<div class="field-error">{{ form.city.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="form-field">
+            <label for="{{ form.state.id_for_label }}">{{ form.state.label }}</label>
+            {{ form.state }}
+            {% if form.state.errors %}<div class="field-error">{{ form.state.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="form-field">
+            <label for="{{ form.zip_code.id_for_label }}">{{ form.zip_code.label }}</label>
+            {{ form.zip_code }}
+            {% if form.zip_code.errors %}<div class="field-error">{{ form.zip_code.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="form-field">
+            <label for="{{ form.country.id_for_label }}">{{ form.country.label }}</label>
+            {{ form.country }}
+            {% if form.country.errors %}<div class="field-error">{{ form.country.errors|join:", " }}</div>{% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit bar -->
+    <div class="profile-submit-bar">
+      <a href="{% url 'home' %}" class="btn-cancel">
+        <span class="material-icons" style="font-size:17px;">arrow_back</span>
+        Cancel
+      </a>
+      <button type="submit" class="btn-save">
+        <span class="material-icons" style="font-size:17px;">save</span>
+        Save Changes
+      </button>
+    </div>
+
+  </form>
+</section>
+
+<script>
+  // Live photo preview
+  document.getElementById('{{ form.profile_pic.id_for_label }}').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const preview = document.getElementById('avatarPreview');
+      preview.innerHTML = '<img src="' + e.target.result + '" alt="Preview" id="avatarImg" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+    };
+    reader.readAsDataURL(file);
+  });
+</script>
 {% endblock content %}

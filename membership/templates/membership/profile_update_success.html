@@ -1,20 +1,151 @@
 {% extends 'membership/base.html' %}
+{% load static %}
 
-{% block title %}
-    {{ title }} - Profile Updated 
-{% endblock title %}
+{% block title %}Profile Updated – ELTAN{% endblock %}
 
 {% block content %}
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4"></div>
-            <div class="col-md-4">
-                <h2 style="color: green;">Profile Updated Successfully</h2>
-                <p><i class="fa-solid fa-circle-check" style="color:green;"></i></p>
-                <a href="{% url 'home' %}">Go To Home Page</a>
-            </div>
-            <div class="col-md-4"></div>
-        </div>
+<style>
+  .success-page {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    padding: 3rem 1rem;
+  }
+
+  .success-card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(16,185,129,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    padding: 3rem 2.5rem;
+    max-width: 520px;
+    width: 100%;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .success-icon-wrap {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.75rem;
+    box-shadow: 0 4px 20px rgba(16,185,129,0.20);
+  }
+
+  .success-icon-wrap .material-icons { font-size: 44px; color: #10b981; }
+
+  .success-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: #d1fae5;
+    color: #059669;
+    border: 1.5px solid #a7f3d0;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: .3rem .9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .success-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #111827;
+    margin-bottom: .75rem;
+    line-height: 1.25;
+  }
+
+  .success-subtitle {
+    color: #6b7280;
+    font-size: 1rem;
+    line-height: 1.65;
+    max-width: 400px;
+    margin: 0 auto 2rem;
+  }
+
+  .success-actions {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+  }
+
+  .btn-success-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    background: #E67918;
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: .85rem 1.75rem;
+    text-decoration: none;
+    transition: background .15s;
+  }
+  .btn-success-primary:hover { background: #c5630c; color: #fff; }
+
+  .btn-success-ghost {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    background: transparent;
+    color: #6b7280;
+    font-size: .9rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: .75rem 1.75rem;
+    text-decoration: none;
+    border: 1.5px solid #e5e7eb;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-success-ghost:hover { border-color: #E67918; color: #E67918; }
+
+  @media (max-width: 576px) {
+    .success-card { padding: 2rem 1.25rem; }
+    .success-title { font-size: 1.4rem; }
+  }
+</style>
+
+<section class="success-page">
+  <div class="success-card">
+
+    <div class="success-icon-wrap">
+      <span class="material-icons">check_circle</span>
     </div>
 
+    <div class="success-badge">
+      <span class="material-icons" style="font-size:13px;">check</span>
+      Profile Updated
+    </div>
+
+    <h1 class="success-title">Profile Saved Successfully!</h1>
+
+    <p class="success-subtitle">
+      Your profile information has been updated. Changes are reflected immediately across your ELTAN account.
+    </p>
+
+    <div class="success-actions">
+      {% if user.is_authenticated %}
+      <a href="{% url 'dash' %}" class="btn-success-primary">
+        <span class="material-icons" style="font-size:18px;">dashboard</span>
+        Go to Dashboard
+      </a>
+      {% endif %}
+      <a href="{% url 'home' %}" class="btn-success-ghost">
+        <span class="material-icons" style="font-size:18px;">home</span>
+        Back to Homepage
+      </a>
+    </div>
+
+  </div>
+</section>
 {% endblock content %}
