@@ -1,25 +1,246 @@
 {% extends 'membership/base.html' %}
 {% load static %}
 
-
-{% block title %}
-    Subscription Success - ELTAN
-{% endblock title %}
+{% block title %}Subscription Pending – ELTAN{% endblock %}
 
 {% block content %}
-<div class="container mt-9 h-100">
-    <div class="row mt-5">
-        <div class="col-md-3"></div>
-        <div class="col-md-6">
-            <h3 class="text-center mb-5">Thank you! Your subscription is pending!</h3>
-            <h2 class="text-black text-center p-5 bg-warning"><a style="color:blue !important;" href="{% url 'home' %}">Go Back to Home Page</a></h2>
-            <p class="text-center mb-5">As soon as your application is verified by the ELTAN Registration Team, you will have access to your dashboard.</p>
-            
-            <h4 class="mt-5 text-center">While waiting for approval, Please fill out your information here:</h4>
-            <a style="color:white !important; background-color:#E67918; display:block !important; margin: 0 auto !important;" class="btn btn-warning text-center" href="{% url 'profile_update' %}">Click Here To Update Profile</a>
-        </div>
-        <div class="col-md-3">
-        </div>
+<style>
+  .pending-page {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #fffbf5 0%, #fff7ed 100%);
+    padding: 3rem 1rem;
+  }
+
+  .pending-card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(230,121,24,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    padding: 3rem 2.5rem;
+    max-width: 640px;
+    width: 100%;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .pending-icon-wrap {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.75rem;
+    box-shadow: 0 4px 20px rgba(230,121,24,0.18);
+  }
+
+  .pending-icon-wrap .material-icons {
+    font-size: 44px;
+    color: #E67918;
+  }
+
+  .pending-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: #fff3e0;
+    color: #E67918;
+    border: 1.5px solid #ffd0a0;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: .3rem .9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .pending-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin-bottom: .75rem;
+    line-height: 1.25;
+  }
+
+  .pending-subtitle {
+    color: #6b7280;
+    font-size: 1rem;
+    line-height: 1.65;
+    max-width: 480px;
+    margin: 0 auto 2rem;
+  }
+
+  .pending-steps {
+    background: #f9fafb;
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: left;
+  }
+
+  .pending-steps h6 {
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin-bottom: 1rem;
+  }
+
+  .pending-step {
+    display: flex;
+    align-items: flex-start;
+    gap: .85rem;
+    padding: .6rem 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .pending-step:last-child { border-bottom: none; }
+
+  .step-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #E67918;
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .step-num.done {
+    background: #10b981;
+  }
+
+  .step-text {
+    font-size: .9rem;
+    color: #374151;
+    line-height: 1.5;
+  }
+
+  .step-text strong { color: #1a1a2e; }
+
+  .pending-actions {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+  }
+
+  .btn-pending-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    background: #E67918;
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: .85rem 1.75rem;
+    text-decoration: none;
+    transition: background .15s;
+    border: none;
+  }
+  .btn-pending-primary:hover { background: #c5630c; color: #fff; }
+
+  .btn-pending-ghost {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    background: transparent;
+    color: #6b7280;
+    font-size: .9rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: .75rem 1.75rem;
+    text-decoration: none;
+    border: 1.5px solid #e5e7eb;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-pending-ghost:hover { border-color: #E67918; color: #E67918; }
+
+  @media (max-width: 576px) {
+    .pending-card { padding: 2rem 1.25rem; }
+    .pending-title { font-size: 1.4rem; }
+  }
+</style>
+
+<section class="pending-page">
+  <div class="pending-card">
+
+    <div class="pending-icon-wrap">
+      <span class="material-icons">hourglass_top</span>
     </div>
-</div>
+
+    <div class="pending-badge">
+      <span class="material-icons" style="font-size:13px;">schedule</span>
+      Pending Review
+    </div>
+
+    <h1 class="pending-title">Your Application is Submitted!</h1>
+
+    <p class="pending-subtitle">
+      Thank you for applying for ELTAN membership. Our registration team will review
+      your details and activate your account shortly.
+    </p>
+
+    <div class="pending-steps">
+      <h6>What happens next</h6>
+
+      <div class="pending-step">
+        <div class="step-num done">
+          <span class="material-icons" style="font-size:14px;">check</span>
+        </div>
+        <div class="step-text">
+          <strong>Application submitted</strong><br>
+          Your membership application has been received.
+        </div>
+      </div>
+
+      <div class="pending-step">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <strong>Admin review</strong><br>
+          The ELTAN team will verify your details and qualification certificate.
+        </div>
+      </div>
+
+      <div class="pending-step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <strong>Confirmation email</strong><br>
+          You'll receive an email once your account is activated.
+        </div>
+      </div>
+
+      <div class="pending-step">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <strong>Access your dashboard</strong><br>
+          Log in to download your ELTAN membership certificate.
+        </div>
+      </div>
+    </div>
+
+    <div class="pending-actions">
+      <a href="{% url 'profile_update' %}" class="btn-pending-primary">
+        <span class="material-icons" style="font-size:18px;">edit_note</span>
+        Complete Your Profile
+      </a>
+      <a href="{% url 'home' %}" class="btn-pending-ghost">
+        <span class="material-icons" style="font-size:18px;">home</span>
+        Back to Homepage
+      </a>
+    </div>
+
+  </div>
+</section>
 {% endblock content %}
