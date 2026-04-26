@@ -147,13 +147,11 @@ class MembershipType(models.Model):
 class Subscription(models.Model):
 
     MEMBER_CHOICES = [
-        ('select', 'Select Membership'),
         ('New Membership', 'New Membership (N5,500)'),
         ('Renew Membership', 'Renew Membership (N3,000)'),
     ]
 
     ELTANYEAR_CHOICES = [
-        ('Select', 'Select Year'),
         ('2022-2023', '2022-2023'),
         ('2023-2024', '2023-2024'),
         ('2024-2025', '2024-2025'),
@@ -162,7 +160,6 @@ class Subscription(models.Model):
         ]
 
     STATE_CHOICES = [
-        ('Select', 'Select State'),
         ('FCT', 'Abuja'),
         ('ABIA', 'Abia'),
         ('ADAMAWA', 'Adamawa'),

@@ -166,16 +166,15 @@ class SubscriptionForm(forms.ModelForm):
         # Filter out any empty choices and set the new choices to the widget
         non_empty_choices = [choice for choice in membership_type_field.choices if choice[0] != '']
         non_empty_choices2 = [item for item in state_chapter_field.choices if item[0] != '']
-        # Prepend a blank sentinel so the user must actively choose
-        membership_type_field.choices = [('', '— Select Membership Type —')] + non_empty_choices
-        state_chapter_field.choices = [('', '— Select State Chapter —')] + non_empty_choices2
+        membership_type_field.choices = non_empty_choices
+        state_chapter_field.choices = non_empty_choices2
         membership_type_field.required = True
         state_chapter_field.required = True
         
         # Set choices for eltan_year from ELTANYearSetting
         from .models import ELTANYearSetting  # Import at the top of the file instead
         eltan_years = ELTANYearSetting.objects.all()
-        self.fields['eltan_year'].choices = [('', '— Select Year —')] + [(year.eltan_year, year.eltan_year) for year in eltan_years]
+        self.fields['eltan_year'].choices = [(year.eltan_year, year.eltan_year) for year in eltan_years]
         self.fields['eltan_year'].required = True
 
     def clean_membership_type(self):
