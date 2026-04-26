@@ -61,7 +61,7 @@
                         </div>
                         {% endif %}
 
-                        <p class="card-text">{{ conference.description|truncatewords:50 }}</p>
+                        <p class="card-text">{{ conference.description|truncatewords:50|safe }}</p>
 
                         <div style="margin-top: 1.5rem;">
                             {% if conference.is_open_for_registration %}
