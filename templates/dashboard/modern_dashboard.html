@@ -95,10 +95,11 @@
     text-transform: uppercase;
     letter-spacing: 0.4px;
 }
-.db-cert-badge.approved  { background: #e8f5e9; color: #2e7d32; }
-.db-cert-badge.pending   { background: #fff8e1; color: #f57f17; }
-.db-cert-badge.rejected  { background: #fce4ec; color: #c62828; }
-.db-cert-badge.inactive  { background: #f5f5f5; color: #757575; }
+.db-cert-badge.approved    { background: #e8f5e9; color: #2e7d32; }
+.db-cert-badge.pending     { background: #fff8e1; color: #f57f17; }
+.db-cert-badge.rejected    { background: #fce4ec; color: #c62828; }
+.db-cert-badge.inactive    { background: #f5f5f5; color: #757575; }
+.db-cert-badge.processing  { background: #e3f2fd; color: #1565c0; }
 
 .db-progress-track {
     height: 8px;
@@ -131,11 +132,13 @@
     gap: 0.75rem;
     margin-bottom: 1.5rem;
 }
-.db-notice.pending  { background: #fff8e1; border: 1px solid #ffe082; }
-.db-notice.rejected { background: #fce4ec; border: 1px solid #f48fb1; }
+.db-notice.pending     { background: #fff8e1; border: 1px solid #ffe082; }
+.db-notice.rejected    { background: #fce4ec; border: 1px solid #f48fb1; }
+.db-notice.processing  { background: #e3f2fd; border: 1px solid #90caf9; }
 .db-notice .material-icons { flex-shrink: 0; font-size: 1.3rem; margin-top: 1px; }
-.db-notice.pending  .material-icons { color: #f9a825; }
-.db-notice.rejected .material-icons { color: #c62828; }
+.db-notice.pending    .material-icons { color: #f9a825; }
+.db-notice.rejected   .material-icons { color: #c62828; }
+.db-notice.processing .material-icons { color: #1565c0; }
 .db-notice p { margin: 0; font-size: 0.875rem; line-height: 1.5; }
 .db-notice strong { display: block; margin-bottom: 0.2rem; font-size: 0.9rem; }
 
@@ -562,16 +565,66 @@
         </a>
     </div>
 
-    <!-- No membership -->
+    <!-- Membership status for non-active users -->
     {% if not active_subscription %}
-    <div class="db-join-banner" data-aos="fade-up">
-        <span class="material-icons" style="font-size:2.5rem; color:#1565c0; margin-bottom:.75rem; display:block;">card_membership</span>
-        <h4>Join ELTAN Today</h4>
-        <p>Become a member to access exclusive resources, events, and networking opportunities.</p>
-        <a href="{% url 'subscribe' %}" class="db-tool-btn primary" style="display:inline-flex; margin:0 auto;">
-            <span class="material-icons">card_membership</span> View Membership Plans
-        </a>
-    </div>
+        {% if latest_subscription and latest_subscription.payment_status == 'pending' %}
+        <!-- Subscription submitted, awaiting admin review -->
+        <div class="db-membership" data-aos="fade-up">
+            <div class="db-membership-header" style="background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);">
+                <div>
+                    <p class="db-membership-title">{{ latest_subscription.membership_type }}</p>
+                    <p class="db-membership-number">Application in Progress</p>
+                </div>
+                <div style="text-align:right;">
+                    <span class="db-cert-badge processing">
+                        <span class="material-icons" style="font-size:.9rem;">schedule</span> Processing
+                    </span>
+                    <div style="font-size:.8rem; opacity:.75; margin-top:.4rem;">{{ latest_subscription.eltan_year }}</div>
+                </div>
+            </div>
+            <div class="db-membership-body">
+                <div class="db-notice processing" style="margin-bottom:1rem;">
+                    <span class="material-icons">hourglass_top</span>
+                    <div>
+                        <strong>Your membership application is being processed</strong>
+                        <p>The ELTAN registration team is reviewing your application and payment. You will receive an email confirmation once your account is activated. This usually takes 1–3 business days.</p>
+                    </div>
+                </div>
+                <div class="db-meta-grid">
+                    <div class="db-meta-item">
+                        <label>Membership type</label>
+                        <span>{{ latest_subscription.membership_type }}</span>
+                    </div>
+                    <div class="db-meta-item">
+                        <label>State chapter</label>
+                        <span>{{ latest_subscription.state_chapter|default:"—" }}</span>
+                    </div>
+                    <div class="db-meta-item">
+                        <label>Year</label>
+                        <span>{{ latest_subscription.eltan_year }}</span>
+                    </div>
+                    <div class="db-meta-item">
+                        <label>Payment status</label>
+                        <span style="color:#f57f17;">Awaiting confirmation</span>
+                    </div>
+                </div>
+                <a href="{% url 'profile_update' %}" class="db-tool-btn" style="display:inline-flex; margin-top:.5rem; font-size:.82rem;">
+                    <span class="material-icons" style="font-size:15px;">edit_note</span> Complete Your Profile
+                </a>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- No subscription at all -->
+        <div class="db-join-banner" data-aos="fade-up">
+            <span class="material-icons" style="font-size:2.5rem; color:#1565c0; margin-bottom:.75rem; display:block;">card_membership</span>
+            <h4>Join ELTAN Today</h4>
+            <p>Become a member to access exclusive resources, events, and networking opportunities.</p>
+            <a href="{% url 'subscribe' %}" class="db-tool-btn primary" style="display:inline-flex; margin:0 auto;">
+                <span class="material-icons">card_membership</span> View Membership Plans
+            </a>
+        </div>
+        {% endif %}
     {% endif %}
 
     <!-- Two-column grid -->
