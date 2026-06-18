@@ -81,7 +81,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'payment_status', 'amount_paid', 'cert_status_badge', 'qualification_cert_link',
         'payment_proof_thumbnail',
     ]
-    actions = ['approve_certificate', 'reject_certificate', 'export_to_excel']
+    actions = ['recalculate_eltan_dates', 'approve_certificate', 'reject_certificate', 'export_to_excel']
 
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'user__eltan_number',
                      'membership_type', 'payment_status', 'state_chapter']
@@ -158,6 +158,24 @@ class SubscriptionAdmin(admin.ModelAdmin):
     qualification_cert_preview.short_description = 'Qualification Certificate'
 
     # --- Actions ---
+
+    def recalculate_eltan_dates(self, request, queryset):
+        """Reset end_date (and eltan_year) to the end of the ELTAN year derived
+        from each subscription's start_date, fixing renewals that were given a
+        flat one-year end date."""
+        updated = 0
+        for subscription in queryset:
+            dates = subscription.calculate_eltan_dates()
+            subscription.end_date = dates['end_date']
+            subscription.eltan_year = dates['eltan_year']
+            subscription.save(update_fields=['end_date', 'eltan_year'])
+            updated += 1
+        self.message_user(
+            request,
+            f'{updated} subscription(s) recalculated to the correct ELTAN year end date.',
+            messages.SUCCESS,
+        )
+    recalculate_eltan_dates.short_description = 'Recalculate end date to ELTAN year end'
 
     def approve_certificate(self, request, queryset):
         approved = queryset.filter(certificate_status__in=['pending', 'rejected'])

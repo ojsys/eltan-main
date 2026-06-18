@@ -448,7 +448,10 @@ def renew_subscription(subscription, payment_proof, payment_amount, state_chapte
     subscription.qualification_certificate = qualification_certificate
     subscription.payment_status = 'pending'
     subscription.start_date = timezone.now().date()
-    subscription.end_date = timezone.now().date() + timezone.timedelta(days=365)  # Assuming 1-year renewal
+    # End date should be the end of the ELTAN year, not one year from the renewal date
+    dates = subscription.calculate_eltan_dates()
+    subscription.end_date = dates['end_date']
+    subscription.eltan_year = dates['eltan_year']
     subscription.save()
 
     user = subscription.user

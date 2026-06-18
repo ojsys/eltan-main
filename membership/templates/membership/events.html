@@ -20,7 +20,7 @@
         {% if conferences %}
             <div style="display: flex; flex-direction: column; gap: 2rem;">
                 {% for conference in conferences %}
-                <div class="card-modern" style="display: flex; flex-direction: column; lg:flex-direction: row;">
+                <div class="card-modern" style="display: flex; flex-direction: column; flex-direction: row;">
                     <div style="flex: 1;">
                         {% if conference.image %}
                             <img src="{{ conference.image.url }}" alt="{{ conference.title }}" style="height: 100%; object-fit: cover;">
