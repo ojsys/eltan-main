@@ -1585,7 +1585,7 @@ def download_resource(request, resource_id):
     else:
         form = DownloadForm()
 
-    return render(request, 'download_page.html', {'form': form, 'resource': resource})
+    return render(request, 'membership/download_page.html', {'form': form, 'resource': resource})
 
 
 
