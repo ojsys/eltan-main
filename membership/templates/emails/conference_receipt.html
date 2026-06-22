@@ -80,9 +80,19 @@
         <div class="header">
             <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Conference Logo" class="logo" width="40">
             <h2>ELTAN Conference Registration Receipt</h2>
-            <p style="color: #666;">Thank you for registering for {{ registration.conference.name }}</p>
+            <p style="color: #666;">Thank you for registering for {{ registration.conference.title }}</p>
         </div>
+        {% if ticket_id %}
+        <div class="amount" style="background-color:#E67918; color:#ffffff; border:none;">
+            <div style="font-size:13px; letter-spacing:1px; text-transform:uppercase;">Your Ticket ID</div>
+            <div style="font-size:28px; font-weight:bold; letter-spacing:2px;">{{ ticket_id }}</div>
+            <div style="font-size:12px;">Please keep this ID — you may be asked for it at the event.</div>
+        </div>
+        {% endif %}
         <div class="details">
+            <p><strong>Conference:</strong> {{ registration.conference.title }}</p>
+            <p><strong>Dates:</strong> {{ registration.conference.start_date|date:"F j" }} &ndash; {{ registration.conference.end_date|date:"F j, Y" }}</p>
+            <p><strong>Venue:</strong> {{ registration.conference.venue }}</p>
             <p><strong>Name:</strong> {{ registration.first_name }} {{ registration.last_name }}</p>
             <p><strong>Email:</strong> {{ registration.email }}</p>
             <p><strong>Phone:</strong> {{ registration.phone }}</p>

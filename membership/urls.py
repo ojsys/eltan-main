@@ -34,6 +34,11 @@ urlpatterns = [
     path('payment/success/', views.payment_success, name='payment_success'),
     path('paystack/webhook/', views.paystack_webhook, name='paystack_webhook'),
 
+    ## Staff conference payment verification
+    path('staff/conference-verification/', views.conference_verification, name='conference_verification'),
+    path('staff/conference-verification/<int:pk>/confirm/', views.confirm_conference_payment, name='confirm_conference_payment'),
+    path('staff/conference-verification/<int:pk>/reject/', views.reject_conference_payment, name='reject_conference_payment'),
+
     #Update Profile
     path('profile/update/', views.profile_update, name='profile_update'),
     path('profile/update/success/', views.profile_update_success, name='profile_update_success'),

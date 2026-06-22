@@ -11,6 +11,8 @@ from django.conf import settings
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_POST
 from .models import EltanConference, EltanConferenceRegistration, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, Newsletter, ELTANYearSetting, Download, ExcoMember
 from .forms import ConferenceRegistrationForm, MemberProfileUpdateForm, SigsForm, SubscriptionForm, DownloadForm, SponsorApplicationForm
 import qrcode
@@ -864,32 +866,40 @@ def initiate_conference_registration(request, pk):
 
 def send_registration_receipt(registration):
     try:
+        recipient = registration.email or (registration.user.email if registration.user else None)
+        if not recipient:
+            logger.error(f"No email address for registration {registration.pk}; skipping receipt.")
+            return
+
         # Prepare email content
         context = {
             'registration': registration,
+            'ticket_id': registration.ticket_id,
             'current_date': timezone.now(),
             'year': datetime.now().year
         }
-        
+
         html_content = render_to_string(
             'emails/conference_receipt.html',
             context
         )
-        
+
         # Create email
         subject = f'Registration Confirmation - {registration.conference.title}'
+        if registration.ticket_id:
+            subject += f' — Ticket {registration.ticket_id}'
         email = EmailMessage(
             subject=subject,
             body=html_content,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[registration.email],
+            to=[recipient],
             reply_to=[settings.DEFAULT_FROM_EMAIL],
         )
         email.content_subtype = 'html'
-        
+
         # Send email
         email.send(fail_silently=False)
-        logger.info(f"Registration receipt sent to {registration.email}")
+        logger.info(f"Registration receipt sent to {recipient}")
         
     except Exception as e:
         logger.error(f"Failed to send registration receipt to {registration.email}: {str(e)}")
@@ -949,12 +959,9 @@ def payment_success(request):
             logger.error(f"Email mismatch: received {received_email}, registration {registration.email}")
             raise ValueError(f"Email mismatch: {received_email} vs {registration.email}")
 
-        # Update registration
-        registration.payment_status = 'completed'
-        registration.paystack_reference = payment_ref
-        registration.payment_verified_at = timezone.now()
-        registration.save()
-            
+        # Update registration (issues a ticket id, records verification timestamp)
+        registration.mark_completed(paystack_ref=payment_ref)
+
         logger.info(f"Registration {registration.id} payment completed successfully")
 
         # Clear session data
@@ -1021,10 +1028,12 @@ def paystack_webhook(request):
                 
                 # Validate and update registration
                 if data['amount'] == int(registration.amount_paid * 100):
-                    registration.payment_status = 'completed'
-                    registration.paystack_reference = data['reference']
-                    registration.save()
+                    registration.mark_completed(paystack_ref=data['reference'])
                     logger.info(f"Webhook updated registration: {reference}")
+                    try:
+                        send_registration_receipt(registration)
+                    except Exception as e:
+                        logger.error(f"Webhook failed to send receipt: {str(e)}")
 
         except json.JSONDecodeError:
             logger.error("Invalid JSON payload")
@@ -1040,6 +1049,135 @@ def paystack_webhook(request):
 
 
 ###### End Registration Init #####
+
+
+##################### Staff Conference Payment Verification #####################
+
+@staff_member_required
+def conference_verification(request):
+    """Staff page listing conference registrations so payments can be verified/confirmed."""
+    conference_id = request.GET.get('conference') or ''
+    status = request.GET.get('status', 'pending')
+    query = (request.GET.get('q') or '').strip()
+
+    registrations = EltanConferenceRegistration.objects.select_related(
+        'conference', 'user', 'verified_by'
+    )
+
+    if conference_id:
+        registrations = registrations.filter(conference_id=conference_id)
+    if status and status != 'all':
+        registrations = registrations.filter(payment_status=status)
+    if query:
+        registrations = registrations.filter(
+            models.Q(email__icontains=query)
+            | models.Q(first_name__icontains=query)
+            | models.Q(last_name__icontains=query)
+            | models.Q(user__email__icontains=query)
+            | models.Q(user__first_name__icontains=query)
+            | models.Q(user__last_name__icontains=query)
+            | models.Q(payment_reference__icontains=query)
+            | models.Q(paystack_ref__icontains=query)
+            | models.Q(ticket_id__icontains=query)
+        )
+
+    registrations = registrations.order_by('-registered_at')
+
+    context = {
+        'registrations': registrations,
+        'conferences': EltanConference.objects.order_by('-start_date'),
+        'selected_conference': conference_id,
+        'selected_status': status,
+        'query': query,
+        'status_choices': EltanConferenceRegistration.PAYMENT_STATUS_CHOICES,
+    }
+    return render(request, 'membership/conference_verification.html', context)
+
+
+def _verify_with_paystack(reference, registration):
+    """Return (ok, message) after checking a reference against Paystack."""
+    try:
+        headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
+        response = requests.get(
+            f"https://api.paystack.co/transaction/verify/{reference}",
+            headers=headers,
+            timeout=15,
+        )
+        response.raise_for_status()
+        data = response.json().get('data', {})
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Paystack verify failed for {reference}: {str(e)}")
+        return False, "Could not reach Paystack to verify this payment."
+
+    if data.get('status') != 'success':
+        return False, f"Paystack reports this payment as '{data.get('status', 'unknown')}'."
+
+    expected_amount = int(registration.amount_paid * 100)
+    if data.get('amount') != expected_amount:
+        return False, (
+            f"Amount mismatch: Paystack has {data.get('amount')} kobo, "
+            f"expected {expected_amount} kobo."
+        )
+    return True, "Payment confirmed via Paystack."
+
+
+@staff_member_required
+@require_POST
+def confirm_conference_payment(request, pk):
+    """Confirm a pending payment. Auto-verifies Paystack when a reference exists;
+    confirms a bank/manual payment on staff trust otherwise."""
+    registration = get_object_or_404(EltanConferenceRegistration, pk=pk)
+    redirect_to = request.POST.get('next') or reverse('conference_verification')
+
+    if registration.payment_status == 'completed':
+        messages.info(request, f"This registration is already confirmed (Ticket {registration.ticket_id}).")
+        return redirect(redirect_to)
+
+    method = request.POST.get('method', 'paystack')
+    reference = registration.paystack_ref or registration.payment_reference
+
+    if method == 'paystack':
+        if not reference:
+            messages.error(request, "No payment reference on this registration — use 'Confirm Bank Payment' instead.")
+            return redirect(redirect_to)
+        ok, msg = _verify_with_paystack(reference, registration)
+        if not ok:
+            messages.error(request, msg)
+            return redirect(redirect_to)
+        registration.mark_completed(verified_by=request.user, paystack_ref=reference)
+    else:
+        # Manual / bank transfer — confirmed on staff trust
+        registration.mark_completed(verified_by=request.user)
+
+    try:
+        send_registration_receipt(registration)
+        messages.success(
+            request,
+            f"Payment confirmed. Ticket {registration.ticket_id} issued and emailed to {registration.email}.",
+        )
+    except Exception as e:
+        logger.error(f"Failed to send confirmation email for registration {registration.pk}: {str(e)}")
+        messages.warning(
+            request,
+            f"Payment confirmed and Ticket {registration.ticket_id} issued, but the confirmation email could not be sent.",
+        )
+
+    return redirect(redirect_to)
+
+
+@staff_member_required
+@require_POST
+def reject_conference_payment(request, pk):
+    """Mark a registration's payment as failed."""
+    registration = get_object_or_404(EltanConferenceRegistration, pk=pk)
+    redirect_to = request.POST.get('next') or reverse('conference_verification')
+    if registration.payment_status == 'completed':
+        messages.error(request, "This registration is already confirmed and cannot be rejected here.")
+        return redirect(redirect_to)
+    registration.payment_status = 'failed'
+    registration.save(update_fields=['payment_status'])
+    messages.success(request, "Registration marked as failed.")
+    return redirect(redirect_to)
 
 
 

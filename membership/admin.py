@@ -467,7 +467,7 @@ class UserTypeFilter(admin.SimpleListFilter):
 
 @admin.register(EltanConferenceRegistration)
 class EltanConferenceRegistrationAdmin(admin.ModelAdmin):
-    list_display = ('display_user', 'conference', 'registration_type', 'payment_status', 'amount_paid', 
+    list_display = ('display_user', 'conference', 'registration_type', 'payment_status', 'ticket_id', 'amount_paid',
                     'is_presenting', 'registered_at', 'phone')
     list_filter = (UserTypeFilter, 'conference', 'registration_type', 'payment_status', 'is_presenting')
     
@@ -483,11 +483,31 @@ class EltanConferenceRegistrationAdmin(admin.ModelAdmin):
     
     display_user.short_description = 'Member / Non-Member'
     
-    search_fields = ('user__email', 'user__first_name', 'user__last_name', 
-                    'paper_title', 'email', 'first_name', 'last_name')  # Added non-user fields
-    readonly_fields = ('registered_at',)
-    
-    actions = ['export_registrations']
+    search_fields = ('user__email', 'user__first_name', 'user__last_name',
+                    'paper_title', 'email', 'first_name', 'last_name', 'ticket_id')  # Added non-user fields
+    readonly_fields = ('registered_at', 'ticket_id', 'payment_verified_at', 'verified_by')
+
+    actions = ['verify_payments', 'export_registrations']
+
+    def verify_payments(self, request, queryset):
+        from .views import send_registration_receipt
+        confirmed = 0
+        skipped = 0
+        for registration in queryset:
+            if registration.payment_status == 'completed':
+                skipped += 1
+                continue
+            registration.mark_completed(verified_by=request.user)
+            try:
+                send_registration_receipt(registration)
+            except Exception:
+                pass
+            confirmed += 1
+        self.message_user(
+            request,
+            f"{confirmed} registration(s) confirmed and ticketed; {skipped} already completed.",
+        )
+    verify_payments.short_description = "Verify & confirm selected payments (issue ticket + email)"
     
     def export_registrations(self, request, queryset):
         import csv
@@ -498,7 +518,7 @@ class EltanConferenceRegistrationAdmin(admin.ModelAdmin):
         
         writer = csv.writer(response)
         writer.writerow([
-            'Name', 'Email', 'Registration Type', 'Payment Status',
+            'Ticket ID', 'Name', 'Email', 'Registration Type', 'Payment Status',
             'Amount Paid', 'Is Presenting', 'Paper Title', 'Phone',
             'Registration Date'
         ])
@@ -513,6 +533,7 @@ class EltanConferenceRegistrationAdmin(admin.ModelAdmin):
                 email = registration.email
             
             writer.writerow([
+                registration.ticket_id or '',
                 name,
                 email,
                 registration.registration_type,

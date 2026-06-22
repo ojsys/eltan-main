@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from datetime import timezone, date, datetime
 from django.utils import timezone
@@ -446,6 +447,7 @@ class EltanConferenceRegistration(models.Model):
         ('failed', 'Failed'),
     ]
     currency = models.CharField(max_length=3, default="NGN")
+    ticket_id = models.CharField(max_length=30, unique=True, null=True, blank=True, editable=False)
     conference = models.ForeignKey(EltanConference, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     registration_type = models.CharField(max_length=20, choices=[
@@ -469,7 +471,17 @@ class EltanConferenceRegistration(models.Model):
     first_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
-    
+
+    # Payment verification tracking
+    payment_verified_at = models.DateTimeField(null=True, blank=True)
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='verified_conference_registrations',
+    )
+
     class Meta:
         unique_together = ['conference', 'user']
         ordering = ['-registered_at']
@@ -503,6 +515,32 @@ class EltanConferenceRegistration(models.Model):
 
     def is_payment_successful(self):
         return self.payment_status == 'completed'
+
+    def generate_ticket_id(self):
+        """Return a unique, human-readable ticket id: ELTAN-{year}-{6 chars}."""
+        try:
+            year = self.conference.start_date.year
+        except Exception:
+            year = timezone.now().year
+        while True:
+            token = uuid.uuid4().hex[:6].upper()
+            candidate = f"ELTAN-{year}-{token}"
+            if not EltanConferenceRegistration.objects.filter(ticket_id=candidate).exists():
+                return candidate
+
+    def mark_completed(self, verified_by=None, paystack_ref=None):
+        """Finalize a payment: mark completed, issue a ticket id (idempotent), and
+        record who/when it was verified. Returns self."""
+        self.payment_status = 'completed'
+        self.payment_verified_at = timezone.now()
+        if verified_by is not None:
+            self.verified_by = verified_by
+        if paystack_ref:
+            self.paystack_ref = paystack_ref
+        if not self.ticket_id:
+            self.ticket_id = self.generate_ticket_id()
+        self.save()
+        return self
 
 
 class ConferenceDocument(models.Model):
