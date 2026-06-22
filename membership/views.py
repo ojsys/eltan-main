@@ -1202,6 +1202,32 @@ def reject_conference_payment(request, pk):
     return redirect(redirect_to)
 
 
+@staff_member_required
+@require_POST
+def resend_conference_ticket(request, pk):
+    """Re-send the ticket/receipt email for a confirmed registration."""
+    registration = get_object_or_404(EltanConferenceRegistration, pk=pk)
+    redirect_to = request.POST.get('next') or reverse('conference_verification')
+
+    if registration.payment_status != 'completed':
+        messages.error(request, "A ticket can only be sent for a confirmed payment.")
+        return redirect(redirect_to)
+
+    # Issue a ticket id if somehow missing (e.g. legacy data) before sending
+    if not registration.ticket_id:
+        registration.ticket_id = registration.generate_ticket_id()
+        registration.save(update_fields=['ticket_id'])
+
+    recipient = registration.email or (registration.user.email if registration.user else None)
+    try:
+        send_registration_receipt(registration)
+        messages.success(request, f"Ticket {registration.ticket_id} re-sent to {recipient}.")
+    except Exception as e:
+        logger.error(f"Failed to resend ticket for registration {registration.pk}: {str(e)}")
+        messages.error(request, "The ticket email could not be sent. Please try again.")
+
+    return redirect(redirect_to)
+
 
 @login_required
 def registration_detail(request, pk):

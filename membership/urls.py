@@ -38,6 +38,7 @@ urlpatterns = [
     path('staff/conference-verification/', views.conference_verification, name='conference_verification'),
     path('staff/conference-verification/<int:pk>/confirm/', views.confirm_conference_payment, name='confirm_conference_payment'),
     path('staff/conference-verification/<int:pk>/reject/', views.reject_conference_payment, name='reject_conference_payment'),
+    path('staff/conference-verification/<int:pk>/send-ticket/', views.resend_conference_ticket, name='resend_conference_ticket'),
 
     #Update Profile
     path('profile/update/', views.profile_update, name='profile_update'),

@@ -118,6 +118,8 @@
     .cv-act-bank:hover { background: #E8F5E9; }
     .cv-act-reject { background: #fff; color: #C62828; border-color: #f0c3c3; }
     .cv-act-reject:hover { background: #FFEBEE; }
+    .cv-act-send { background: #fff; color: var(--cv-blue); border-color: #bcd9f5; }
+    .cv-act-send:hover { background: #E3F2FD; }
     .cv-act-link { font-size: .76rem; color: var(--cv-blue); text-decoration: none; }
     .cv-act-link:hover { text-decoration: underline; }
 
@@ -293,7 +295,15 @@
                                 <td data-label="Registered"><span class="text-muted" style="font-size:.82rem;">{{ reg.registered_at|date:"M d, Y" }}<br>{{ reg.registered_at|date:"H:i" }}</span></td>
                                 <td data-label="Action" class="text-end">
                                     {% if reg.payment_status == 'completed' %}
-                                        <span class="cv-ticket"><i class="fas fa-ticket me-1"></i>{{ reg.ticket_id }}</span>
+                                        <div class="cv-actions ms-auto" style="align-items:flex-end;">
+                                            <span class="cv-ticket"><i class="fas fa-ticket me-1"></i>{{ reg.ticket_id }}</span>
+                                            <form method="post" action="{% url 'resend_conference_ticket' reg.pk %}"
+                                                  onsubmit="return confirm('Re-send the ticket email to this registrant?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                <button type="submit" class="cv-act cv-act-send"><i class="fas fa-paper-plane"></i> Send Ticket</button>
+                                            </form>
+                                        </div>
                                     {% else %}
                                         <div class="cv-actions ms-auto">
                                             {% if reference %}
