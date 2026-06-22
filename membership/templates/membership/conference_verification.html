@@ -67,9 +67,9 @@
                         <tr>
                             <td>
                                 <strong>
-                                    {% if reg.user %}{{ reg.user.get_full_name|default:reg.user.username }}{% else %}{{ reg.first_name }} {{ reg.last_name }}{% endif %}
+                                    {% if reg.user %}{{ reg.user.first_name }} {{ reg.user.last_name }}{% else %}{{ reg.first_name }} {{ reg.last_name }}{% endif %}
                                 </strong><br>
-                                <small class="text-muted">{{ reg.email|default:reg.user.email }}</small>
+                                <small class="text-muted">{% if reg.email %}{{ reg.email }}{% elif reg.user %}{{ reg.user.email }}{% endif %}</small>
                                 {% if reg.phone %}<br><small class="text-muted">{{ reg.phone }}</small>{% endif %}
                             </td>
                             <td>{{ reg.get_registration_type_display }}</td>
