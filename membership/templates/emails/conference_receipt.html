@@ -1,123 +1,166 @@
-{% load static %}
-<!DOCTYPE html>
-<html>
+{% load static %}<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Conference Registration Receipt</title>
+    <!--[if mso]>
+    <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+    <![endif]-->
     <style>
-        body { 
-            font-family: Arial, sans-serif;
-            background-color: #fff5eb;
-            margin: 0;
-            padding: 20px;
-        }
-        .container { 
-            max-width: 600px; 
-            margin: auto; 
-            padding: 30px;
-            border-radius: 8px;
-            background-color: white;
-            box-shadow: 0 2px 4px rgba(230, 121, 24, 0.1);
-        }
-        .header { 
-            text-align: center; 
-            padding-bottom: 25px;
-            border-bottom: 2px solid #E67918;
-            margin-bottom: 25px;
-        }
-        .logo { 
-            max-width: 180px; 
-            margin-bottom: 15px;
-        }
-        .details { 
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
-        .details p {
-            margin: 12px 0;
-            padding: 8px;
-            background-color: #fff5eb;
-            border-radius: 4px;
-        }
-        .amount {
-            font-size: 24px;
-            color: #E67918;
-            padding: 15px;
-            background-color: #fff5eb;
-            border-radius: 4px;
-            text-align: center;
-            margin: 20px 0;
-            border: 1px solid #E67918;
-        }
-        .contact-info {
-            text-align: center;
-            padding: 20px;
-            background-color: #fff5eb;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-        .footer { 
-            font-size: 12px; 
-            text-align: center; 
-            color: #666;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #E67918;
-        }
-        h2 {
-            color: #E67918;
-            margin: 15px 0;
-        }
-        strong {
-            color: #E67918;
-        }
-        .contact-info strong {
-            color: #E67918;
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        @media screen and (max-width: 600px) {
+            .cv-card { width: 100% !important; }
+            .cv-pad { padding-left: 22px !important; padding-right: 22px !important; }
+            .cv-h1 { font-size: 22px !important; }
+            .cv-ticket-id { font-size: 26px !important; letter-spacing: 2px !important; }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="{% static 'images/logo-eltan.jpeg' %}" alt="ELTAN Conference Logo" class="logo" width="40">
-            <h2>ELTAN Conference Registration Receipt</h2>
-            <p style="color: #666;">Thank you for registering for {{ registration.conference.title }}</p>
-        </div>
-        {% if ticket_id %}
-        <div class="amount" style="background-color:#E67918; color:#ffffff; border:none;">
-            <div style="font-size:13px; letter-spacing:1px; text-transform:uppercase;">Your Ticket ID</div>
-            <div style="font-size:28px; font-weight:bold; letter-spacing:2px;">{{ ticket_id }}</div>
-            <div style="font-size:12px;">Please keep this ID — you may be asked for it at the event.</div>
-        </div>
-        {% endif %}
-        <div class="details">
-            <p><strong>Conference:</strong> {{ registration.conference.title }}</p>
-            <p><strong>Dates:</strong> {{ registration.conference.start_date|date:"F j" }} &ndash; {{ registration.conference.end_date|date:"F j, Y" }}</p>
-            <p><strong>Venue:</strong> {{ registration.conference.venue }}</p>
-            <p><strong>Name:</strong> {{ registration.first_name }} {{ registration.last_name }}</p>
-            <p><strong>Email:</strong> {{ registration.email }}</p>
-            <p><strong>Phone:</strong> {{ registration.phone }}</p>
-            <p><strong>Registration Type:</strong> 
-                {% if registration.registration_type == 'member' %}
-                    ELTAN MEMBER
-                {% elif registration.registration_type == 'non_member' %}
-                    NON ELTAN MEMBER
-                {% elif registration.registration_type == 'non_member2' %}
-                    INTERNATIONAL DELEGATE
-                {% endif %}
-            </p>
-            <div class="amount">
-                <strong>Amount Paid:</strong> ₦{{ registration.amount_paid }}
-            </div>
-            <p><strong>Payment Reference:</strong> {{ registration.payment_reference }}</p>
-            <p><strong>Date:</strong> {{ current_date|date:"F j, Y" }}</p>
-        </div>
-        <div class="contact-info">
-            <p style="margin: 0;">If you have any questions, please contact us at:</p>
-            <strong>nationalsec@eltanigeria.org</strong>
-        </div>
-        <div class="footer">
-            <p>ELTAN Conference &copy; {{ year }}. All rights reserved.</p>
-        </div>
+<body style="margin:0; padding:0; background-color:#f1f2f4; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <!-- Preheader (hidden) -->
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; height:0; width:0;">
+        Your payment is confirmed{% if ticket_id %} — Ticket {{ ticket_id }}{% endif %}. Here are your registration details for {{ registration.conference.title }}.
     </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f2f4;">
+        <tr>
+            <td align="center" style="padding:32px 16px;">
+                <!-- Card -->
+                <table role="presentation" class="cv-card" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 8px 28px rgba(17,17,17,0.08);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color:#1A1A1A; background-image:linear-gradient(120deg,#1A1A1A 0%,#2b2b2b 45%,#C5630C 100%); padding:36px 40px 32px;" class="cv-pad">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td>
+                                        <span style="display:inline-block; background-color:#E67918; color:#ffffff; font-size:15px; font-weight:700; letter-spacing:3px; padding:8px 14px; border-radius:8px;">ELTAN</span>
+                                    </td>
+                                    <td align="right">
+                                        <span style="display:inline-block; background-color:rgba(255,255,255,0.14); color:#7CFFB0; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:6px 12px; border-radius:999px;">&#10003; Payment Confirmed</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <h1 class="cv-h1" style="margin:22px 0 6px; color:#ffffff; font-size:26px; font-weight:700; line-height:1.25;">Registration Receipt</h1>
+                            <p style="margin:0; color:#e6c4a3; font-size:14px; line-height:1.5;">Thank you for registering for<br><strong style="color:#ffffff;">{{ registration.conference.title }}</strong></p>
+                        </td>
+                    </tr>
+
+                    {% if ticket_id %}
+                    <!-- Ticket -->
+                    <tr>
+                        <td style="padding:28px 40px 8px;" class="cv-pad">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF5EB; border:1px solid #F3D9BD; border-radius:14px;">
+                                <tr>
+                                    <td align="center" style="padding:24px 20px;">
+                                        <div style="color:#9a6a30; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">Your Ticket ID</div>
+                                        <div class="cv-ticket-id" style="margin:10px 0 8px; color:#C5630C; font-size:32px; font-weight:800; letter-spacing:4px; font-family:'Courier New',monospace;">{{ ticket_id }}</div>
+                                        <div style="color:#a07a4e; font-size:12px; line-height:1.5;">Please keep this ID safe — you may be asked to present it at the event.</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <!-- Amount -->
+                    <tr>
+                        <td style="padding:20px 40px 4px;" class="cv-pad">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#1A1A1A; border-radius:12px;">
+                                <tr>
+                                    <td style="padding:18px 22px;">
+                                        <span style="color:#9aa0a8; font-size:12px; font-weight:600; letter-spacing:.5px; text-transform:uppercase;">Amount Paid</span>
+                                    </td>
+                                    <td align="right" style="padding:18px 22px;">
+                                        <span style="color:#ffffff; font-size:24px; font-weight:800;">&#8358;{{ registration.amount_paid|floatformat:2 }}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Details -->
+                    <tr>
+                        <td style="padding:24px 40px 8px;" class="cv-pad">
+                            <div style="color:#1A1A1A; font-size:13px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-bottom:6px;">Registration Details</div>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px; color:#333333;">
+                                <tr>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#8c919a; width:42%;">Name</td>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#1A1A1A; font-weight:600;" align="right">
+                                        {% if registration.first_name or registration.last_name %}{{ registration.first_name }} {{ registration.last_name }}{% elif registration.user %}{{ registration.user.first_name }} {{ registration.user.last_name }}{% else %}&mdash;{% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#8c919a;">Email</td>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#1A1A1A; font-weight:600;" align="right">{% if registration.email %}{{ registration.email }}{% elif registration.user %}{{ registration.user.email }}{% else %}&mdash;{% endif %}</td>
+                                </tr>
+                                {% if registration.phone %}
+                                <tr>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#8c919a;">Phone</td>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#1A1A1A; font-weight:600;" align="right">{{ registration.phone }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#8c919a;">Registration Type</td>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2;" align="right">
+                                        <span style="display:inline-block; background-color:#FFF5EB; color:#C5630C; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;">{{ registration.get_registration_type_display }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#8c919a;">Conference Dates</td>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#1A1A1A; font-weight:600;" align="right">{{ registration.conference.start_date|date:"M j" }} &ndash; {{ registration.conference.end_date|date:"M j, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#8c919a;">Venue</td>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#1A1A1A; font-weight:600;" align="right">{{ registration.conference.venue|default:"&mdash;" }}</td>
+                                </tr>
+                                {% with reference=registration.paystack_ref|default:registration.payment_reference %}
+                                {% if reference %}
+                                <tr>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#8c919a;">Payment Reference</td>
+                                    <td style="padding:12px 0; border-bottom:1px solid #eef0f2; color:#555555; font-family:'Courier New',monospace; font-size:12px;" align="right">{{ reference }}</td>
+                                </tr>
+                                {% endif %}
+                                {% endwith %}
+                                <tr>
+                                    <td style="padding:12px 0; color:#8c919a;">Date Confirmed</td>
+                                    <td style="padding:12px 0; color:#1A1A1A; font-weight:600;" align="right">{{ current_date|date:"F j, Y" }}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Contact -->
+                    <tr>
+                        <td style="padding:14px 40px 28px;" class="cv-pad">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f8fa; border-radius:12px;">
+                                <tr>
+                                    <td align="center" style="padding:18px 20px;">
+                                        <span style="color:#8c919a; font-size:13px;">Questions about your registration? Contact us at</span><br>
+                                        <a href="mailto:nationalsec@eltanigeria.org" style="color:#E67918; font-size:14px; font-weight:700; text-decoration:none;">nationalsec@eltanigeria.org</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color:#1A1A1A; padding:22px 40px;" class="cv-pad" align="center">
+                            <div style="color:#ffffff; font-size:13px; font-weight:600; letter-spacing:1px;">ELTAN</div>
+                            <div style="color:#8c919a; font-size:11px; margin-top:6px; line-height:1.6;">English Language Teachers Association of Nigeria<br>&copy; {{ year }} ELTAN. All rights reserved.</div>
+                        </td>
+                    </tr>
+
+                </table>
+                <!-- /Card -->
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

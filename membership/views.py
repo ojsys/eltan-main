@@ -1083,6 +1083,18 @@ def conference_verification(request):
 
     registrations = registrations.order_by('-registered_at')
 
+    # Summary counts scoped to the selected conference (independent of the status filter)
+    scope = EltanConferenceRegistration.objects.all()
+    if conference_id:
+        scope = scope.filter(conference_id=conference_id)
+    summary = scope.aggregate(
+        total=models.Count('id'),
+        pending=models.Count('id', filter=models.Q(payment_status='pending')),
+        completed=models.Count('id', filter=models.Q(payment_status='completed')),
+        failed=models.Count('id', filter=models.Q(payment_status='failed')),
+        revenue=models.Sum('amount_paid', filter=models.Q(payment_status='completed')),
+    )
+
     context = {
         'registrations': registrations,
         'conferences': EltanConference.objects.order_by('-start_date'),
@@ -1090,6 +1102,7 @@ def conference_verification(request):
         'selected_status': status,
         'query': query,
         'status_choices': EltanConferenceRegistration.PAYMENT_STATUS_CHOICES,
+        'summary': summary,
     }
     return render(request, 'membership/conference_verification.html', context)
 

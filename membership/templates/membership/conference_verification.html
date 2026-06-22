@@ -1,139 +1,335 @@
 {% extends 'membership/base.html' %}
+{% load static %}
+
+{% block title %}Conference Payment Verification — ELTAN{% endblock title %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1">Conference Payment Verification</h2>
-            <p class="text-muted mb-0">Review registrations and confirm payments made via Paystack or bank transfer.</p>
+<style>
+    .cv-wrap {
+        --cv-orange: #E67918;
+        --cv-orange-dark: #C5630C;
+        --cv-blue: #1565C0;
+        background: #F5F6F8;
+        min-height: 70vh;
+        padding: 0 0 4rem;
+        font-family: 'Poppins', sans-serif;
+    }
+    .cv-hero {
+        background: linear-gradient(120deg, #1A1A1A 0%, #2b2b2b 45%, var(--cv-orange-dark) 100%);
+        color: #fff;
+        padding: 2.5rem 0 4.5rem;
+    }
+    .cv-hero h1 { font-weight: 700; font-size: 1.7rem; margin: 0; letter-spacing: -.3px; }
+    .cv-hero p { opacity: .8; margin: .35rem 0 0; font-size: .95rem; }
+    .cv-hero .cv-eyebrow {
+        text-transform: uppercase; letter-spacing: 2px; font-size: .7rem;
+        font-weight: 600; opacity: .7; margin-bottom: .4rem;
+    }
+    .cv-container { max-width: 1240px; }
+
+    /* Stat cards */
+    .cv-stats { margin-top: -3rem; }
+    .cv-stat {
+        background: #fff; border-radius: 16px; padding: 1.1rem 1.25rem;
+        box-shadow: 0 8px 24px rgba(17,17,17,.07); border: 1px solid #eef0f3;
+        display: flex; align-items: center; gap: .9rem; height: 100%;
+    }
+    .cv-stat .ico {
+        width: 46px; height: 46px; border-radius: 12px; flex: 0 0 46px;
+        display: grid; place-items: center; font-size: 1.15rem; color: #fff;
+    }
+    .cv-stat .ico.total { background: linear-gradient(135deg, #455A64, #263238); }
+    .cv-stat .ico.pending { background: linear-gradient(135deg, #FFB74D, var(--cv-orange)); }
+    .cv-stat .ico.completed { background: linear-gradient(135deg, #4CAF50, #2E7D32); }
+    .cv-stat .ico.revenue { background: linear-gradient(135deg, #42A5F5, var(--cv-blue)); }
+    .cv-stat .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: #90969f; font-weight: 600; }
+    .cv-stat .value { font-size: 1.4rem; font-weight: 700; color: #1A1A1A; line-height: 1.1; }
+
+    /* Filter bar */
+    .cv-panel {
+        background: #fff; border-radius: 16px; border: 1px solid #eef0f3;
+        box-shadow: 0 8px 24px rgba(17,17,17,.05);
+    }
+    .cv-filter { padding: 1.1rem 1.25rem; border-bottom: 1px solid #f0f1f4; }
+    .cv-filter label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #90969f; margin-bottom: .25rem; }
+    .cv-filter .form-control, .cv-filter .form-select { border-radius: 10px; border-color: #e3e6ea; font-size: .9rem; padding: .55rem .8rem; }
+    .cv-filter .form-control:focus, .cv-filter .form-select:focus { border-color: var(--cv-orange); box-shadow: 0 0 0 .2rem rgba(230,121,24,.12); }
+    .cv-btn-primary {
+        background: var(--cv-orange); border: none; color: #fff; font-weight: 600; border-radius: 10px;
+        padding: .55rem 1.1rem; transition: background .15s;
+    }
+    .cv-btn-primary:hover { background: var(--cv-orange-dark); color: #fff; }
+
+    /* Status chips (filter quick links) */
+    .cv-chips { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem 1.25rem 0; }
+    .cv-chip {
+        text-decoration: none; font-size: .82rem; font-weight: 600; padding: .35rem .85rem;
+        border-radius: 999px; border: 1px solid #e3e6ea; color: #555; background: #fff; transition: all .15s;
+    }
+    .cv-chip:hover { border-color: var(--cv-orange); color: var(--cv-orange); }
+    .cv-chip.active { background: #1A1A1A; border-color: #1A1A1A; color: #fff; }
+    .cv-chip .n { opacity: .65; font-weight: 500; }
+
+    /* Table */
+    .cv-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
+    .cv-table thead th {
+        font-size: .68rem; text-transform: uppercase; letter-spacing: .6px; color: #969ba4;
+        font-weight: 700; padding: .9rem 1.25rem; border-bottom: 1px solid #eef0f3; white-space: nowrap;
+    }
+    .cv-table tbody td { padding: 1rem 1.25rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; font-size: .9rem; }
+    .cv-table tbody tr:last-child td { border-bottom: none; }
+    .cv-table tbody tr:hover { background: #fafbfc; }
+
+    .cv-person { display: flex; align-items: center; gap: .75rem; }
+    .cv-avatar {
+        width: 40px; height: 40px; border-radius: 50%; flex: 0 0 40px; display: grid; place-items: center;
+        font-weight: 700; font-size: .85rem; color: #fff; background: linear-gradient(135deg, var(--cv-orange), var(--cv-orange-dark));
+        text-transform: uppercase;
+    }
+    .cv-person .nm { font-weight: 600; color: #1A1A1A; line-height: 1.2; }
+    .cv-person .sub { font-size: .78rem; color: #8c919a; }
+
+    .cv-amount { font-weight: 700; color: #1A1A1A; }
+    .cv-ref { font-size: .76rem; color: #8c919a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+
+    .cv-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; font-weight: 600; padding: .3rem .65rem; border-radius: 999px; }
+    .cv-badge.method-paystack { background: #E3F2FD; color: #1565C0; }
+    .cv-badge.method-bank { background: #F3E5F5; color: #7B1FA2; }
+    .cv-badge.st-pending { background: #FFF3E0; color: #E65100; }
+    .cv-badge.st-completed { background: #E8F5E9; color: #2E7D32; }
+    .cv-badge.st-failed { background: #FFEBEE; color: #C62828; }
+
+    .cv-ticket { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; font-weight: 700; color: #2E7D32; background: #E8F5E9; padding: .35rem .6rem; border-radius: 8px; display: inline-block; }
+
+    .cv-actions { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; min-width: 170px; }
+    .cv-act { font-size: .8rem; font-weight: 600; border-radius: 9px; padding: .42rem .7rem; border: 1px solid transparent; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; width: 100%; }
+    .cv-act-confirm { background: #2E7D32; color: #fff; }
+    .cv-act-confirm:hover { background: #1B5E20; }
+    .cv-act-bank { background: #fff; color: #2E7D32; border-color: #b6d8b8; }
+    .cv-act-bank:hover { background: #E8F5E9; }
+    .cv-act-reject { background: #fff; color: #C62828; border-color: #f0c3c3; }
+    .cv-act-reject:hover { background: #FFEBEE; }
+    .cv-act-link { font-size: .76rem; color: var(--cv-blue); text-decoration: none; }
+    .cv-act-link:hover { text-decoration: underline; }
+
+    .cv-empty { text-align: center; padding: 4rem 1rem; color: #9aa0a8; }
+    .cv-empty i { font-size: 2.5rem; color: #d4d8de; margin-bottom: .75rem; }
+
+    .cv-alert { border: none; border-radius: 12px; font-size: .9rem; }
+
+    @media (max-width: 991px) {
+        .cv-table thead { display: none; }
+        .cv-table, .cv-table tbody, .cv-table tr, .cv-table td { display: block; width: 100%; }
+        .cv-table tbody tr { border: 1px solid #eef0f3; border-radius: 14px; margin: 0 1rem 1rem; padding: .4rem 0; }
+        .cv-table tbody td { border-bottom: 1px solid #f5f6f8; padding: .65rem 1.1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+        .cv-table tbody td:last-child { border-bottom: none; }
+        .cv-table tbody td::before { content: attr(data-label); font-size: .68rem; text-transform: uppercase; letter-spacing: .5px; color: #969ba4; font-weight: 700; }
+        .cv-person { justify-content: flex-end; text-align: right; }
+        .cv-actions { min-width: 0; }
+    }
+</style>
+
+<div class="cv-wrap">
+    <div class="cv-hero">
+        <div class="container cv-container">
+            <div class="cv-eyebrow"><i class="fas fa-shield-halved me-1"></i> Staff Tools</div>
+            <h1>Conference Payment Verification</h1>
+            <p>Review registrations and confirm payments made via Paystack or bank transfer. Confirmed registrants are issued a Ticket ID and emailed automatically.</p>
         </div>
     </div>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
+    <div class="container cv-container">
+        {% if messages %}
+            <div class="cv-stats row g-3 mb-0">
+                <div class="col-12">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'info' }} cv-alert mb-2">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
 
-    <form method="get" class="card card-body mb-4">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label mb-1">Conference</label>
-                <select name="conference" class="form-select">
-                    <option value="">All conferences</option>
-                    {% for conf in conferences %}
-                        <option value="{{ conf.pk }}" {% if selected_conference == conf.pk|stringformat:'s' %}selected{% endif %}>
-                            {{ conf.title }} ({{ conf.start_date|date:"Y" }})
-                        </option>
-                    {% endfor %}
-                </select>
+        <!-- Stat cards -->
+        <div class="cv-stats row g-3 {% if messages %}mt-0{% endif %}">
+            <div class="col-6 col-lg-3">
+                <div class="cv-stat">
+                    <div class="ico total"><i class="fas fa-users"></i></div>
+                    <div>
+                        <div class="label">Total</div>
+                        <div class="value">{{ summary.total|default:0 }}</div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-3">
-                <label class="form-label mb-1">Status</label>
-                <select name="status" class="form-select">
-                    <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All</option>
-                    {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
+            <div class="col-6 col-lg-3">
+                <div class="cv-stat">
+                    <div class="ico pending"><i class="fas fa-hourglass-half"></i></div>
+                    <div>
+                        <div class="label">Pending</div>
+                        <div class="value">{{ summary.pending|default:0 }}</div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-3">
-                <label class="form-label mb-1">Search</label>
-                <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Name, email, reference, ticket">
+            <div class="col-6 col-lg-3">
+                <div class="cv-stat">
+                    <div class="ico completed"><i class="fas fa-circle-check"></i></div>
+                    <div>
+                        <div class="label">Confirmed</div>
+                        <div class="value">{{ summary.completed|default:0 }}</div>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            <div class="col-6 col-lg-3">
+                <div class="cv-stat">
+                    <div class="ico revenue"><i class="fas fa-naira-sign"></i></div>
+                    <div>
+                        <div class="label">Confirmed Revenue</div>
+                        <div class="value">&#8358;{{ summary.revenue|default:0|floatformat:0 }}</div>
+                    </div>
+                </div>
             </div>
         </div>
-    </form>
 
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Registrant</th>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th>Method / Reference</th>
-                        <th>Status</th>
-                        <th>Registered</th>
-                        <th class="text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for reg in registrations %}
-                        {% with reference=reg.paystack_ref|default:reg.payment_reference %}
+        <!-- Panel -->
+        <div class="cv-panel mt-4">
+            <form method="get">
+                <div class="cv-filter">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label>Conference</label>
+                            <select name="conference" class="form-select">
+                                <option value="">All conferences</option>
+                                {% for conf in conferences %}
+                                    <option value="{{ conf.pk }}" {% if selected_conference == conf.pk|stringformat:'s' %}selected{% endif %}>
+                                        {{ conf.title }} ({{ conf.start_date|date:"Y" }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label>Search</label>
+                            <div class="position-relative">
+                                <i class="fas fa-magnifying-glass position-absolute" style="left:.85rem; top:50%; transform:translateY(-50%); color:#b6bcc4; font-size:.85rem;"></i>
+                                <input type="text" name="q" value="{{ query }}" class="form-control" style="padding-left:2.2rem;" placeholder="Name, email, reference or ticket ID">
+                            </div>
+                        </div>
+                        <input type="hidden" name="status" value="{{ selected_status }}">
+                        <div class="col-md-3 d-grid">
+                            <button type="submit" class="cv-btn-primary"><i class="fas fa-sliders me-1"></i> Apply</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Status quick-filter chips (preserve conference + query) -->
+            {% with base="?conference="|add:selected_conference %}
+            <div class="cv-chips">
+                <a class="cv-chip {% if selected_status == 'pending' %}active{% endif %}" href="?conference={{ selected_conference }}&status=pending&q={{ query|urlencode }}">Pending <span class="n">{{ summary.pending|default:0 }}</span></a>
+                <a class="cv-chip {% if selected_status == 'completed' %}active{% endif %}" href="?conference={{ selected_conference }}&status=completed&q={{ query|urlencode }}">Confirmed <span class="n">{{ summary.completed|default:0 }}</span></a>
+                <a class="cv-chip {% if selected_status == 'failed' %}active{% endif %}" href="?conference={{ selected_conference }}&status=failed&q={{ query|urlencode }}">Failed <span class="n">{{ summary.failed|default:0 }}</span></a>
+                <a class="cv-chip {% if selected_status == 'all' %}active{% endif %}" href="?conference={{ selected_conference }}&status=all&q={{ query|urlencode }}">All <span class="n">{{ summary.total|default:0 }}</span></a>
+            </div>
+            {% endwith %}
+
+            <!-- Table -->
+            <div class="table-responsive mt-2">
+                <table class="cv-table">
+                    <thead>
                         <tr>
-                            <td>
-                                <strong>
-                                    {% if reg.user %}{{ reg.user.first_name }} {{ reg.user.last_name }}{% else %}{{ reg.first_name }} {{ reg.last_name }}{% endif %}
-                                </strong><br>
-                                <small class="text-muted">{% if reg.email %}{{ reg.email }}{% elif reg.user %}{{ reg.user.email }}{% endif %}</small>
-                                {% if reg.phone %}<br><small class="text-muted">{{ reg.phone }}</small>{% endif %}
-                            </td>
-                            <td>{{ reg.get_registration_type_display }}</td>
-                            <td>&#8358;{{ reg.amount_paid }}</td>
-                            <td>
-                                {% if reference %}
-                                    <span class="badge bg-info text-dark">Paystack</span><br>
-                                    <small class="text-muted">{{ reference }}</small>
-                                {% else %}
-                                    <span class="badge bg-secondary">Bank / Manual</span>
-                                {% endif %}
-                                {% if reg.payment_proof %}
-                                    <br><a href="{{ reg.payment_proof.url }}" target="_blank" rel="noopener">View proof</a>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if reg.payment_status == 'completed' %}
-                                    <span class="badge bg-success">Completed</span>
-                                {% elif reg.payment_status == 'failed' %}
-                                    <span class="badge bg-danger">Failed</span>
-                                {% else %}
-                                    <span class="badge bg-warning text-dark">Pending</span>
-                                {% endif %}
-                            </td>
-                            <td><small>{{ reg.registered_at|date:"M d, Y H:i" }}</small></td>
-                            <td class="text-end">
-                                {% if reg.payment_status == 'completed' %}
-                                    <span class="badge bg-light text-dark border">Ticket: {{ reg.ticket_id }}</span>
-                                {% else %}
-                                    <div class="d-flex flex-column gap-1 align-items-end">
-                                        {% if reference %}
-                                        <form method="post" action="{% url 'confirm_conference_payment' reg.pk %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="method" value="paystack">
-                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                            <button type="submit" class="btn btn-sm btn-success">Verify &amp; Confirm</button>
-                                        </form>
-                                        {% endif %}
-                                        <form method="post" action="{% url 'confirm_conference_payment' reg.pk %}"
-                                              onsubmit="return confirm('Confirm this as a verified bank/manual payment?');">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="method" value="manual">
-                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                            <button type="submit" class="btn btn-sm btn-outline-success">Confirm Bank Payment</button>
-                                        </form>
-                                        <form method="post" action="{% url 'reject_conference_payment' reg.pk %}"
-                                              onsubmit="return confirm('Mark this registration as failed?');">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
-                                        </form>
+                            <th>Registrant</th>
+                            <th>Conference</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Method / Reference</th>
+                            <th>Status</th>
+                            <th>Registered</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reg in registrations %}
+                            {% with reference=reg.paystack_ref|default:reg.payment_reference %}
+                            <tr>
+                                <td data-label="Registrant">
+                                    <div class="cv-person">
+                                        <div class="cv-avatar">
+                                            {% if reg.user %}{{ reg.user.first_name|slice:":1" }}{{ reg.user.last_name|slice:":1" }}{% else %}{{ reg.first_name|slice:":1" }}{{ reg.last_name|slice:":1" }}{% endif %}
+                                        </div>
+                                        <div>
+                                            <div class="nm">{% if reg.user %}{{ reg.user.first_name }} {{ reg.user.last_name }}{% else %}{{ reg.first_name }} {{ reg.last_name }}{% endif %}</div>
+                                            <div class="sub">{% if reg.email %}{{ reg.email }}{% elif reg.user %}{{ reg.user.email }}{% endif %}{% if reg.phone %} &middot; {{ reg.phone }}{% endif %}</div>
+                                        </div>
                                     </div>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endwith %}
-                    {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No registrations match the current filters.</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                                </td>
+                                <td data-label="Conference"><span class="text-muted" style="font-size:.85rem;">{{ reg.conference.title }}</span></td>
+                                <td data-label="Type"><span style="font-size:.85rem;">{{ reg.get_registration_type_display }}</span></td>
+                                <td data-label="Amount"><span class="cv-amount">&#8358;{{ reg.amount_paid|floatformat:0 }}</span></td>
+                                <td data-label="Method">
+                                    {% if reference %}
+                                        <span class="cv-badge method-paystack"><i class="fas fa-bolt"></i> Paystack</span>
+                                        <div class="cv-ref mt-1">{{ reference }}</div>
+                                    {% else %}
+                                        <span class="cv-badge method-bank"><i class="fas fa-building-columns"></i> Bank / Manual</span>
+                                    {% endif %}
+                                    {% if reg.payment_proof %}
+                                        <div class="mt-1"><a class="cv-act-link" href="{{ reg.payment_proof.url }}" target="_blank" rel="noopener"><i class="fas fa-paperclip"></i> View proof</a></div>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Status">
+                                    {% if reg.payment_status == 'completed' %}
+                                        <span class="cv-badge st-completed"><i class="fas fa-check"></i> Confirmed</span>
+                                    {% elif reg.payment_status == 'failed' %}
+                                        <span class="cv-badge st-failed"><i class="fas fa-xmark"></i> Failed</span>
+                                    {% else %}
+                                        <span class="cv-badge st-pending"><i class="fas fa-clock"></i> Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Registered"><span class="text-muted" style="font-size:.82rem;">{{ reg.registered_at|date:"M d, Y" }}<br>{{ reg.registered_at|date:"H:i" }}</span></td>
+                                <td data-label="Action" class="text-end">
+                                    {% if reg.payment_status == 'completed' %}
+                                        <span class="cv-ticket"><i class="fas fa-ticket me-1"></i>{{ reg.ticket_id }}</span>
+                                    {% else %}
+                                        <div class="cv-actions ms-auto">
+                                            {% if reference %}
+                                            <form method="post" action="{% url 'confirm_conference_payment' reg.pk %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="method" value="paystack">
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                <button type="submit" class="cv-act cv-act-confirm"><i class="fas fa-bolt"></i> Verify &amp; Confirm</button>
+                                            </form>
+                                            {% endif %}
+                                            <form method="post" action="{% url 'confirm_conference_payment' reg.pk %}"
+                                                  onsubmit="return confirm('Confirm this as a verified bank/manual payment?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="method" value="manual">
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                <button type="submit" class="cv-act cv-act-bank"><i class="fas fa-building-columns"></i> Confirm Bank</button>
+                                            </form>
+                                            <form method="post" action="{% url 'reject_conference_payment' reg.pk %}"
+                                                  onsubmit="return confirm('Mark this registration as failed?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                <button type="submit" class="cv-act cv-act-reject"><i class="fas fa-xmark"></i> Reject</button>
+                                            </form>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endwith %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="8">
+                                    <div class="cv-empty">
+                                        <i class="fas fa-inbox d-block"></i>
+                                        <div class="fw-semibold">No registrations found</div>
+                                        <div class="small">Try a different conference, status or search term.</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %}
+{% endblock content %}
