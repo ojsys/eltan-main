@@ -1056,7 +1056,16 @@ def paystack_webhook(request):
 @staff_member_required
 def conference_verification(request):
     """Staff page listing conference registrations so payments can be verified/confirmed."""
-    conference_id = request.GET.get('conference') or ''
+    # Default to the current open conference unless the staff explicitly chose one
+    # (an explicit empty value means "All conferences").
+    if 'conference' in request.GET:
+        conference_id = request.GET.get('conference') or ''
+    else:
+        active_conference = EltanConference.objects.filter(
+            is_active=True,
+            end_date__gte=timezone.now().date(),
+        ).first()
+        conference_id = str(active_conference.pk) if active_conference else ''
     status = request.GET.get('status', 'pending')
     query = (request.GET.get('q') or '').strip()
 

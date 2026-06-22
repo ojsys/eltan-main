@@ -71,12 +71,20 @@
     .cv-chip .n { opacity: .65; font-weight: 500; }
 
     /* Table */
-    .cv-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; }
+    .cv-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
     .cv-table thead th {
         font-size: .68rem; text-transform: uppercase; letter-spacing: .6px; color: #969ba4;
-        font-weight: 700; padding: .9rem 1.25rem; border-bottom: 1px solid #eef0f3; white-space: nowrap;
+        font-weight: 700; padding: .9rem 1rem; border-bottom: 1px solid #eef0f3; white-space: nowrap;
     }
-    .cv-table tbody td { padding: 1rem 1.25rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; font-size: .9rem; }
+    .cv-table tbody td { padding: 1rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; font-size: .9rem; word-break: break-word; }
+    /* Column widths (sum to 100%) — Conference column removed */
+    .cv-col-person { width: 26%; }
+    .cv-col-type { width: 13%; }
+    .cv-col-amount { width: 11%; }
+    .cv-col-method { width: 17%; }
+    .cv-col-status { width: 11%; }
+    .cv-col-date { width: 10%; }
+    .cv-col-action { width: 12%; }
     .cv-table tbody tr:last-child td { border-bottom: none; }
     .cv-table tbody tr:hover { background: #fafbfc; }
 
@@ -101,8 +109,9 @@
 
     .cv-ticket { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; font-weight: 700; color: #2E7D32; background: #E8F5E9; padding: .35rem .6rem; border-radius: 8px; display: inline-block; }
 
-    .cv-actions { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; min-width: 170px; }
-    .cv-act { font-size: .8rem; font-weight: 600; border-radius: 9px; padding: .42rem .7rem; border: 1px solid transparent; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; width: 100%; }
+    .cv-actions { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; }
+    .cv-actions form { margin: 0; }
+    .cv-act { font-size: .78rem; font-weight: 600; border-radius: 9px; padding: .42rem .5rem; border: 1px solid transparent; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; justify-content: center; gap: .35rem; width: 100%; white-space: nowrap; }
     .cv-act-confirm { background: #2E7D32; color: #fff; }
     .cv-act-confirm:hover { background: #1B5E20; }
     .cv-act-bank { background: #fff; color: #2E7D32; border-color: #b6d8b8; }
@@ -197,7 +206,7 @@
                         <div class="col-md-4">
                             <label>Conference</label>
                             <select name="conference" class="form-select">
-                                <option value="">All conferences</option>
+                                <option value="" {% if not selected_conference %}selected{% endif %}>All conferences</option>
                                 {% for conf in conferences %}
                                     <option value="{{ conf.pk }}" {% if selected_conference == conf.pk|stringformat:'s' %}selected{% endif %}>
                                         {{ conf.title }} ({{ conf.start_date|date:"Y" }})
@@ -235,14 +244,13 @@
                 <table class="cv-table">
                     <thead>
                         <tr>
-                            <th>Registrant</th>
-                            <th>Conference</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Method / Reference</th>
-                            <th>Status</th>
-                            <th>Registered</th>
-                            <th class="text-end">Action</th>
+                            <th class="cv-col-person">Registrant</th>
+                            <th class="cv-col-type">Type</th>
+                            <th class="cv-col-amount">Amount</th>
+                            <th class="cv-col-method">Method / Reference</th>
+                            <th class="cv-col-status">Status</th>
+                            <th class="cv-col-date">Registered</th>
+                            <th class="cv-col-action text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -260,7 +268,6 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td data-label="Conference"><span class="text-muted" style="font-size:.85rem;">{{ reg.conference.title }}</span></td>
                                 <td data-label="Type"><span style="font-size:.85rem;">{{ reg.get_registration_type_display }}</span></td>
                                 <td data-label="Amount"><span class="cv-amount">&#8358;{{ reg.amount_paid|floatformat:0 }}</span></td>
                                 <td data-label="Method">
@@ -317,7 +324,7 @@
                             {% endwith %}
                         {% empty %}
                             <tr>
-                                <td colspan="8">
+                                <td colspan="7">
                                     <div class="cv-empty">
                                         <i class="fas fa-inbox d-block"></i>
                                         <div class="fw-semibold">No registrations found</div>
