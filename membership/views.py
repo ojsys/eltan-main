@@ -29,6 +29,7 @@ import tempfile
 from io import BytesIO
 from .utils import get_subscription_eltan_year
 from .utils import Paystack
+from .email_utils import send_email_async
 
 from django.core.mail import send_mail, EmailMultiAlternatives, EmailMessage
 from django.utils.html import strip_tags
@@ -897,13 +898,14 @@ def send_registration_receipt(registration):
         )
         email.content_subtype = 'html'
 
-        # Send email
-        email.send(fail_silently=False)
-        logger.info(f"Registration receipt sent to {recipient}")
-        
+        # Send in the background so the web worker is not blocked on SMTP
+        # (blocking sends here were exhausting the LSAPI worker pool).
+        send_email_async(email)
+        logger.info(f"Registration receipt queued for {recipient}")
+
     except Exception as e:
-        logger.error(f"Failed to send registration receipt to {registration.email}: {str(e)}")
-        raise
+        logger.error(f"Failed to build/queue registration receipt to {registration.email}: {str(e)}")
+        # Don't raise — a mail hiccup must not break payment confirmation.
 
 
 ################## Payment Success views
@@ -950,9 +952,15 @@ def payment_success(request):
 
         received_amount = verification['data']['amount']
         expected_amount = int(registration.amount_paid * 100)
-        if received_amount != expected_amount:
-            logger.error(f"Amount mismatch: received {received_amount}, expected {expected_amount}")
-            raise ValueError(f"Amount mismatch: received {received_amount}, expected {expected_amount}")
+        # Accept overpayment: Paystack's transaction fee is often added on top, so
+        # the amount received can legitimately exceed the ticket price. Only reject
+        # genuine underpayment.
+        if received_amount < expected_amount:
+            logger.error(f"Underpayment: received {received_amount}, expected {expected_amount}")
+            raise ValueError(
+                f"Payment is short: received ₦{received_amount / 100:,.2f}, "
+                f"expected ₦{expected_amount / 100:,.2f}."
+            )
 
         received_email = verification['data']['customer']['email']
         if received_email.lower() != registration.email.lower():
@@ -1167,9 +1175,12 @@ def _verify_with_paystack(reference, registration):
         )
 
     expected_amount = int(registration.amount_paid * 100)
-    if data.get('amount') != expected_amount:
+    received_amount = data.get('amount') or 0
+    # Accept overpayment (Paystack fee is often passed to the payer); only reject
+    # a genuine shortfall.
+    if received_amount < expected_amount:
         return False, (
-            f"Amount mismatch: Paystack received ₦{(data.get('amount') or 0) / 100:,.2f} "
+            f"Payment is short: Paystack received ₦{received_amount / 100:,.2f} "
             f"but this registration expects ₦{registration.amount_paid:,.2f}."
         )
     return True, "Payment confirmed via Paystack."
@@ -1843,9 +1854,10 @@ def subscription_payment_success(request):
 
         received_amount = verification['data']['amount']
         expected_amount = int(subscription.payment_amount * 100)
-        if received_amount != expected_amount:
-            logger.error(f"Amount mismatch: received {received_amount}, expected {expected_amount}")
-            messages.error(request, f"Payment amount mismatch")
+        # Accept overpayment (Paystack fee added on top); reject only underpayment.
+        if received_amount < expected_amount:
+            logger.error(f"Underpayment: received {received_amount}, expected {expected_amount}")
+            messages.error(request, "Payment is short of the required amount")
             return redirect('subscribe')
 
         # Update subscription

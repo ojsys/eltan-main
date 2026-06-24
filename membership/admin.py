@@ -5,8 +5,9 @@ from django.utils import timezone
 from django.db import OperationalError as DBOperationalError
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
+from .email_utils import send_bulk_async
 from django.db import models
 from django.http import HttpResponse
 from openpyxl import Workbook
@@ -179,36 +180,51 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
     def approve_certificate(self, request, queryset):
         approved = queryset.filter(certificate_status__in=['pending', 'rejected'])
+        emails = []
         count = 0
         for subscription in approved:
             subscription.certificate_status = 'approved'
             subscription.save(update_fields=['certificate_status'])
-            self._send_cert_verification_email(subscription, approved=True)
+            email = self._build_cert_verification_email(subscription, approved=True)
+            if email:
+                emails.append(email)
             count += 1
+        send_bulk_async(emails)
         self.message_user(
             request,
-            f'{count} subscription(s) approved — members have been notified by email.',
+            f'{count} subscription(s) approved — {len(emails)} notification email(s) '
+            f'are being sent in the background.',
             messages.SUCCESS,
         )
     approve_certificate.short_description = 'Approve certificate & activate subscription'
 
     def reject_certificate(self, request, queryset):
         rejected = queryset.filter(certificate_status__in=['pending', 'approved'])
+        emails = []
         count = 0
         for subscription in rejected:
             subscription.certificate_status = 'rejected'
             subscription.save(update_fields=['certificate_status'])
-            self._send_cert_verification_email(subscription, approved=False)
+            email = self._build_cert_verification_email(subscription, approved=False)
+            if email:
+                emails.append(email)
             count += 1
+        send_bulk_async(emails)
         self.message_user(
             request,
-            f'{count} subscription(s) rejected — members have been notified by email.',
+            f'{count} subscription(s) rejected — {len(emails)} notification email(s) '
+            f'are being sent in the background.',
             messages.WARNING,
         )
     reject_certificate.short_description = 'Reject certificate & block subscription'
 
-    def _send_cert_verification_email(self, subscription, approved: bool):
+    def _build_cert_verification_email(self, subscription, approved: bool):
+        """Build (but do not send) the cert verification email. Returns an
+        EmailMessage, or None when the member has no email address. Sending is
+        done in bulk over a single connection by send_bulk_async()."""
         user = subscription.user
+        if not user or not user.email:
+            return None
         name = f"{user.first_name} {user.last_name}".strip() or user.email
         site_name = getattr(settings, 'SITE_NAME', 'ELTAN')
         site_url = getattr(settings, 'SITE_URL', 'https://eltanigeria.org')
@@ -235,17 +251,12 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 f"Best regards,\n{site_name} Team"
             )
 
-        try:
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to send cert verification email to {user.email}: {e}")
+        return EmailMessage(
+            subject=subject,
+            body=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
 
     def export_to_excel(self, request, queryset):
         wb = Workbook()
