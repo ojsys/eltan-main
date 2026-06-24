@@ -1118,8 +1118,17 @@ def conference_verification(request):
 
 def _verify_with_paystack(reference, registration):
     """Return (ok, message) after checking a reference against Paystack."""
+    secret_key = (settings.PAYSTACK_SECRET_KEY or '').strip()
+    if not secret_key or not secret_key.startswith('sk_'):
+        logger.error("Paystack verification attempted but PAYSTACK_SECRET_KEY is not configured.")
+        return False, (
+            "Paystack is not configured on the server (missing/invalid secret key). "
+            "Use 'Confirm Bank' to confirm a payment you have verified manually, "
+            "or set PAYSTACK_SECRET_KEY and try again."
+        )
+
     try:
-        headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
+        headers = {"Authorization": f"Bearer {secret_key}"}
         response = requests.get(
             f"https://api.paystack.co/transaction/verify/{reference}",
             headers=headers,
@@ -1127,18 +1136,41 @@ def _verify_with_paystack(reference, registration):
         )
         response.raise_for_status()
         data = response.json().get('data', {})
+    except requests.exceptions.HTTPError as e:
+        status_code = e.response.status_code if e.response is not None else None
+        # Surface Paystack's own message so the cause is obvious to staff.
+        gateway_msg = ''
+        try:
+            gateway_msg = e.response.json().get('message', '')
+        except Exception:
+            pass
+        logger.error(f"Paystack verify HTTP {status_code} for {reference}: {gateway_msg or str(e)}")
+        if status_code == 401:
+            return False, (
+                "Paystack rejected the server's secret key (401). The key is wrong or "
+                "is a test key being used on live data. Use 'Confirm Bank' to confirm manually."
+            )
+        if status_code == 404:
+            return False, f"Paystack has no transaction for reference '{reference}'."
+        return False, (
+            f"Paystack verification failed ({status_code}). "
+            f"{gateway_msg or 'Please try again or use Confirm Bank.'}"
+        )
     except requests.exceptions.RequestException as e:
         logger.error(f"Paystack verify failed for {reference}: {str(e)}")
-        return False, "Could not reach Paystack to verify this payment."
+        return False, "Could not reach Paystack to verify this payment. Please try again."
 
     if data.get('status') != 'success':
-        return False, f"Paystack reports this payment as '{data.get('status', 'unknown')}'."
+        return False, (
+            f"Paystack reports this payment as '{data.get('status', 'unknown')}', so it "
+            "cannot be confirmed. If you have verified it some other way, use 'Confirm Bank'."
+        )
 
     expected_amount = int(registration.amount_paid * 100)
     if data.get('amount') != expected_amount:
         return False, (
-            f"Amount mismatch: Paystack has {data.get('amount')} kobo, "
-            f"expected {expected_amount} kobo."
+            f"Amount mismatch: Paystack received ₦{(data.get('amount') or 0) / 100:,.2f} "
+            f"but this registration expects ₦{registration.amount_paid:,.2f}."
         )
     return True, "Payment confirmed via Paystack."
 
