@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from django.db import models
 from datetime import timezone, date, datetime
 from django.utils import timezone
@@ -406,7 +407,11 @@ class EltanConference(models.Model):
     non_member_fee = models.DecimalField(max_digits=10, decimal_places=2)
     non_member_early_bird_fee = models.DecimalField(max_digits=10, decimal_places=2)
     international_delegate_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True)
-    
+    virtual_attendee_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('40000.00'),
+        help_text="Flat rate for virtual attendees"
+    )
+
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -417,6 +422,10 @@ class EltanConference(models.Model):
     def get_fee_for_type(self, registration_type):
         if registration_type == 'member':
             return self.member_early_bird_fee if self.is_early_bird_active else self.member_fee
+        if registration_type == 'non_member2':
+            return self.international_delegate_fee
+        if registration_type == 'virtual':
+            return self.virtual_attendee_fee
         return self.non_member_early_bird_fee if self.is_early_bird_active else self.non_member_fee
     
     class Meta:
@@ -454,6 +463,7 @@ class EltanConferenceRegistration(models.Model):
         ('member', 'Member'),
         ('non_member', 'Non-Member (Nigeria)'),
         ('non_member2', 'Non-Member (International)'),
+        ('virtual', 'Virtual Attendee'),
     ], default='non_member')
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')

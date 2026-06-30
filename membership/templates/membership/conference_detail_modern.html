@@ -548,6 +548,7 @@
                     <a href="{% url 'conference_register' conference.pk %}?type=member" class="btn btn-primary btn-pill">Register as Member</a>
                     <a href="{% url 'conference_register' conference.pk %}?type=non-member" class="btn btn-secondary btn-pill">Non&#8209;Member</a>
                     <a href="{% url 'conference_register' conference.pk %}?type=international" class="btn btn-secondary btn-pill">International</a>
+                    <a href="{% url 'conference_register' conference.pk %}?type=virtual" class="btn btn-secondary btn-pill">Virtual Attendee</a>
                 {% else %}
                     <span class="btn btn-secondary btn-pill" style="opacity:.8;cursor:not-allowed;">Registration Closed</span>
                 {% endif %}
@@ -653,12 +654,14 @@
                             {% if conference.international_delegate_fee %}
                             <li><strong>International Delegate:</strong> ${{ conference.international_delegate_fee }}</li>
                             {% endif %}
+                            <li><strong>Virtual Attendee (flat rate):</strong> &#8358;{{ conference.virtual_attendee_fee }}</li>
                         </ul>
                         <div style="display:grid;gap:.5rem;">
                             {% if conference.is_open_for_registration %}
                                 <a href="{% url 'conference_register' conference.pk %}?type=member"       class="btn btn-primary btn-pill">Register as Member</a>
                                 <a href="{% url 'conference_register' conference.pk %}?type=non-member"   class="btn btn-secondary btn-pill">Register as Non&#8209;Member</a>
                                 <a href="{% url 'conference_register' conference.pk %}?type=international" class="btn btn-secondary btn-pill">International Delegate</a>
+                                <a href="{% url 'conference_register' conference.pk %}?type=virtual"       class="btn btn-secondary btn-pill">Virtual Attendee</a>
                             {% else %}
                                 <span class="btn btn-secondary btn-pill" style="opacity:.7;cursor:not-allowed;">Registration Closed</span>
                             {% endif %}

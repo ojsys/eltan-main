@@ -469,7 +469,12 @@
             <div class="crf-fee-card">
                 <h3><span class="material-icons">receipt_long</span> Registration Fee</h3>
 
-                {% if registration_type == 'non_member2' %}
+                {% if registration_type == 'virtual' %}
+                    <div class="crf-fee-row active">
+                        <span class="crf-fee-row__label">Virtual Attendee (flat rate)</span>
+                        <span class="crf-fee-row__amount">&#8358;{{ conference.virtual_attendee_fee }}</span>
+                    </div>
+                {% elif registration_type == 'non_member2' %}
                     <div class="crf-fee-row active">
                         <span class="crf-fee-row__label">International Delegate</span>
                         <span class="crf-fee-row__amount">&#8358;{{ conference.international_delegate_fee }}</span>

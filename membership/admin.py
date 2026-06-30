@@ -383,7 +383,7 @@ class EltanConferenceAdmin(admin.ModelAdmin):
         }),
         ('Fees', {
             'fields': ('member_fee', 'member_early_bird_fee', 'non_member_fee', 'non_member_early_bird_fee',
-                       'international_delegate_fee')
+                       'international_delegate_fee', 'virtual_attendee_fee')
         }),
         ('Payment Links', {
             'fields': ('member_payment_link', 'non_member_payment_link'),

@@ -664,11 +664,15 @@ def conference_register(request, pk):
     # Check if 'type' is passed in the URL (for international registrations)
     if request.GET.get('type') == 'international':
         registration_type = 'non_member2'  # Set as international
-    
-    # Adjust registration type if user is authenticated and subscribed
-    if request.user.is_authenticated and hasattr(request.user, 'is_subscribed'):
-        if request.user.is_subscribed:
-            registration_type = 'member'
+    elif request.GET.get('type') == 'virtual':
+        registration_type = 'virtual'  # Flat-rate virtual attendee
+
+    # Adjust registration type if user is authenticated and subscribed.
+    # Virtual and international selections take priority and are not overridden.
+    if registration_type not in ('virtual', 'non_member2'):
+        if request.user.is_authenticated and hasattr(request.user, 'is_subscribed'):
+            if request.user.is_subscribed:
+                registration_type = 'member'
 
     if request.method == 'POST':
         form = ConferenceRegistrationForm(request.POST)
@@ -754,6 +758,8 @@ def initiate_conference_registration(request, pk):
             base_fee = conference.member_early_bird_fee if conference.is_early_bird_active else conference.member_fee
         elif registration_data.get('registration_type') == 'non_member2':
             base_fee = conference.international_delegate_fee
+        elif registration_data.get('registration_type') == 'virtual':
+            base_fee = conference.virtual_attendee_fee
         else:
             base_fee = conference.non_member_early_bird_fee if conference.is_early_bird_active else conference.non_member_fee
 
