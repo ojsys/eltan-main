@@ -510,6 +510,44 @@
             border-color: var(--eltan-orange);
         }
         .accom-action-btn--primary:hover { background: var(--eltan-orange-dark); border-color: var(--eltan-orange-dark); color: #fff; }
+
+        /* ============ Mobile overhaul ============ */
+        @media (max-width: 768px) {
+            /* Hero: size to its content instead of a tall 70vh block */
+            .conf-hero { min-height: auto; }
+            .conf-hero__content { padding: 2.75rem 1.25rem; }
+            .conf-hero__title { font-size: clamp(1.6rem, 6vw, 2.2rem); }
+            .conf-hero__meta { font-size: .95rem; line-height: 1.5; }
+            /* Stack the register buttons full-width for easy tapping */
+            .conf-hero__cta { gap: .6rem; }
+            .conf-hero__cta .btn { flex: 1 1 100%; justify-content: center; padding: .8rem 1.25rem; }
+
+            /* Tabs: smooth horizontal scroll, no visible scrollbar, edge padding */
+            .conf-tabs .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .conf-tabs .container::-webkit-scrollbar { display: none; }
+            .conf-tab { padding: .8rem .7rem; font-size: .9rem; }
+
+            /* Once the layout stacks, don't stick the registration card */
+            .conf-reg-card { position: static; }
+
+            /* Key info reads better as a single column */
+            .conf-keyinfo { grid-template-columns: 1fr; }
+
+            /* Trim vertical padding so panels aren't so airy on small screens */
+            .conf-tabpanel { padding: 1.75rem 0; }
+        }
+
+        @media (max-width: 480px) {
+            .conf-hero__content { padding: 2.25rem 1rem; }
+            /* Turn the floating action into a full-width sticky bar */
+            .floating-cta { left: 12px; right: 12px; bottom: 12px; }
+            .floating-cta .btn { width: 100%; justify-content: center; padding: .95rem 1.25rem; }
+        }
     </style>
 </head>
 <body>

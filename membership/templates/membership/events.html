@@ -3,6 +3,43 @@
 
 {% block title %}Events & Conferences - ELTAN{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Featured conference card: image beside details on desktop */
+    .event-featured-card { display: flex; flex-direction: row; overflow: hidden; }
+    .event-featured-media { flex: 1; min-width: 0; }
+    .event-featured-media img,
+    .event-featured-placeholder { width: 100%; height: 100%; min-height: 300px; object-fit: cover; display: block; }
+    .event-featured-placeholder {
+        min-height: 300px;
+        background: linear-gradient(135deg, #E67918 0%, #1565C0 100%);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .event-featured-body { flex: 1.5; }
+
+    /* Tablet: stack the featured card */
+    @media (max-width: 768px) {
+        .event-featured-card { flex-direction: column; }
+        .event-featured-media img,
+        .event-featured-placeholder { height: 220px; min-height: 220px; }
+        .page-header { text-align: center; }
+    }
+
+    /* Phone: tighten cards, stack meta, full-width tap targets */
+    @media (max-width: 600px) {
+        .content-container .card-modern .card-body { padding: 1.25rem; }
+        .content-container .card-modern .card-title { font-size: 1.35rem; }
+        .content-container .card-modern .card-meta { flex-direction: column; gap: .4rem; }
+        .content-container .btn-modern { width: 100%; justify-content: center; }
+        .event-featured-media img,
+        .event-featured-placeholder { height: 200px; min-height: 200px; }
+        /* "Why attend" tiles */
+        section .grid-3 > div { padding: 1.5rem 1rem !important; }
+        section .grid-3 h3 { font-size: 1.25rem !important; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Page Header -->
     <section class="page-header">
@@ -20,17 +57,17 @@
         {% if conferences %}
             <div style="display: flex; flex-direction: column; gap: 2rem;">
                 {% for conference in conferences %}
-                <div class="card-modern" style="display: flex; flex-direction: column; flex-direction: row;">
-                    <div style="flex: 1;">
+                <div class="card-modern event-featured-card">
+                    <div class="event-featured-media">
                         {% if conference.image %}
-                            <img src="{{ conference.image.url }}" alt="{{ conference.title }}" style="height: 100%; object-fit: cover;">
+                            <img src="{{ conference.image.url }}" alt="{{ conference.title }}">
                         {% else %}
-                            <div style="height: 300px; background: linear-gradient(135deg, #E67918 0%, #1565C0 100%); display: flex; align-items: center; justify-content: center;">
+                            <div class="event-featured-placeholder">
                                 <span class="material-icons" style="font-size: 80px; color: white;">event</span>
                             </div>
                         {% endif %}
                     </div>
-                    <div class="card-body" style="flex: 1.5;">
+                    <div class="card-body event-featured-body">
                         <div style="margin-bottom: 1rem;">
                             <span class="card-label">
                                 {% if conference.is_open_for_registration %}
