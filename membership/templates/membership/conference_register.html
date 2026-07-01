@@ -84,8 +84,20 @@
             align-items: start;
         }
         @media (max-width: 900px) {
-            .crf-body { grid-template-columns: 1fr; margin-top: 2.5rem; }
-            .crf-sidebar { order: -1; }
+            /* Stack everything and reorder so the fee shows first, then the
+               form, then the supporting cards — instead of burying the form
+               under the whole sidebar. */
+            .crf-body {
+                display: flex;
+                flex-direction: column;
+                gap: 1.25rem;
+                margin: 2rem auto 3rem;
+            }
+            .crf-sidebar { display: contents; }
+            .crf-fee-card { order: 1; }
+            .crf-form-card { order: 2; }
+            .crf-info-card,
+            .crf-secure-badge { order: 3; }
         }
 
         /* ---- Form card ---- */
@@ -359,6 +371,54 @@
             color: #388E3C;
         }
         .crf-secure-badge .material-icons { font-size: 18px; }
+
+        /* ---- Mobile refinements ---- */
+        @media (max-width: 600px) {
+            /* Hero: tighter, back button no longer overlaps the badge */
+            .crf-hero {
+                padding: 1.25rem 1.15rem 3.25rem;
+                text-align: left;
+            }
+            .crf-hero__back {
+                position: static;
+                margin-bottom: 1.15rem;
+                font-size: .9rem;
+            }
+            .crf-hero__badge { margin-bottom: .85rem; }
+            .crf-hero__conf { font-size: .85rem; line-height: 1.5; }
+
+            /* Lift the content up over the hero curve for a modern feel */
+            .crf-body { margin-top: -1.75rem; padding: 0 1rem; position: relative; z-index: 2; }
+
+            /* Roomier-feeling but tighter cards */
+            .crf-form-card { padding: 1.5rem 1.25rem; border-radius: 18px; }
+            .crf-form-card h2 { font-size: 1.2rem; }
+            .crf-form-card > p { margin-bottom: 1.5rem; }
+            .crf-fee-card { padding: 1.5rem 1.35rem; border-radius: 18px; }
+            .crf-info-card { padding: 1.35rem; }
+
+            /* 16px inputs stop iOS from zooming in on focus */
+            .crf-field input[type="text"],
+            .crf-field input[type="email"],
+            .crf-field input[type="tel"] {
+                font-size: 16px;
+                padding: .8rem 1rem;
+            }
+
+            /* Bigger, easier tap target for the primary action */
+            .crf-submit-btn { padding: 1.05rem 1.5rem; font-size: 1.02rem; }
+            .crf-submit-row { margin-top: 1.75rem; }
+
+            /* Emphasise the fee that will actually be charged */
+            .crf-fee-row.active { font-size: 1rem; }
+            .crf-fee-row.active .crf-fee-row__amount { font-size: 1.15rem; }
+        }
+
+        @media (max-width: 380px) {
+            .crf-hero h1 { font-size: 1.55rem; }
+            .crf-form-card { padding: 1.25rem 1rem; }
+            .crf-fee-card { padding: 1.35rem 1.15rem; }
+        }
     </style>
 </head>
 <body>
