@@ -194,7 +194,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='') or config('USER_
 EMAIL_TIMEOUT = int(config('EMAIL_TIMEOUT', default=20))
 
 # Address members should reply to / contact for support (used in receipt emails).
-CONTACT_EMAIL = config('CONTACT_EMAIL', default='nationalsec@eltanigeria.org')
+CONTACT_EMAIL = config('CONTACT_EMAIL', default='info@eltanigeria.org')
 
 # Hosts whose SMTP *login* is an account identifier, not a mailbox you can send
 # from. Brevo issues logins like 'b479b8001@smtp-brevo.com'; SendGrid's login is
