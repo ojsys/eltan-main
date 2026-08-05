@@ -23,6 +23,7 @@ import logging
 import smtplib
 import threading
 import time
+from email.utils import parseaddr
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
@@ -47,6 +48,50 @@ def _run_in_background(fn, *args, **kwargs):
     thread = threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True)
     thread.start()
     return thread
+
+
+# SMTP logins that are account identifiers rather than mailboxes. Kept in step
+# with _RELAY_LOGIN_DOMAINS in settings/base.py.
+_RELAY_LOGIN_DOMAINS = (
+    'smtp-brevo.com', 'sendinblue.com', 'smtp-relay.brevo.com',
+    'sendgrid.net', 'amazonses.com', 'mailtrap.io', 'postmarkapp.com',
+)
+
+
+def _sender_address(from_email):
+    """Pull the bare address out of a 'Name <addr@example.com>' header value."""
+    return parseaddr(from_email or '')[1]
+
+
+def _is_relay_login(address):
+    if not address or address.count('@') != 1:
+        return False
+    domain = address.rsplit('@', 1)[1].lower()
+    return any(domain == relay or domain.endswith('.' + relay) for relay in _RELAY_LOGIN_DOMAINS)
+
+
+def _looks_like_sender_rejection(exc):
+    """True when a provider error is really 'this From: address is not authorised'."""
+    text = str(exc).lower()
+    return any(
+        phrase in text
+        for phrase in (
+            'sender you used', 'not valid', 'unverified', 'verify your sender',
+            'validate your sender', 'authenticate your domain', 'sender address',
+            'not owned by user', 'domain not verified', 'from address',
+        )
+    )
+
+
+def _sender_rejected_message(exc):
+    """Explain a rejected From: address in terms of what to actually change."""
+    return (
+        f"The mail server rejected the sender address {settings.DEFAULT_FROM_EMAIL!r}. "
+        f"Provider said: {exc}. "
+        "Set DEFAULT_FROM_EMAIL in .env to an address your provider has verified "
+        "(for Brevo/SendGrid the SMTP login is NOT a valid sender — verify a sender "
+        "or authenticate the eltanigeria.org domain in the provider's dashboard)."
+    )
 
 
 def build_html_email(subject, html_body, to, reply_to=None, text_body=None):
@@ -97,10 +142,16 @@ def send_now(message, retries=1):
             )
         except smtplib.SMTPSenderRefused as e:
             logger.error(f"SMTP sender refused ({settings.DEFAULT_FROM_EMAIL}) for {recipients}: {e}")
-            return False, (
-                f"The mail server refused the sender address {settings.DEFAULT_FROM_EMAIL!r}. "
-                "It must be the authenticated account or a verified alias — set DEFAULT_FROM_EMAIL accordingly."
-            )
+            return False, _sender_rejected_message(e)
+        except smtplib.SMTPDataError as e:
+            # Relay providers (Brevo, SendGrid, ...) often reject an unverified
+            # sender here rather than at MAIL FROM, so check for that first.
+            if _looks_like_sender_rejection(e):
+                logger.error(f"SMTP rejected sender ({settings.DEFAULT_FROM_EMAIL}) for {recipients}: {e}")
+                return False, _sender_rejected_message(e)
+            last_error = f"{type(e).__name__}: {e}"
+            logger.error(f"Email send failed to {recipients}: {last_error}")
+            break
         except smtplib.SMTPRecipientsRefused as e:
             logger.error(f"SMTP recipients refused {recipients}: {e}")
             return False, f"The mail server rejected the recipient address {recipients}."
@@ -199,6 +250,18 @@ def check_email_configuration():
         problems.append("EMAIL_HOST_PASSWORD is empty — SMTP login will fail.")
     if settings.EMAIL_USE_TLS and settings.EMAIL_USE_SSL:
         problems.append("EMAIL_USE_TLS and EMAIL_USE_SSL are both on; enable only one.")
+
+    # The single most common cause of "sent successfully" mail that never arrives:
+    # a From: address the provider has not authorised.
+    sender = _sender_address(settings.DEFAULT_FROM_EMAIL)
+    if not sender:
+        problems.append(f"DEFAULT_FROM_EMAIL ({settings.DEFAULT_FROM_EMAIL!r}) is not a usable address.")
+    elif _is_relay_login(sender):
+        problems.append(
+            f"DEFAULT_FROM_EMAIL is {sender!r}, which is an SMTP *login*, not a sendable address. "
+            "Relay providers reject it. Set DEFAULT_FROM_EMAIL in .env to a sender you have "
+            "verified in the provider's dashboard, e.g. 'ELTAN <nationalsec@eltanigeria.org>'."
+        )
 
     try:
         connection = get_connection(fail_silently=False)

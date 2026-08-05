@@ -193,23 +193,53 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='') or config('USER_
 # Never let a slow/hanging mail server tie up a web worker indefinitely.
 EMAIL_TIMEOUT = int(config('EMAIL_TIMEOUT', default=20))
 
-# The From: address MUST be one the SMTP account is allowed to send as. Gmail and
-# most providers reject a From: header that is neither the authenticated user nor
-# a verified alias, which silently killed every receipt/ticket. So default to the
-# authenticated account, and only use a custom domain sender when DEFAULT_FROM_EMAIL
-# is set explicitly (i.e. the provider has been configured to allow it).
+# Address members should reply to / contact for support (used in receipt emails).
+CONTACT_EMAIL = config('CONTACT_EMAIL', default='nationalsec@eltanigeria.org')
+
+# Hosts whose SMTP *login* is an account identifier, not a mailbox you can send
+# from. Brevo issues logins like 'b479b8001@smtp-brevo.com'; SendGrid's login is
+# literally 'apikey'; SES uses an IAM-style key. Using any of them as the From:
+# address gets the mail rejected ("the sender you used ... is not valid").
+_RELAY_LOGIN_DOMAINS = (
+    'smtp-brevo.com', 'sendinblue.com', 'smtp-relay.brevo.com',
+    'sendgrid.net', 'amazonses.com', 'mailtrap.io', 'postmarkapp.com',
+)
+
+
+def _is_usable_sender(address):
+    """True when `address` looks like a real mailbox we could send from."""
+    if not address or address.count('@') != 1:
+        return False
+    domain = address.rsplit('@', 1)[1].lower()
+    return not any(domain == relay or domain.endswith('.' + relay) for relay in _RELAY_LOGIN_DOMAINS)
+
+
+# The From: address MUST be one the provider has authorised. Two different rules
+# apply depending on the provider:
+#   * Mailbox providers (Gmail, Zoho, cPanel mail) accept the authenticated
+#     account itself, so that is a safe default.
+#   * Relay providers (Brevo, SendGrid, SES) authenticate with an account id and
+#     require a separately *verified* sender or domain — the login is never valid
+#     as a From: address.
+# So set DEFAULT_FROM_EMAIL explicitly to your verified sender whenever you use a
+# relay. When it is unset we fall back to the login only if that login looks like
+# a real mailbox, and otherwise to CONTACT_EMAIL, which at least belongs to ELTAN.
 _configured_from = config('DEFAULT_FROM_EMAIL', default='')
 if _configured_from:
     DEFAULT_FROM_EMAIL = _configured_from
-elif EMAIL_HOST_USER:
+elif _is_usable_sender(EMAIL_HOST_USER):
     DEFAULT_FROM_EMAIL = f'ELTAN <{EMAIL_HOST_USER}>'
 else:
-    DEFAULT_FROM_EMAIL = 'ELTAN <noreply@eltanigeria.org>'
+    DEFAULT_FROM_EMAIL = f'ELTAN <{CONTACT_EMAIL}>'
 
-SERVER_EMAIL = config('SERVER_EMAIL', default='') or EMAIL_HOST_USER or DEFAULT_FROM_EMAIL
-
-# Address members should reply to / contact for support (used in receipt emails).
-CONTACT_EMAIL = config('CONTACT_EMAIL', default='nationalsec@eltanigeria.org')
+# The envelope sender (bounces). Must also be authorised — never the relay login.
+_configured_server_email = config('SERVER_EMAIL', default='')
+if _configured_server_email:
+    SERVER_EMAIL = _configured_server_email
+elif _is_usable_sender(EMAIL_HOST_USER):
+    SERVER_EMAIL = EMAIL_HOST_USER
+else:
+    SERVER_EMAIL = CONTACT_EMAIL
 
 # =============================================================================
 # JAZZMIN SETTINGS
