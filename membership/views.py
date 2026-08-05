@@ -26,19 +26,26 @@ import hmac
 import hashlib
 import json
 import tempfile
+import threading
+import time
 from io import BytesIO
 from .utils import get_subscription_eltan_year
 from .utils import Paystack
 from .email_utils import build_html_email, send_now
 
-from django.core.mail import send_mail, EmailMultiAlternatives, EmailMessage
+from django.core.mail import send_mail, EmailMultiAlternatives, EmailMessage, get_connection
 from django.utils.html import strip_tags
 from django.db import OperationalError as DBOperationalError
+from django.db import connection as db_connection
 
 
 
 
 logger = logging.getLogger(__name__)
+
+# Bulk ticket runs up to this size are sent inline so staff get a real result;
+# anything larger would outlast the request and goes to a background thread.
+BULK_TICKET_INLINE_LIMIT = 25
 path_qr = "../static/images/qrcodes"
 
 
@@ -878,13 +885,15 @@ def initiate_conference_registration(request, pk):
 ############ SEnd Registration Email ####################    
 
 
-def send_registration_receipt(registration):
+def send_registration_receipt(registration, connection=None):
     """Send the ticket/receipt email for a confirmed registration.
 
     Returns ``(ok, error)``. The outcome is recorded on the registration so a
     failed send is visible in the admin and on the staff verification page
     instead of vanishing — previously this was fired into a background thread
     and nobody ever learned that the attendee got nothing.
+
+    Pass ``connection`` to reuse one open SMTP connection across a bulk run.
 
     Never raises: a mail problem must not break a confirmed payment.
     """
@@ -921,6 +930,8 @@ def send_registration_receipt(registration):
             to=recipient,
             text_body=_receipt_text_body(registration),
         )
+        if connection is not None:
+            message.connection = connection
 
         # Sent synchronously (with EMAIL_TIMEOUT as the guard) so the result is
         # real: a ticket the attendee paid for is not something to fire and forget.
@@ -939,6 +950,147 @@ def send_registration_receipt(registration):
 
     registration.save(update_fields=['receipt_sent_at', 'receipt_error'])
     return ok, error
+
+
+def send_receipts_bulk(registrations, throttle_seconds=0.6):
+    """Email tickets/receipts to many registrations over ONE SMTP connection.
+
+    Returns ``(sent, failed)``. Each registration records its own outcome, so a
+    run that is cut short (worker recycled, provider cap hit) leaves the
+    stragglers marked "not sent" and simply running it again picks up where it
+    stopped — nothing is sent twice and nothing is lost.
+    """
+    registrations = list(registrations)
+    if not registrations:
+        return 0, 0
+
+    try:
+        connection = get_connection()
+        connection.open()
+    except Exception as e:
+        error = f"Could not open SMTP connection: {type(e).__name__}: {e}"
+        logger.error(error)
+        EltanConferenceRegistration.objects.filter(
+            pk__in=[r.pk for r in registrations]
+        ).update(receipt_error=error[:2000])
+        return 0, len(registrations)
+
+    sent = failed = 0
+    try:
+        for registration in registrations:
+            ok, _ = send_registration_receipt(registration, connection=connection)
+            if ok:
+                sent += 1
+            else:
+                failed += 1
+            # Stay gentle on the provider's rate limit.
+            if throttle_seconds:
+                time.sleep(throttle_seconds)
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+    logger.info(f"Bulk ticket run complete: {sent} sent, {failed} failed.")
+    return sent, failed
+
+
+def _send_receipts_in_background(registration_ids):
+    """Run a bulk ticket send off the request thread.
+
+    A few hundred SMTP round-trips cannot happen inside a web request without
+    the worker being killed for taking too long. The per-registration status
+    recorded by send_receipts_bulk() is what makes this safe: the staff page
+    shows progress on refresh, and re-running finishes anything left over.
+    """
+    def _run():
+        try:
+            registrations = EltanConferenceRegistration.objects.filter(
+                pk__in=registration_ids
+            ).select_related('conference', 'user')
+            send_receipts_bulk(registrations)
+        except Exception as e:
+            logger.error(f"Background ticket run failed: {type(e).__name__}: {e}", exc_info=True)
+        finally:
+            # This thread has its own DB connection; don't leak it.
+            db_connection.close()
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    return thread
+
+
+@staff_member_required
+@require_POST
+def send_conference_tickets(request):
+    """Send tickets/receipts to every confirmed registration for a conference.
+
+    'missing' (the default) targets only those who never received one — the
+    normal catch-up. 'all' re-sends to every confirmed registration, for when
+    the earlier emails went out broken.
+    """
+    redirect_to = request.POST.get('next') or reverse('conference_verification')
+    conference_id = request.POST.get('conference') or ''
+    scope = request.POST.get('scope', 'missing')
+
+    registrations = EltanConferenceRegistration.objects.filter(
+        payment_status='completed'
+    ).select_related('conference', 'user')
+
+    if conference_id:
+        registrations = registrations.filter(conference_id=conference_id)
+    if scope != 'all':
+        registrations = registrations.filter(receipt_sent_at__isnull=True)
+
+    # Someone with no address on file can never be emailed; report them
+    # separately rather than counting them as a failure on every single run.
+    addressable = [r for r in registrations if r.contact_email]
+    unaddressable = len(registrations) - len(addressable)
+
+    if not addressable:
+        if scope == 'all' and not unaddressable:
+            messages.info(request, "There are no confirmed registrations for this selection.")
+        elif scope != 'all':
+            messages.success(
+                request,
+                "Every confirmed registration with an email address has already received its ticket.",
+            )
+        if unaddressable:
+            messages.warning(
+                request,
+                f"{unaddressable} confirmed registration(s) have no email address on file and cannot be emailed.",
+            )
+        return redirect(redirect_to)
+
+    # Small batches finish well inside a request, so send them inline and give
+    # staff the real result instead of an unhelpful "started" message.
+    if len(addressable) <= BULK_TICKET_INLINE_LIMIT:
+        sent, failed = send_receipts_bulk(addressable)
+        if sent:
+            messages.success(request, f"{sent} ticket email(s) sent.")
+        if failed:
+            messages.error(
+                request,
+                f"{failed} ticket email(s) failed — open a row to see why, or run "
+                f"'python manage.py test_email' to check the mail settings.",
+            )
+    else:
+        _send_receipts_in_background([r.pk for r in addressable])
+        messages.info(
+            request,
+            f"Sending {len(addressable)} ticket email(s) in the background. "
+            "Refresh this page to watch the 'Ticket sent' badges update; "
+            "running this again later will pick up anything that did not go out.",
+        )
+
+    if unaddressable:
+        messages.warning(
+            request,
+            f"{unaddressable} confirmed registration(s) were skipped — no email address on file.",
+        )
+
+    return redirect(redirect_to)
 
 
 def _receipt_text_body(registration):

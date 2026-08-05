@@ -141,8 +141,10 @@
                     <h2 class="mt-3">Payment Successful!</h2>
                     <p>Your registration for {{ registration.conference.title }} has been confirmed.</p>
 
-                    {# Show the ticket here as well as by email — this page is the one thing
-                       the attendee is guaranteed to see, even if mail is delayed or blocked. #}
+                    {% comment %}
+                    Show the ticket here as well as by email — this page is the one
+                    thing the attendee is guaranteed to see, even if mail is delayed.
+                    {% endcomment %}
                     {% if registration.ticket_id %}
                     <div class="mx-auto my-4 p-3" style="max-width:340px; background:#FFF5EB; border:1px solid #F3D9BD; border-radius:14px;">
                         <div style="color:#9a6a30; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">Your Ticket ID</div>

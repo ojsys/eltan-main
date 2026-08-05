@@ -200,15 +200,57 @@
             </div>
         </div>
 
-        {% if summary.tickets_unsent %}
-        <div class="alert alert-warning d-flex align-items-center gap-2 mt-3 mb-0" role="alert">
-            <i class="fas fa-triangle-exclamation"></i>
-            <div>
-                <strong>{{ summary.tickets_unsent }} confirmed registration{{ summary.tickets_unsent|pluralize }}</strong>
-                {{ summary.tickets_unsent|pluralize:"has,have" }} not received a ticket email.
-                Use <em>Send Ticket</em> on each row, or run
-                <code>python manage.py send_pending_tickets</code> to send them all.
+        {% if summary.completed %}
+        <div class="alert {% if summary.tickets_unsent %}alert-warning{% else %}alert-light border{% endif %} mt-3 mb-0" role="alert">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    {% if summary.tickets_unsent %}
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <div>
+                            <strong>{{ summary.tickets_unsent }} confirmed registration{{ summary.tickets_unsent|pluralize }}</strong>
+                            {{ summary.tickets_unsent|pluralize:"has,have" }} not received a ticket email.
+                        </div>
+                    {% else %}
+                        <i class="fas fa-circle-check text-success"></i>
+                        <div>All {{ summary.completed }} confirmed registration{{ summary.completed|pluralize }} {{ summary.completed|pluralize:"has,have" }} been sent a ticket.</div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    {% if summary.tickets_unsent %}
+                    <form method="post" action="{% url 'send_conference_tickets' %}"
+                          onsubmit="return confirm('Email a ticket/receipt to the {{ summary.tickets_unsent }} confirmed registration(s) that have not received one?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="conference" value="{{ selected_conference }}">
+                        <input type="hidden" name="scope" value="missing">
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="cv-act cv-act-send">
+                            <i class="fas fa-paper-plane"></i> Send {{ summary.tickets_unsent }} missing ticket{{ summary.tickets_unsent|pluralize }}
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% comment %}
+                    Re-sends to everyone confirmed, including those already
+                    emailed — for when the earlier batch went out broken.
+                    {% endcomment %}
+                    <form method="post" action="{% url 'send_conference_tickets' %}"
+                          onsubmit="return confirm('Re-send the ticket/receipt to ALL {{ summary.completed }} confirmed registration(s)? People who already received one will get it again.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="conference" value="{{ selected_conference }}">
+                        <input type="hidden" name="scope" value="all">
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="cv-act cv-act-bank">
+                            <i class="fas fa-rotate"></i> Re-send to all {{ summary.completed }} confirmed
+                        </button>
+                    </form>
+                </div>
             </div>
+            {% if not selected_conference %}
+            <div class="mt-2" style="font-size:.82rem; opacity:.85;">
+                <i class="fas fa-circle-info me-1"></i>This applies to <strong>all conferences</strong> — pick one above to limit it.
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
