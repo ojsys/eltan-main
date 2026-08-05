@@ -1,3 +1,4 @@
+import re
 import uuid
 from decimal import Decimal
 from django.db import models
@@ -60,16 +61,177 @@ def _resize_image_field(instance, field_name):
 #         super().save(*args, **kwargs)
 
 
+ELTAN_YEAR_RE = re.compile(r'^(\d{4})\s*[-/]\s*(\d{4})$')
+
+# An ELTAN year runs September 1 -> August 31 of the following year.
+ELTAN_YEAR_START_MONTH = 9
+ELTAN_YEAR_START_DAY = 1
+ELTAN_YEAR_END_MONTH = 8
+ELTAN_YEAR_END_DAY = 31
+
+
+def normalize_eltan_year(value):
+    """Return an ELTAN year label in the canonical ``YYYY-YYYY`` form.
+
+    Historic data mixes ``2024/2025`` and ``2024-2025``, which made the same year
+    look like two different years everywhere it was compared or filtered. Every
+    read and write funnels through here so only one spelling ever reaches the DB.
+    """
+    if not value:
+        return ''
+    match = ELTAN_YEAR_RE.match(str(value).strip())
+    if not match:
+        return str(value).strip()
+    return f"{match.group(1)}-{match.group(2)}"
+
+
+def validate_eltan_year(value):
+    """Validate an ELTAN year label: ``YYYY-YYYY`` with consecutive years."""
+    match = ELTAN_YEAR_RE.match(str(value).strip())
+    if not match:
+        raise ValidationError(
+            f"'{value}' is not a valid ELTAN year. Use the form 2026-2027."
+        )
+    start, end = int(match.group(1)), int(match.group(2))
+    if end != start + 1:
+        raise ValidationError(
+            f"'{value}' must span two consecutive years, e.g. {start}-{start + 1}."
+        )
+
+
+def eltan_year_for_date(on_date=None):
+    """Return the ELTAN year label covering ``on_date`` (defaults to today)."""
+    on_date = on_date or timezone.now().date()
+    if on_date.month >= ELTAN_YEAR_START_MONTH:
+        start_year = on_date.year
+    else:
+        start_year = on_date.year - 1
+    return f"{start_year}-{start_year + 1}"
+
+
 class ELTANYearSetting(models.Model):
-    eltan_year = models.CharField(max_length=20)
-    start_date = models.DateField(null=True)
-    end_date = models.DateField(null=True)
-    is_active = models.BooleanField(default=True)
+    """The single source of truth for which ELTAN years exist and which one is
+    current.
+
+    Admins create a year by typing its label (e.g. ``2026-2027``) — the start and
+    end dates fill themselves in, and marking one 'current' stands the others
+    down. Members only ever choose from the years listed here, so adding a new
+    one is a single admin action with no code change.
+    """
+
+    eltan_year = models.CharField(
+        max_length=20,
+        unique=True,
+        validators=[validate_eltan_year],
+        help_text="Format: 2026-2027 (two consecutive years).",
+    )
+    start_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Leave blank to use 1 September of the first year.",
+    )
+    end_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Leave blank to use 31 August of the second year.",
+    )
+    # Defaults to False on purpose: adding next year's row in advance must not
+    # quietly demote the year that is actually running. Promote it deliberately
+    # (tick this box, or use the 'Set as the current ELTAN year' admin action).
+    is_active = models.BooleanField(
+        default=False,
+        verbose_name="Current ELTAN year",
+        help_text="The year new subscriptions default to. Only one year can be current.",
+    )
+    is_selectable = models.BooleanField(
+        default=True,
+        verbose_name="Selectable by members",
+        help_text="Untick to hide this year from the subscription form without deleting it.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['-eltan_year']
+        verbose_name = 'ELTAN Year'
+        verbose_name_plural = 'ELTAN Years'
+
     def __str__(self):
         return self.eltan_year
+
+    @property
+    def start_year(self):
+        match = ELTAN_YEAR_RE.match(self.eltan_year or '')
+        return int(match.group(1)) if match else None
+
+    def default_dates(self):
+        """Derive (start_date, end_date) from the label: 1 Sep -> 31 Aug."""
+        start_year = self.start_year
+        if start_year is None:
+            return None, None
+        return (
+            date(start_year, ELTAN_YEAR_START_MONTH, ELTAN_YEAR_START_DAY),
+            date(start_year + 1, ELTAN_YEAR_END_MONTH, ELTAN_YEAR_END_DAY),
+        )
+
+    def clean(self):
+        self.eltan_year = normalize_eltan_year(self.eltan_year)
+        validate_eltan_year(self.eltan_year)
+        if self.start_date and self.end_date and self.end_date <= self.start_date:
+            raise ValidationError({'end_date': "End date must come after the start date."})
+
+    def save(self, *args, **kwargs):
+        self.eltan_year = normalize_eltan_year(self.eltan_year)
+        # Fill the dates in for the admin so creating a year is just typing its label.
+        default_start, default_end = self.default_dates()
+        if not self.start_date:
+            self.start_date = default_start
+        if not self.end_date:
+            self.end_date = default_end
+        super().save(*args, **kwargs)
+        # Exactly one current year — enforced here so it holds however the row is
+        # saved (admin, shell, data migration), not just via the admin form.
+        if self.is_active:
+            ELTANYearSetting.objects.exclude(pk=self.pk).filter(is_active=True).update(is_active=False)
+
+    @classmethod
+    def selectable_years(cls):
+        """Years a member may pick on the subscription form, newest first."""
+        return cls.objects.filter(is_selectable=True).order_by('-eltan_year')
+
+    @classmethod
+    def current(cls):
+        """The year marked current, else the one covering today, else the newest."""
+        active = cls.objects.filter(is_active=True).first()
+        if active:
+            return active
+        today = timezone.now().date()
+        covering = cls.objects.filter(start_date__lte=today, end_date__gte=today).first()
+        return covering or cls.objects.order_by('-eltan_year').first()
+
+    @classmethod
+    def current_label(cls):
+        """The current ELTAN year label, falling back to the calendar-derived one
+        when no years have been configured yet."""
+        current = cls.current()
+        return current.eltan_year if current else eltan_year_for_date()
+
+    @classmethod
+    def dates_for(cls, eltan_year):
+        """(start_date, end_date) for a label — from the configured row when it
+        exists, otherwise from the Sep/Aug rule."""
+        label = normalize_eltan_year(eltan_year)
+        setting = cls.objects.filter(eltan_year=label).first()
+        if setting and setting.start_date and setting.end_date:
+            return setting.start_date, setting.end_date
+        match = ELTAN_YEAR_RE.match(label)
+        if not match:
+            return None, None
+        start_year = int(match.group(1))
+        return (
+            date(start_year, ELTAN_YEAR_START_MONTH, ELTAN_YEAR_START_DAY),
+            date(start_year + 1, ELTAN_YEAR_END_MONTH, ELTAN_YEAR_END_DAY),
+        )
 
 
 
@@ -153,14 +315,6 @@ class Subscription(models.Model):
         ('Renew Membership', 'Renew Membership (N3,000)'),
     ]
 
-    ELTANYEAR_CHOICES = [
-        ('2022-2023', '2022-2023'),
-        ('2023-2024', '2023-2024'),
-        ('2024-2025', '2024-2025'),
-        ('2025-2026', '2025-2026'),
-        ('2027-2028', '2027-2028'),
-        ]
-
     STATE_CHOICES = [
         ('FCT', 'Abuja'),
         ('ABIA', 'Abia'),
@@ -216,7 +370,10 @@ class Subscription(models.Model):
     membership_type = models.CharField(max_length=50, default="New Membership (5,500)", choices=MEMBER_CHOICES)
     start_date = models.DateField(auto_now_add=True)
     end_date = models.DateField(null=True, blank=True)
-    eltan_year = models.CharField(max_length=9, default='2024/2025', choices=ELTANYEAR_CHOICES)
+    # No hardcoded choices: the valid years live in ELTANYearSetting so an admin
+    # can add one without a code change or migration. The form restricts the
+    # selection to the years configured there.
+    eltan_year = models.CharField(max_length=20, blank=True)
     payment_status = models.CharField(
         max_length=20,
         blank=True,
@@ -238,34 +395,43 @@ class Subscription(models.Model):
     )
 
     def calculate_eltan_dates(self):
-        """Calculate the correct ELTAN year dates based on registration date"""
-        registration_date = self.start_date or date.today()
-        current_year = registration_date.year
+        """Return the {'eltan_year', 'start_date', 'end_date'} this subscription
+        belongs to.
 
-        # If registering before September, use current academic year
-        # If registering after September, use next academic year
-        if registration_date.month < 9:
-            start_year = current_year - 1
-            end_year = current_year
-        else:
-            start_year = current_year
-            end_year = current_year + 1
+        The year the member selected wins. Only when none was selected do we fall
+        back to the year covering the registration date. Dates always come from
+        the ELTANYearSetting row for that year when one exists, so an admin can
+        correct a year's dates in one place.
+        """
+        label = normalize_eltan_year(self.eltan_year)
+        if not label:
+            label = eltan_year_for_date(self.start_date or date.today())
 
+        start_date, end_date = ELTANYearSetting.dates_for(label)
         return {
-            'end_date': date(end_year, 8, 31),
-            'eltan_year': f"{start_year}/{end_year}"
+            'eltan_year': label,
+            'start_date': start_date,
+            'end_date': end_date,
         }
 
     def save(self, *args, **kwargs):
-        if not self.pk or not self.end_date:  # Only on creation or if end_date not set
-            dates = self.calculate_eltan_dates()
+        # Always store the canonical spelling so '2024/2025' and '2024-2025'
+        # can never coexist as two different years.
+        dates = self.calculate_eltan_dates()
+        self.eltan_year = dates['eltan_year']
+        if not self.end_date and dates['end_date']:
             self.end_date = dates['end_date']
-            self.eltan_year = dates['eltan_year']
 
         super().save(*args, **kwargs)
 
     @property
     def is_active(self):
+        # start_date/end_date can come back None for rows migrated from the old
+        # MySQL database, where datetimes were written into these date columns.
+        # Treat a subscription with unreadable dates as inactive rather than
+        # raising — this used to 500 the whole certificates page.
+        if not self.start_date or not self.end_date:
+            return False
         today = timezone.now().date()
         return (
             self.payment_status == 'paid' and
@@ -491,6 +657,28 @@ class EltanConferenceRegistration(models.Model):
         blank=True,
         related_name='verified_conference_registrations',
     )
+
+    # Ticket/receipt delivery tracking. Without this a failed send is invisible:
+    # the payment succeeds, nobody gets an email, and no one finds out until the
+    # attendee complains. These let staff see and re-send exactly what was missed.
+    receipt_sent_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the ticket/receipt email was last delivered successfully.",
+    )
+    receipt_error = models.TextField(
+        blank=True, default='',
+        help_text="Why the last ticket/receipt email failed, if it did.",
+    )
+
+    @property
+    def receipt_pending(self):
+        """A confirmed registration whose ticket email has never gone out."""
+        return self.payment_status == 'completed' and self.receipt_sent_at is None
+
+    @property
+    def contact_email(self):
+        """The address a ticket should go to."""
+        return self.email or (self.user.email if self.user else None)
 
     class Meta:
         unique_together = ['conference', 'user']

@@ -110,7 +110,9 @@
                                 <select name="eltan_year" id="eltan_year" class="form-input-modern" required>
                                     <option value="">Select ELTAN year</option>
                                     {% for value, label in form.eltan_year.field.choices %}
-                                        <option value="{{ value }}">{{ label }}</option>
+                                        {% if value %}
+                                        <option value="{{ value }}"{% if value == form.eltan_year.field.initial %} selected{% endif %}>{{ label }}</option>
+                                        {% endif %}
                                     {% endfor %}
                                 </select>
                             </div>

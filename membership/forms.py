@@ -1,7 +1,11 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Field, Submit, Div
-from .models import EltanConference, MemberProfile, Sigs, Subscription, Download, EltanConferenceRegistration, ConferenceSponsor
+from .models import (
+    EltanConference, MemberProfile, Sigs, Subscription, Download,
+    EltanConferenceRegistration, ConferenceSponsor, ELTANYearSetting,
+    normalize_eltan_year,
+)
 
 # class ConferenceRegistrationForm(forms.ModelForm):
 #     class Meta:
@@ -171,11 +175,21 @@ class SubscriptionForm(forms.ModelForm):
         membership_type_field.required = True
         state_chapter_field.required = True
         
-        # Set choices for eltan_year from ELTANYearSetting
-        from .models import ELTANYearSetting  # Import at the top of the file instead
-        eltan_years = ELTANYearSetting.objects.all()
-        self.fields['eltan_year'].choices = [(year.eltan_year, year.eltan_year) for year in eltan_years]
-        self.fields['eltan_year'].required = True
+        # The ELTAN years on offer come from ELTANYearSetting, so an admin adding
+        # a year in the admin panel is all it takes for members to be able to
+        # pick it — no code change, no migration.
+        years = list(ELTANYearSetting.selectable_years().values_list('eltan_year', flat=True))
+        current = ELTANYearSetting.current_label()
+        if current and current not in years:
+            # Never let the current year be unpickable because someone unticked it.
+            years.insert(0, current)
+
+        self.fields['eltan_year'] = forms.ChoiceField(
+            label='ELTAN Year',
+            required=True,
+            choices=[('', 'Select ELTAN Year')] + [(year, year) for year in years],
+            initial=current,
+        )
 
     def clean_membership_type(self):
         value = self.cleaned_data.get('membership_type', '').strip()
@@ -190,7 +204,7 @@ class SubscriptionForm(forms.ModelForm):
         return value
 
     def clean_eltan_year(self):
-        value = self.cleaned_data.get('eltan_year', '').strip()
+        value = normalize_eltan_year(self.cleaned_data.get('eltan_year', ''))
         if not value:
             raise forms.ValidationError('Please select an ELTAN year.')
         return value

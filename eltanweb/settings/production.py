@@ -93,8 +93,9 @@ LOGGING = {
 # Create logs directory if it doesn't exist
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 
-# Use SMTP email backend for production
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Use SMTP email backend for production unless EMAIL_BACKEND says otherwise
+# (base.py already reads it from the environment).
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 
 # Additional production optimizations
 CONN_MAX_AGE = 600  # Database connection pooling

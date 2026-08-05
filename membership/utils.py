@@ -28,18 +28,10 @@ class Paystack:
 
 def get_current_eltan_year():
     """
-    Get the current ELTAN year from settings or calculate it if not set.
+    Get the current ELTAN year, from the admin-configured years when available.
+    Always returns the canonical 'YYYY-YYYY' form.
     """
-    # First try to get from settings
-    current_setting = ELTANYearSetting.objects.filter(is_active=True).first()
-    if current_setting:
-        return current_setting.eltan_year
-        
-    # If no setting exists, calculate based on current date
-    current_date = timezone.now()
-    if current_date.month >= 9:  # New academic year starts in September
-        return f"{current_date.year}/{current_date.year + 1}"
-    return f"{current_date.year - 1}/{current_date.year}"
+    return ELTANYearSetting.current_label()
 
 def get_subscription_eltan_year(subscription):
     """

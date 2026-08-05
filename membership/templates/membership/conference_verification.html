@@ -200,6 +200,18 @@
             </div>
         </div>
 
+        {% if summary.tickets_unsent %}
+        <div class="alert alert-warning d-flex align-items-center gap-2 mt-3 mb-0" role="alert">
+            <i class="fas fa-triangle-exclamation"></i>
+            <div>
+                <strong>{{ summary.tickets_unsent }} confirmed registration{{ summary.tickets_unsent|pluralize }}</strong>
+                {{ summary.tickets_unsent|pluralize:"has,have" }} not received a ticket email.
+                Use <em>Send Ticket</em> on each row, or run
+                <code>python manage.py send_pending_tickets</code> to send them all.
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Panel -->
         <div class="cv-panel mt-4">
             <form method="get">
@@ -286,6 +298,12 @@
                                 <td data-label="Status">
                                     {% if reg.payment_status == 'completed' %}
                                         <span class="cv-badge st-completed"><i class="fas fa-check"></i> Confirmed</span>
+                                        {# Whether the ticket email actually reached them — a failed send used to be invisible here. #}
+                                        {% if reg.receipt_sent_at %}
+                                            <span class="cv-badge st-completed" style="margin-top:.25rem;" title="Ticket emailed {{ reg.receipt_sent_at|date:'M d, Y H:i' }}"><i class="fas fa-envelope-circle-check"></i> Ticket sent</span>
+                                        {% else %}
+                                            <span class="cv-badge st-failed" style="margin-top:.25rem;" title="{{ reg.receipt_error|default:'Never attempted' }}"><i class="fas fa-envelope"></i> Ticket not sent</span>
+                                        {% endif %}
                                     {% elif reg.payment_status == 'failed' %}
                                         <span class="cv-badge st-failed"><i class="fas fa-xmark"></i> Failed</span>
                                     {% else %}

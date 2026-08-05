@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
-from .models import EltanConference, EltanConferenceRegistration, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, Newsletter, ELTANYearSetting, Download, ExcoMember
+from .models import EltanConference, EltanConferenceRegistration, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, Newsletter, ELTANYearSetting, Download, ExcoMember, normalize_eltan_year
 from .forms import ConferenceRegistrationForm, MemberProfileUpdateForm, SigsForm, SubscriptionForm, DownloadForm, SponsorApplicationForm
 import qrcode
 import os
@@ -29,7 +29,7 @@ import tempfile
 from io import BytesIO
 from .utils import get_subscription_eltan_year
 from .utils import Paystack
-from .email_utils import send_email_async
+from .email_utils import build_html_email, send_now
 
 from django.core.mail import send_mail, EmailMultiAlternatives, EmailMessage
 from django.utils.html import strip_tags
@@ -412,11 +412,11 @@ def subscription(request):
 
             if subscription and subscription.end_date < timezone.now().date():
                 # Renew existing subscription
-                subscription = renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate, membership_type=membership_type)
+                subscription = renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate, membership_type=membership_type, eltan_year=eltan_year)
                 return redirect('subscribe_success')
             else:
                 # Create new subscription
-                subscription = create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate, payment_method='manual', membership_type=membership_type)
+                subscription = create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate, payment_method='manual', membership_type=membership_type, eltan_year=eltan_year)
                 return redirect('subscription_pending')
 
     context = {
@@ -425,7 +425,12 @@ def subscription(request):
     }
     return render(request, 'membership/subscription.html', context)
 
-def create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate=None, payment_method='manual', membership_type=''):
+def create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate=None, payment_method='manual', membership_type='', eltan_year=''):
+    # The ELTAN year the member picked has to be carried through — previously it
+    # was dropped here and the model silently substituted a date-derived year.
+    eltan_year = normalize_eltan_year(eltan_year) or ELTANYearSetting.current_label()
+    _, end_date = ELTANYearSetting.dates_for(eltan_year)
+
     subscription = Subscription.objects.create(
         user=user,
         membership_type=membership_type,
@@ -434,8 +439,9 @@ def create_subscription(user, payment_proof, payment_amount, state_chapter, qual
         state_chapter=state_chapter,
         qualification_certificate=qualification_certificate,
         payment_status='pending',
+        eltan_year=eltan_year,
         start_date=timezone.now().date(),
-        end_date=timezone.now().date() + timezone.timedelta(days=365)  # Assuming 1-year subscription
+        end_date=end_date,
     )
 
     user.is_subscribed = True
@@ -443,7 +449,7 @@ def create_subscription(user, payment_proof, payment_amount, state_chapter, qual
 
     return subscription
 
-def renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate=None, membership_type=''):
+def renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate=None, membership_type='', eltan_year=''):
     subscription.membership_type = membership_type
     subscription.payment_proof = payment_proof
     subscription.payment_amount = payment_amount
@@ -451,10 +457,11 @@ def renew_subscription(subscription, payment_proof, payment_amount, state_chapte
     subscription.qualification_certificate = qualification_certificate
     subscription.payment_status = 'pending'
     subscription.start_date = timezone.now().date()
+    # Renew into the year the member selected; fall back to the current one.
+    subscription.eltan_year = normalize_eltan_year(eltan_year) or ELTANYearSetting.current_label()
     # End date should be the end of the ELTAN year, not one year from the renewal date
     dates = subscription.calculate_eltan_dates()
     subscription.end_date = dates['end_date']
-    subscription.eltan_year = dates['eltan_year']
     subscription.save()
 
     user = subscription.user
@@ -466,8 +473,10 @@ def renew_subscription(subscription, payment_proof, payment_amount, state_chapte
 
 @login_required
 def subscribe_past_year(request, eltan_year):
+    # Accept either spelling in the URL, look the year up canonically.
+    eltan_year = normalize_eltan_year(eltan_year)
     eltan_year_setting = get_object_or_404(ELTANYearSetting, eltan_year=eltan_year)
-    
+
     # Check if user already subscribed for this year
     existing = Subscription.objects.filter(user=request.user, eltan_year=eltan_year).first()
     if existing:
@@ -544,16 +553,14 @@ def subscribe_past_year(request, eltan_year):
 
 
 def calculate_start_date(eltan_year):
-    # Parse the ELTAN year (format: "2023/2024")
-    start_year = int(eltan_year.split('/')[0])
-    # Assuming ELTAN year starts in September
-    return date(start_year, 9, 1)
+    """Start date for an ELTAN year, from its configured row when there is one."""
+    start_date, _ = ELTANYearSetting.dates_for(eltan_year)
+    return start_date
 
 def calculate_end_date(eltan_year):
-    # Parse the ELTAN year (format: "2023/2024")
-    end_year = int(eltan_year.split('/')[1])
-    # Assuming ELTAN year ends in August
-    return date(end_year, 8, 31)
+    """End date for an ELTAN year, from its configured row when there is one."""
+    _, end_date = ELTANYearSetting.dates_for(eltan_year)
+    return end_date
     
 
 @login_required
@@ -872,46 +879,99 @@ def initiate_conference_registration(request, pk):
 
 
 def send_registration_receipt(registration):
-    try:
-        recipient = registration.email or (registration.user.email if registration.user else None)
-        if not recipient:
-            logger.error(f"No email address for registration {registration.pk}; skipping receipt.")
-            return
+    """Send the ticket/receipt email for a confirmed registration.
 
-        # Prepare email content
+    Returns ``(ok, error)``. The outcome is recorded on the registration so a
+    failed send is visible in the admin and on the staff verification page
+    instead of vanishing — previously this was fired into a background thread
+    and nobody ever learned that the attendee got nothing.
+
+    Never raises: a mail problem must not break a confirmed payment.
+    """
+    try:
+        recipient = registration.contact_email
+        if not recipient:
+            error = "No email address on this registration."
+            logger.error(f"No email address for registration {registration.pk}; skipping receipt.")
+            registration.receipt_error = error
+            registration.save(update_fields=['receipt_error'])
+            return False, error
+
+        # A ticket id must exist before the receipt goes out (legacy rows may not have one)
+        if not registration.ticket_id:
+            registration.ticket_id = registration.generate_ticket_id()
+            registration.save(update_fields=['ticket_id'])
+
         context = {
             'registration': registration,
             'ticket_id': registration.ticket_id,
             'current_date': timezone.now(),
-            'year': datetime.now().year
+            'year': datetime.now().year,
+            'contact_email': getattr(settings, 'CONTACT_EMAIL', settings.DEFAULT_FROM_EMAIL),
         }
+        html_content = render_to_string('emails/conference_receipt.html', context)
 
-        html_content = render_to_string(
-            'emails/conference_receipt.html',
-            context
-        )
-
-        # Create email
         subject = f'Registration Confirmation - {registration.conference.title}'
         if registration.ticket_id:
             subject += f' — Ticket {registration.ticket_id}'
-        email = EmailMessage(
+
+        message = build_html_email(
             subject=subject,
-            body=html_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[recipient],
-            reply_to=[settings.DEFAULT_FROM_EMAIL],
+            html_body=html_content,
+            to=recipient,
+            text_body=_receipt_text_body(registration),
         )
-        email.content_subtype = 'html'
 
-        # Send in the background so the web worker is not blocked on SMTP
-        # (blocking sends here were exhausting the LSAPI worker pool).
-        send_email_async(email)
-        logger.info(f"Registration receipt queued for {recipient}")
-
+        # Sent synchronously (with EMAIL_TIMEOUT as the guard) so the result is
+        # real: a ticket the attendee paid for is not something to fire and forget.
+        ok, error = send_now(message)
     except Exception as e:
-        logger.error(f"Failed to build/queue registration receipt to {registration.email}: {str(e)}")
-        # Don't raise — a mail hiccup must not break payment confirmation.
+        ok, error = False, f"{type(e).__name__}: {e}"
+        logger.error(f"Failed to build registration receipt for #{registration.pk}: {error}")
+
+    if ok:
+        registration.receipt_sent_at = timezone.now()
+        registration.receipt_error = ''
+        logger.info(f"Registration receipt sent to {registration.contact_email} (#{registration.pk})")
+    else:
+        registration.receipt_error = (error or 'Unknown mail error.')[:2000]
+        logger.error(f"Registration receipt FAILED for #{registration.pk}: {error}")
+
+    registration.save(update_fields=['receipt_sent_at', 'receipt_error'])
+    return ok, error
+
+
+def _receipt_text_body(registration):
+    """Plain-text version of the receipt, for clients that don't render HTML."""
+    conference = registration.conference
+    name = f"{registration.first_name or ''} {registration.last_name or ''}".strip()
+    if not name and registration.user:
+        name = f"{registration.user.first_name} {registration.user.last_name}".strip()
+    contact = getattr(settings, 'CONTACT_EMAIL', settings.DEFAULT_FROM_EMAIL)
+
+    lines = [
+        f"Dear {name or 'Participant'},",
+        "",
+        f"Your payment for {conference.title} is confirmed. This email is your receipt and ticket.",
+        "",
+        f"Ticket ID: {registration.ticket_id or '—'}",
+        f"Amount paid: NGN {registration.amount_paid:,.2f}",
+        f"Registration type: {registration.get_registration_type_display()}",
+        f"Dates: {conference.start_date:%d %b %Y} – {conference.end_date:%d %b %Y}",
+        f"Venue: {conference.venue or '—'}",
+    ]
+    reference = registration.paystack_ref or registration.payment_reference
+    if reference:
+        lines.append(f"Payment reference: {reference}")
+    lines += [
+        "",
+        "Please keep your Ticket ID safe — you may be asked to present it at the event.",
+        "",
+        f"Questions? Contact us at {contact}.",
+        "",
+        "English Language Teachers Association of Nigeria (ELTAN)",
+    ]
+    return "\n".join(lines)
 
 
 ################## Payment Success views
@@ -923,23 +983,30 @@ def payment_success(request):
     logger.info(f"Payment success called with payment_ref: {payment_ref}, internal_ref: {internal_ref}")
     
     try:
-        # Try to find registration using both references
+        # Look the registration up by reference regardless of payment_status. Filtering
+        # on 'pending' meant a refresh of this page (or a webhook that got there first)
+        # made an already-paid registration look missing, and the attendee was shown
+        # "Invalid registration reference" instead of their ticket.
         registration = None
-        if internal_ref:
-            registration = EltanConferenceRegistration.objects.filter(
-                payment_reference=internal_ref,
-                payment_status='pending'
-            ).first()
-        
-        if not registration and payment_ref:
-            registration = EltanConferenceRegistration.objects.filter(
-                payment_reference=payment_ref,
-                payment_status='pending'
-            ).first()
-            
+        for ref in (internal_ref, payment_ref):
+            if ref:
+                registration = EltanConferenceRegistration.objects.filter(payment_reference=ref).first()
+                if registration:
+                    break
+
         if not registration:
             logger.error(f"Registration not found for refs - payment: {payment_ref}, internal: {internal_ref}")
             raise EltanConferenceRegistration.DoesNotExist()
+
+        if registration.payment_status == 'completed':
+            # Already confirmed (refresh, or the webhook beat us here). Show the
+            # ticket, and send the receipt if it never actually went out.
+            if registration.receipt_pending:
+                send_registration_receipt(registration)
+            return render(request, 'membership/payment_success.html', {
+                'registration': registration,
+                'conference': registration.conference,
+            })
 
         # Verify transaction with Paystack
         headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
@@ -982,12 +1049,16 @@ def payment_success(request):
         if 'registration_data' in request.session:
             del request.session['registration_data']
         
-        try:
-            send_registration_receipt(registration)
-            logger.info(f"Registration receipt sent to {registration.email}")
-        except Exception as e:
-            logger.error(f"Failed to send registration receipt: {str(e)}")
-            # Don't raise the error as payment is already successful
+        ok, error = send_registration_receipt(registration)
+        if not ok:
+            # Payment is done — say so, but be honest that the email did not arrive
+            # rather than leaving the attendee waiting for one that never comes.
+            logger.error(f"Failed to send registration receipt for #{registration.pk}: {error}")
+            messages.warning(
+                request,
+                f"Your payment is confirmed and your ticket is {registration.ticket_id}, but we could "
+                "not email your receipt. Please save your ticket ID and contact us if you need a copy.",
+            )
 
         messages.success(request, "Registration payment completed successfully!")
         return render(request, 'membership/payment_success.html', {
@@ -1029,34 +1100,52 @@ def paystack_webhook(request):
         if not hmac.compare_digest(computed_signature, signature):
             return HttpResponse(status=400)
 
+        reference = None
         try:
             event = json.loads(payload)
             if event['event'] == 'charge.success':
                 data = event['data']
-                reference = data['metadata']['internal_ref']
-                
-                registration = EltanConferenceRegistration.objects.get(
-                    payment_reference=reference,
-                    payment_status='pending'
-                )
-                
-                # Validate and update registration
-                if data['amount'] == int(registration.amount_paid * 100):
-                    registration.mark_completed(paystack_ref=data['reference'])
-                    logger.info(f"Webhook updated registration: {reference}")
-                    try:
+                metadata = data.get('metadata') or {}
+
+                # The transaction reference we send to Paystack IS the registration's
+                # payment_reference. This used to read metadata['internal_ref'], a key
+                # nothing ever sets, so every webhook raised KeyError and no ticket was
+                # ever issued for a payer who closed the tab before the redirect.
+                reference = data.get('reference')
+                registration = None
+                if metadata.get('registration_id'):
+                    registration = EltanConferenceRegistration.objects.filter(
+                        pk=metadata['registration_id']
+                    ).first()
+                if not registration and reference:
+                    registration = EltanConferenceRegistration.objects.filter(
+                        models.Q(payment_reference=reference) | models.Q(paystack_ref=reference)
+                    ).first()
+
+                if not registration:
+                    logger.error(f"Webhook registration not found for reference: {reference}")
+                    return HttpResponse(status=200)
+
+                # Accept overpayment (Paystack's fee is often added on top); only a
+                # genuine shortfall should block confirmation.
+                if data.get('amount', 0) >= int(registration.amount_paid * 100):
+                    if registration.payment_status != 'completed':
+                        registration.mark_completed(paystack_ref=reference)
+                        logger.info(f"Webhook completed registration #{registration.pk} ({reference})")
+                    if registration.receipt_pending:
                         send_registration_receipt(registration)
-                    except Exception as e:
-                        logger.error(f"Webhook failed to send receipt: {str(e)}")
+                else:
+                    logger.error(
+                        f"Webhook underpayment for #{registration.pk}: received {data.get('amount')}, "
+                        f"expected {int(registration.amount_paid * 100)}"
+                    )
 
         except json.JSONDecodeError:
             logger.error("Invalid JSON payload")
         except KeyError as e:
             logger.error(f"Missing key in webhook payload: {str(e)}")
-        except EltanConferenceRegistration.DoesNotExist:
-            logger.error(f"Webhook registration not found: {reference}")
         except Exception as e:
-            logger.error(f"Webhook processing error: {str(e)}")
+            logger.error(f"Webhook processing error: {str(e)}", exc_info=True)
 
         return HttpResponse(status=200)
     return HttpResponse(status=405)
@@ -1116,6 +1205,12 @@ def conference_verification(request):
         completed=models.Count('id', filter=models.Q(payment_status='completed')),
         failed=models.Count('id', filter=models.Q(payment_status='failed')),
         revenue=models.Sum('amount_paid', filter=models.Q(payment_status='completed')),
+        # Confirmed payers whose ticket email never went out — the number that
+        # matters when mail has been misbehaving.
+        tickets_unsent=models.Count(
+            'id',
+            filter=models.Q(payment_status='completed', receipt_sent_at__isnull=True),
+        ),
     )
 
     context = {
@@ -1220,17 +1315,17 @@ def confirm_conference_payment(request, pk):
         # Manual / bank transfer — confirmed on staff trust
         registration.mark_completed(verified_by=request.user)
 
-    try:
-        send_registration_receipt(registration)
+    ok, error = send_registration_receipt(registration)
+    if ok:
         messages.success(
             request,
-            f"Payment confirmed. Ticket {registration.ticket_id} issued and emailed to {registration.email}.",
+            f"Payment confirmed. Ticket {registration.ticket_id} issued and emailed to {registration.contact_email}.",
         )
-    except Exception as e:
-        logger.error(f"Failed to send confirmation email for registration {registration.pk}: {str(e)}")
+    else:
         messages.warning(
             request,
-            f"Payment confirmed and Ticket {registration.ticket_id} issued, but the confirmation email could not be sent.",
+            f"Payment confirmed and Ticket {registration.ticket_id} issued, but the email could not be "
+            f"sent: {error} Use 'Resend ticket' once the mail problem is fixed.",
         )
 
     return redirect(redirect_to)
@@ -1262,18 +1357,11 @@ def resend_conference_ticket(request, pk):
         messages.error(request, "A ticket can only be sent for a confirmed payment.")
         return redirect(redirect_to)
 
-    # Issue a ticket id if somehow missing (e.g. legacy data) before sending
-    if not registration.ticket_id:
-        registration.ticket_id = registration.generate_ticket_id()
-        registration.save(update_fields=['ticket_id'])
-
-    recipient = registration.email or (registration.user.email if registration.user else None)
-    try:
-        send_registration_receipt(registration)
-        messages.success(request, f"Ticket {registration.ticket_id} re-sent to {recipient}.")
-    except Exception as e:
-        logger.error(f"Failed to resend ticket for registration {registration.pk}: {str(e)}")
-        messages.error(request, "The ticket email could not be sent. Please try again.")
+    ok, error = send_registration_receipt(registration)
+    if ok:
+        messages.success(request, f"Ticket {registration.ticket_id} re-sent to {registration.contact_email}.")
+    else:
+        messages.error(request, f"The ticket email could not be sent: {error}")
 
     return redirect(redirect_to)
 
@@ -1727,7 +1815,7 @@ def initiate_subscription_payment(request):
         if not subscription_data and request.method == 'POST':
             membership_type = request.POST.get('membership_type')
             state_chapter = request.POST.get('state_chapter')
-            eltan_year = request.POST.get('eltan_year')
+            eltan_year = normalize_eltan_year(request.POST.get('eltan_year'))
             qualification_certificate = request.FILES.get('qualification_certificate')
 
             if not (membership_type and state_chapter and eltan_year):
@@ -1743,8 +1831,13 @@ def initiate_subscription_payment(request):
             }
         elif subscription_data:
             amount = subscription_data['payment_amount']
+            subscription_data['eltan_year'] = normalize_eltan_year(subscription_data.get('eltan_year'))
         else:
             messages.error(request, "Session expired. Please try again.")
+            return redirect('subscribe')
+
+        if not subscription_data['eltan_year']:
+            messages.error(request, 'Please select an ELTAN year before proceeding to payment.')
             return redirect('subscribe')
 
         # Generate payment reference

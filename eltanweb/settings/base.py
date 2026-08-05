@@ -161,14 +161,55 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dash'
 LOGOUT_REDIRECT_URL = 'login'
 
-# Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_USE_TLS = True
-EMAIL_PORT = 587
-EMAIL_HOST_USER = config('USER_EMAIL', default='')
-EMAIL_HOST_PASSWORD = config('USER_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = 'ELTAN <noreply@eltanigeria.org>'
+# =============================================================================
+# EMAIL / SMTP
+# =============================================================================
+# Every value here is environment-driven so a transactional SMTP provider
+# (SendGrid, Mailgun, Zoho, cPanel mail, ...) can be dropped in by editing .env
+# only — no code change. See .env.example for the full list of variables.
+
+
+def _env_flag(key, default):
+    """Read a boolean env var. The decouple fallback in this file does not cast,
+    and bool('False') is True, so parse the string ourselves."""
+    raw = config(key, default=None)
+    if raw is None or str(raw).strip() == '':
+        return default
+    return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = int(config('EMAIL_PORT', default=587))
+EMAIL_USE_SSL = _env_flag('EMAIL_USE_SSL', False)
+# TLS and SSL are mutually exclusive in Django — SSL (port 465) wins if both are set.
+EMAIL_USE_TLS = False if EMAIL_USE_SSL else _env_flag('EMAIL_USE_TLS', True)
+
+# EMAIL_HOST_USER / EMAIL_HOST_PASSWORD are the canonical names; USER_EMAIL and
+# USER_PASSWORD are kept as fallbacks so existing .env files keep working.
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='') or config('USER_EMAIL', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='') or config('USER_PASSWORD', default='')
+
+# Never let a slow/hanging mail server tie up a web worker indefinitely.
+EMAIL_TIMEOUT = int(config('EMAIL_TIMEOUT', default=20))
+
+# The From: address MUST be one the SMTP account is allowed to send as. Gmail and
+# most providers reject a From: header that is neither the authenticated user nor
+# a verified alias, which silently killed every receipt/ticket. So default to the
+# authenticated account, and only use a custom domain sender when DEFAULT_FROM_EMAIL
+# is set explicitly (i.e. the provider has been configured to allow it).
+_configured_from = config('DEFAULT_FROM_EMAIL', default='')
+if _configured_from:
+    DEFAULT_FROM_EMAIL = _configured_from
+elif EMAIL_HOST_USER:
+    DEFAULT_FROM_EMAIL = f'ELTAN <{EMAIL_HOST_USER}>'
+else:
+    DEFAULT_FROM_EMAIL = 'ELTAN <noreply@eltanigeria.org>'
+
+SERVER_EMAIL = config('SERVER_EMAIL', default='') or EMAIL_HOST_USER or DEFAULT_FROM_EMAIL
+
+# Address members should reply to / contact for support (used in receipt emails).
+CONTACT_EMAIL = config('CONTACT_EMAIL', default='nationalsec@eltanigeria.org')
 
 # =============================================================================
 # JAZZMIN SETTINGS

@@ -73,8 +73,10 @@ LOGGING = {
     },
 }
 
-# Use console email backend for development (emails will be printed to console)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Print emails to the console in development, but allow EMAIL_BACKEND in .env to
+# override so real SMTP settings can be tested locally
+# (e.g. EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend).
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 
 # Development security settings
 SECURE_SSL_REDIRECT = False

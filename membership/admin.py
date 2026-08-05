@@ -18,16 +18,100 @@ from .models import Conference, ConferenceRegistration, EltanConference, EltanCo
 
 @admin.register(ELTANYearSetting)
 class ELTANYearSettingAdmin(admin.ModelAdmin):
-    list_display = ('eltan_year', 'is_active', 'created_at', 'updated_at')
-    list_filter = ('is_active',)
-    search_fields = ('eltan_year',)
-    readonly_fields = ('created_at', 'updated_at')
+    """Manage the ELTAN years members can subscribe to.
 
-    def save_model(self, request, obj, form, change):
-        # If making this setting active, deactivate all others
+    Creating a year is meant to be one step: type the label (e.g. 2026-2027) and
+    save. The dates fill themselves in, and the year appears in the member
+    subscription form immediately.
+    """
+
+    list_display = ('eltan_year', 'current_badge', 'is_selectable', 'start_date', 'end_date', 'subscription_count')
+    list_filter = ('is_active', 'is_selectable')
+    list_editable = ('is_selectable',)
+    search_fields = ('eltan_year',)
+    ordering = ('-eltan_year',)
+    readonly_fields = ('created_at', 'updated_at')
+    actions = ['make_current', 'add_next_year', 'make_selectable', 'make_unselectable']
+
+    fieldsets = (
+        (None, {
+            'fields': ('eltan_year',),
+            'description': (
+                'Type the year as <strong>2026-2027</strong> (two consecutive years). '
+                'Save and it is immediately available to members on the subscription form.'
+            ),
+        }),
+        ('Dates', {
+            'fields': ('start_date', 'end_date'),
+            'description': 'Leave both blank to use the standard 1 September – 31 August span.',
+            'classes': ('collapse',),
+        }),
+        ('Availability', {
+            'fields': ('is_active', 'is_selectable'),
+        }),
+        ('Record', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def current_badge(self, obj):
         if obj.is_active:
-            ELTANYearSetting.objects.exclude(pk=obj.pk).update(is_active=False)
-        super().save_model(request, obj, form, change)
+            return format_html(
+                '<span style="background:#f0fdf4; color:#16a34a; border:1px solid #16a34a; '
+                'padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600;">CURRENT</span>'
+            )
+        return format_html('<span style="color:#9ca3af; font-size:12px;">—</span>')
+    current_badge.short_description = 'Current year'
+
+    def subscription_count(self, obj):
+        return Subscription.objects.filter(eltan_year=obj.eltan_year).count()
+    subscription_count.short_description = 'Subscriptions'
+
+    def make_current(self, request, queryset):
+        if queryset.count() != 1:
+            self.message_user(request, 'Select exactly one year to make current.', messages.ERROR)
+            return
+        year = queryset.first()
+        year.is_active = True
+        year.is_selectable = True
+        year.save()  # model save() stands the other years down
+        self.message_user(request, f'{year.eltan_year} is now the current ELTAN year.', messages.SUCCESS)
+    make_current.short_description = 'Set as the current ELTAN year'
+
+    def add_next_year(self, request, queryset):
+        """Create the year after the newest one, so opening a new ELTAN year is
+        a single click rather than a code change."""
+        newest = ELTANYearSetting.objects.order_by('-eltan_year').first()
+        if not newest or newest.start_year is None:
+            self.message_user(request, 'No valid existing year to follow on from.', messages.ERROR)
+            return
+        next_start = newest.start_year + 1
+        label = f'{next_start}-{next_start + 1}'
+        year, created = ELTANYearSetting.objects.get_or_create(
+            eltan_year=label, defaults={'is_active': False, 'is_selectable': True},
+        )
+        if created:
+            self.message_user(request, f'ELTAN year {label} created and open for selection.', messages.SUCCESS)
+        else:
+            self.message_user(request, f'ELTAN year {label} already exists.', messages.INFO)
+    add_next_year.short_description = 'Create the next ELTAN year'
+
+    def make_selectable(self, request, queryset):
+        updated = queryset.update(is_selectable=True)
+        self.message_user(request, f'{updated} year(s) are now selectable by members.', messages.SUCCESS)
+    make_selectable.short_description = 'Show on the subscription form'
+
+    def make_unselectable(self, request, queryset):
+        updated = queryset.filter(is_active=False).update(is_selectable=False)
+        skipped = queryset.filter(is_active=True).count()
+        self.message_user(
+            request,
+            f'{updated} year(s) hidden from the subscription form.'
+            + (' The current year cannot be hidden.' if skipped else ''),
+            messages.SUCCESS if updated else messages.WARNING,
+        )
+    make_unselectable.short_description = 'Hide from the subscription form'
 
 
 # class NewsAdmin(SummernoteModelAdmin):
@@ -161,12 +245,13 @@ class SubscriptionAdmin(admin.ModelAdmin):
     # --- Actions ---
 
     def recalculate_eltan_dates(self, request, queryset):
-        """Reset end_date (and eltan_year) to the end of the ELTAN year derived
-        from each subscription's start_date, fixing renewals that were given a
-        flat one-year end date."""
+        """Reset end_date to the end of the subscription's ELTAN year, fixing
+        renewals that were given a flat one-year end date."""
         updated = 0
         for subscription in queryset:
             dates = subscription.calculate_eltan_dates()
+            if not dates['end_date']:
+                continue
             subscription.end_date = dates['end_date']
             subscription.eltan_year = dates['eltan_year']
             subscription.save(update_fields=['end_date', 'eltan_year'])
@@ -476,12 +561,52 @@ class UserTypeFilter(admin.SimpleListFilter):
         return queryset
 
 
+class ReceiptStatusFilter(admin.SimpleListFilter):
+    """Find the people who paid but never received their ticket."""
+
+    title = 'Ticket email'
+    parameter_name = 'receipt'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('missing', 'Paid — ticket NOT sent'),
+            ('sent', 'Paid — ticket sent'),
+            ('failed', 'Last send failed'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'missing':
+            return queryset.filter(payment_status='completed', receipt_sent_at__isnull=True)
+        if self.value() == 'sent':
+            return queryset.filter(payment_status='completed', receipt_sent_at__isnull=False)
+        if self.value() == 'failed':
+            return queryset.exclude(receipt_error='')
+        return queryset
+
+
 @admin.register(EltanConferenceRegistration)
 class EltanConferenceRegistrationAdmin(admin.ModelAdmin):
     list_display = ('display_user', 'conference', 'registration_type', 'payment_status', 'ticket_id', 'amount_paid',
-                    'is_presenting', 'registered_at', 'phone')
-    list_filter = (UserTypeFilter, 'conference', 'registration_type', 'payment_status', 'is_presenting')
-    
+                    'receipt_status', 'is_presenting', 'registered_at', 'phone')
+    list_filter = (UserTypeFilter, ReceiptStatusFilter, 'conference', 'registration_type', 'payment_status', 'is_presenting')
+
+    def receipt_status(self, obj):
+        """Whether the ticket/receipt email actually reached the attendee."""
+        if obj.payment_status != 'completed':
+            return format_html('<span style="color:#9ca3af; font-size:12px;">—</span>')
+        if obj.receipt_sent_at:
+            return format_html(
+                '<span style="background:#f0fdf4; color:#16a34a; border:1px solid #16a34a; padding:3px 10px; '
+                'border-radius:12px; font-size:11px; font-weight:600;" title="{}">SENT</span>',
+                obj.receipt_sent_at.strftime('%d %b %Y %H:%M'),
+            )
+        return format_html(
+            '<span style="background:#fef2f2; color:#dc2626; border:1px solid #dc2626; padding:3px 10px; '
+            'border-radius:12px; font-size:11px; font-weight:600;" title="{}">NOT SENT</span>',
+            obj.receipt_error or 'Never attempted',
+        )
+    receipt_status.short_description = 'Ticket email'
+
     def display_user(self, obj):
         """
         Custom method to display user or non-user details.
@@ -496,30 +621,75 @@ class EltanConferenceRegistrationAdmin(admin.ModelAdmin):
     
     search_fields = ('user__email', 'user__first_name', 'user__last_name',
                     'paper_title', 'email', 'first_name', 'last_name', 'ticket_id')  # Added non-user fields
-    readonly_fields = ('registered_at', 'ticket_id', 'payment_verified_at', 'verified_by')
+    readonly_fields = ('registered_at', 'ticket_id', 'payment_verified_at', 'verified_by',
+                       'receipt_sent_at', 'receipt_error')
 
-    actions = ['verify_payments', 'export_registrations']
+    actions = ['verify_payments', 'resend_tickets', 'export_registrations']
 
     def verify_payments(self, request, queryset):
         from .views import send_registration_receipt
         confirmed = 0
         skipped = 0
+        failed_emails = []
         for registration in queryset:
             if registration.payment_status == 'completed':
                 skipped += 1
                 continue
             registration.mark_completed(verified_by=request.user)
-            try:
-                send_registration_receipt(registration)
-            except Exception:
-                pass
+            ok, error = send_registration_receipt(registration)
+            if not ok:
+                failed_emails.append(f"{registration.contact_email or f'#{registration.pk}'} ({error})")
             confirmed += 1
+
         self.message_user(
             request,
             f"{confirmed} registration(s) confirmed and ticketed; {skipped} already completed.",
+            messages.SUCCESS,
         )
+        if failed_emails:
+            # Never let a silent mail failure pass for success — these people paid
+            # and are waiting for a ticket that did not go out.
+            self.message_user(
+                request,
+                f"{len(failed_emails)} ticket email(s) could NOT be sent: "
+                + '; '.join(failed_emails[:5])
+                + ('…' if len(failed_emails) > 5 else '')
+                + " Fix the mail settings, then use 'Resend ticket email'.",
+                messages.ERROR,
+            )
     verify_payments.short_description = "Verify & confirm selected payments (issue ticket + email)"
-    
+
+    def resend_tickets(self, request, queryset):
+        """Re-send the ticket/receipt for confirmed registrations — the catch-up
+        for anyone who paid while mail was misconfigured."""
+        from .views import send_registration_receipt
+        sent = 0
+        failures = []
+        not_confirmed = 0
+        for registration in queryset:
+            if registration.payment_status != 'completed':
+                not_confirmed += 1
+                continue
+            ok, error = send_registration_receipt(registration)
+            if ok:
+                sent += 1
+            else:
+                failures.append(f"{registration.contact_email or f'#{registration.pk}'} ({error})")
+
+        self.message_user(
+            request,
+            f"{sent} ticket email(s) sent."
+            + (f" {not_confirmed} skipped (payment not confirmed)." if not_confirmed else ''),
+            messages.SUCCESS if sent else messages.WARNING,
+        )
+        if failures:
+            self.message_user(
+                request,
+                f"{len(failures)} failed: " + '; '.join(failures[:5]) + ('…' if len(failures) > 5 else ''),
+                messages.ERROR,
+            )
+    resend_tickets.short_description = "Resend ticket / receipt email"
+
     def export_registrations(self, request, queryset):
         import csv
         from django.http import HttpResponse

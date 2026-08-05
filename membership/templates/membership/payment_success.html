@@ -140,7 +140,32 @@
                     </div>
                     <h2 class="mt-3">Payment Successful!</h2>
                     <p>Your registration for {{ registration.conference.title }} has been confirmed.</p>
-                    <p>Registration Reference: {{ registration.paystack_reference }}</p>
+
+                    {# Show the ticket here as well as by email — this page is the one thing
+                       the attendee is guaranteed to see, even if mail is delayed or blocked. #}
+                    {% if registration.ticket_id %}
+                    <div class="mx-auto my-4 p-3" style="max-width:340px; background:#FFF5EB; border:1px solid #F3D9BD; border-radius:14px;">
+                        <div style="color:#9a6a30; font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">Your Ticket ID</div>
+                        <div style="margin:8px 0 6px; color:#C5630C; font-size:28px; font-weight:800; letter-spacing:3px; font-family:'Courier New',monospace;">{{ registration.ticket_id }}</div>
+                        <div style="color:#a07a4e; font-size:12px;">Please save this — you may be asked to present it at the event.</div>
+                    </div>
+                    {% endif %}
+
+                    {% if registration.receipt_sent_at %}
+                    <p class="text-muted" style="font-size:.9rem;">A receipt has been emailed to {{ registration.contact_email }}.</p>
+                    {% else %}
+                    <p class="text-muted" style="font-size:.9rem;">
+                        We could not email your receipt right now. Your registration is confirmed —
+                        please save the ticket ID above and contact us if you need a copy.
+                    </p>
+                    {% endif %}
+
+                    {% with reference=registration.paystack_ref|default:registration.payment_reference %}
+                    {% if reference %}
+                    <p class="text-muted" style="font-size:.85rem;">Payment Reference: {{ reference }}</p>
+                    {% endif %}
+                    {% endwith %}
+
                     <div class="mt-4">
                         <a href="{% url 'conference_detail' registration.conference.pk %}" class="btn btn-primary">
                             Return to Conference Page
