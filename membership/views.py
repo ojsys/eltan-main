@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
-from .models import EltanConference, EltanConferenceRegistration, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, Newsletter, ELTANYearSetting, Download, ExcoMember, normalize_eltan_year
+from .models import EltanConference, EltanConferenceRegistration, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, CertificateSignatory, Newsletter, ELTANYearSetting, Download, ExcoMember, normalize_eltan_year
 from .forms import ConferenceRegistrationForm, MemberProfileUpdateForm, SigsForm, SubscriptionForm, DownloadForm, SponsorApplicationForm
 import qrcode
 import os
@@ -420,10 +420,13 @@ def subscription(request):
             if subscription and subscription.end_date < timezone.now().date():
                 # Renew existing subscription
                 subscription = renew_subscription(subscription, payment_proof, payment_amount, state_chapter, qualification_certificate, membership_type=membership_type, eltan_year=eltan_year)
+                send_subscription_receipt(subscription)
                 return redirect('subscribe_success')
             else:
                 # Create new subscription
                 subscription = create_subscription(user, payment_proof, payment_amount, state_chapter, qualification_certificate, payment_method='manual', membership_type=membership_type, eltan_year=eltan_year)
+                # Their evidence of subscription while the transfer is verified.
+                send_subscription_receipt(subscription)
                 return redirect('subscription_pending')
 
     context = {
@@ -436,8 +439,9 @@ def create_subscription(user, payment_proof, payment_amount, state_chapter, qual
     # The ELTAN year the member picked has to be carried through — previously it
     # was dropped here and the model silently substituted a date-derived year.
     eltan_year = normalize_eltan_year(eltan_year) or ELTANYearSetting.current_label()
-    _, end_date = ELTANYearSetting.dates_for(eltan_year)
 
+    # end_date is left to the model: a first membership expires with the ELTAN
+    # year, a member who has paid before gets 365 days from today.
     subscription = Subscription.objects.create(
         user=user,
         membership_type=membership_type,
@@ -448,7 +452,6 @@ def create_subscription(user, payment_proof, payment_amount, state_chapter, qual
         payment_status='pending',
         eltan_year=eltan_year,
         start_date=timezone.now().date(),
-        end_date=end_date,
     )
 
     user.is_subscribed = True
@@ -466,8 +469,11 @@ def renew_subscription(subscription, payment_proof, payment_amount, state_chapte
     subscription.start_date = timezone.now().date()
     # Renew into the year the member selected; fall back to the current one.
     subscription.eltan_year = normalize_eltan_year(eltan_year) or ELTANYearSetting.current_label()
-    # End date should be the end of the ELTAN year, not one year from the renewal date
-    dates = subscription.calculate_eltan_dates()
+    # A renewal runs a full 365 days from the day it is taken out. This row is
+    # the member's own history being reused, so say so outright — is_renewal()
+    # cannot see a record it is in the middle of overwriting.
+    subscription.renewal_override = True
+    dates = subscription.calculate_eltan_dates(is_renewal=True)
     subscription.end_date = dates['end_date']
     subscription.save()
 
@@ -476,6 +482,123 @@ def renew_subscription(subscription, payment_proof, payment_amount, state_chapte
     user.save()  # This will ensure ELTAN Number is assigned if it wasn't before
 
     return subscription
+
+
+def send_subscription_receipt(subscription):
+    """Email the member their subscription receipt.
+
+    Sent twice over the life of a subscription, and deliberately so: once when
+    they submit it (their evidence that we have it, while payment is still being
+    verified) and again when the payment is confirmed. The template says which
+    of the two it is.
+
+    Returns ``(ok, error)`` and records the outcome on the subscription, so a
+    member who never got their receipt is visible in the admin instead of being
+    discovered by complaint. Never raises — a mail problem must not undo a
+    payment that has already gone through.
+    """
+    try:
+        recipient = subscription.user.email
+        if not recipient:
+            error = "No email address on this member's account."
+            logger.error(f"No email for subscription {subscription.pk}; skipping receipt.")
+            subscription.receipt_error = error
+            subscription.save(update_fields=['receipt_error'])
+            return False, error
+
+        is_paid = subscription.payment_status == 'paid'
+        context = {
+            'subscription': subscription,
+            'member': subscription.user,
+            'is_paid': is_paid,
+            'current_date': timezone.now(),
+            'year': datetime.now().year,
+            'contact_email': getattr(settings, 'CONTACT_EMAIL', settings.DEFAULT_FROM_EMAIL),
+        }
+        html_content = render_to_string('emails/subscription_receipt.html', context)
+
+        if is_paid:
+            subject = f'ELTAN Membership Receipt — {subscription.eltan_year}'
+        else:
+            subject = f'We received your ELTAN subscription — {subscription.eltan_year}'
+
+        message = build_html_email(
+            subject=subject,
+            html_body=html_content,
+            to=recipient,
+            text_body=_subscription_receipt_text_body(subscription, is_paid),
+        )
+        # Synchronous, like the conference receipt: the member paid for this, so
+        # we need the real outcome rather than a thread that may be recycled.
+        ok, error = send_now(message)
+    except Exception as e:
+        ok, error = False, f"{type(e).__name__}: {e}"
+        logger.error(f"Failed to build subscription receipt for #{subscription.pk}: {error}")
+
+    if ok:
+        subscription.receipt_sent_at = timezone.now()
+        subscription.receipt_error = ''
+        logger.info(f"Subscription receipt sent to {subscription.user.email} (#{subscription.pk})")
+    else:
+        subscription.receipt_error = (error or 'Unknown mail error.')[:2000]
+        logger.error(f"Subscription receipt FAILED for #{subscription.pk}: {error}")
+
+    subscription.save(update_fields=['receipt_sent_at', 'receipt_error'])
+    return ok, error
+
+
+def _subscription_receipt_text_body(subscription, is_paid):
+    """Plain-text version of the receipt, for clients that don't render HTML."""
+    member = subscription.user
+    name = f"{member.first_name or ''} {member.last_name or ''}".strip() or 'Member'
+    contact = getattr(settings, 'CONTACT_EMAIL', settings.DEFAULT_FROM_EMAIL)
+
+    lines = [
+        f"Dear {name},",
+        "",
+    ]
+    if is_paid:
+        lines += [
+            f"Your ELTAN membership for {subscription.eltan_year} is confirmed. "
+            "This email is your receipt.",
+        ]
+    else:
+        lines += [
+            f"We have received your ELTAN membership subscription for {subscription.eltan_year}. "
+            "This email is your evidence of subscription while we verify your payment.",
+        ]
+    lines += [
+        "",
+        f"Membership type: {subscription.membership_type}",
+        f"ELTAN year: {subscription.eltan_year}",
+    ]
+    if subscription.start_date and subscription.end_date:
+        lines.append(
+            f"Membership period: {subscription.start_date:%B %d, %Y} to {subscription.end_date:%B %d, %Y}"
+        )
+    if subscription.payment_amount is not None:
+        lines.append(f"Amount: NGN {subscription.payment_amount:,.2f}")
+    if subscription.state_chapter:
+        lines.append(f"State chapter: {subscription.state_chapter}")
+    if subscription.payment_id:
+        lines.append(f"Payment reference: {subscription.payment_id}")
+    if member.eltan_number:
+        lines.append(f"Membership number: #00{member.eltan_number}")
+
+    lines += [
+        "",
+        (
+            "Your certificate becomes available on your dashboard once your qualification "
+            "certificate has been approved."
+            if is_paid else
+            "Our team will verify your payment and confirm your membership by email."
+        ),
+        "",
+        f"Questions? Contact us at {contact}.",
+        "",
+        "ELTAN — English Language Teachers Association of Nigeria",
+    ]
+    return "\n".join(lines)
 
 
 @login_required
@@ -1707,6 +1830,10 @@ def generate_certs(request, subscription_id):
         'member': subscription.user,
         'eltan_year': eltan_year,  # Using the fetched year
         'qr_code_path': qr_code_path,
+        # Names and signature images are maintained in the admin. When none have
+        # been set up the template keeps printing the officers it always has, so
+        # certificates never come out unsigned.
+        'signatories': CertificateSignatory.for_certificate(),
     }
     
     template = get_template(template_path)
@@ -2123,11 +2250,26 @@ def subscription_payment_success(request):
 
         logger.info(f"Subscription {subscription.id} payment completed successfully")
 
+        # Receipt for the confirmed payment. A mail failure is recorded on the
+        # subscription and retried from the admin — it must not fail the payment.
+        receipt_ok, _ = send_subscription_receipt(subscription)
+
         # Clear session data
         if 'subscription_data' in request.session:
             del request.session['subscription_data']
 
-        messages.success(request, "Subscription payment completed successfully!")
+        if receipt_ok:
+            messages.success(
+                request,
+                "Subscription payment completed successfully! A receipt has been emailed to you.",
+            )
+        else:
+            messages.success(request, "Subscription payment completed successfully!")
+            messages.warning(
+                request,
+                "We could not email your receipt just now. Your membership is active — "
+                "please contact us if you need a copy.",
+            )
         return redirect('subscribe_success')
 
     except Subscription.DoesNotExist:

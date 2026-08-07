@@ -52,7 +52,7 @@
     
     
     <h1 style="color: #193784; font-family: CloisterBlack; font-size: 24pt; line-height: 14pt;">English Language Teachers <br>Association of Nigeria</h1>
-    <p style="font-size: 6pt; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 1pt;">ELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANEL3TANELTANELTANELTANELTANELTANELTANEL3TANELTANELTANELTANELTANELTANELTANELVERIFIEDTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTAN</p>
+    <p style="font-size: 3pt; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 1pt;">ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027</p>
     <h1 style="color: #E97717; margin-bottom: -3pt;">Certificate of Membership</h1>
     <p style="color: #1D4355; margin-top: -4pt; margin-bottom: 1pt;">This is to certify that</p>
     <h3 style="color: #1D4355; font-size: 28pt; margin-top: 4pt; margin-bottom: -3pt;">{{ member.first_name }} {{ member.last_name }}</h3>
@@ -61,17 +61,30 @@
     <p style="color: #1D4355;">is a registered member of the English Language Teachers Association of Nigeria (ELTAN) for {{ eltan_year }}</p>
     
     <div id="signatures" style="display: inline-block;">
+        {% if signatories %}
+        {# Names and signature images are maintained in the admin, under Certificate
+           Signatories — changing an officer no longer needs a code change. #}
+        {% for signatory in signatories %}
+        <div>
+            <img style="margin-bottom: -2pt;" src="{{ signatory.signature_source }}" height="45" alt="">
+            <p style="font-size: 3px; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 1pt;">ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027</p>
+            {% if forloop.first %}<p style="margin-top: -0.8pt;">{% else %}<p style="margin-top: 0;">{% endif %}<span style="font-size: 18px; margin-bottom: -1.2pt; font-weight: bolder;">{{ signatory.name }}</span><br><span style="font-size: 16px;">{{ signatory.title }}</span></p>
+        </div>
+        {% endfor %}
+        {% else %}
+        {# Fallback while no signatories have been set up in the admin, so a
+           certificate never comes out unsigned. #}
         <div >
             <img style="margin-bottom: -2pt;" src="https://eltanigeria.org/{% static 'images/signature_DrKen.jpeg' %}" width="150" height="45" alt="">
-            <p style="font-size: 6pt; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 1pt;">ELTANELTANELTANELTANELTANELTANELTANELTANELTAN3LTANELTANELTANELTANELTAN3LTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANEL</p>
+            <p style="font-size: 3px; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 1pt;">ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027</p>
             <p style="margin-top: -0.8pt;"><span style="font-size: 18px; margin-bottom: -1.2pt; font-weight: bolder;">Dr. Kennedy Edegbe</span><br><span style="font-size: 16px;">National President</span></p>
         </div>
         <div>
             <img style="margin-bottom: -2pt;" src="https://eltanigeria.org/{% static 'images/signature_abel.jpeg' %}" width="70" height="45" alt="">
-            <p style="font-size: 6pt; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 1pt;">ELTANELTANELTANELTANELTANELTANELTANELTANELTAN3LTANELTANELTANELTANELTAN3LTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANELTANEL</p>
-            <p style="margin-top: 0;"><span style="font-size: 18px; margin-bottom: -1.2pt; font-weight: bolder;">Abel Ochika</span><br><span style="font-size: 16px;">National Secretary</span></p>
+            <p style="font-size: 3px; font-weight: bolder; font-family: Courier, monospace; letter-spacing: 1pt;">ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027ELTAN20262027</p>
+            <p style="margin-top: 0;"><span style="font-size: 18px; margin-bottom: -1.2pt; font-weight: bolder;">Iyabo Akintola</span><br><span style="font-size: 16px;">Asst National Secretary</span></p>
         </div>
-    
+        {% endif %}
     </div>
 
     <div id="footer_content" style="background-color: #ffffff; height: 250pt;">

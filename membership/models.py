@@ -2,7 +2,7 @@ import re
 import uuid
 from decimal import Decimal
 from django.db import models
-from datetime import timezone, date, datetime
+from datetime import timezone, date, datetime, timedelta
 from django.utils import timezone
 from django.conf import settings
 from ckeditor.fields import RichTextField
@@ -68,6 +68,10 @@ ELTAN_YEAR_START_MONTH = 9
 ELTAN_YEAR_START_DAY = 1
 ELTAN_YEAR_END_MONTH = 8
 ELTAN_YEAR_END_DAY = 31
+
+# A renewal runs this many days from the day it is taken out, instead of
+# expiring with the ELTAN year calendar the way a first membership does.
+RENEWAL_DURATION_DAYS = 365
 
 
 def normalize_eltan_year(value):
@@ -393,8 +397,45 @@ class Subscription(models.Model):
         default='pending',
         help_text="Admin must approve the qualification certificate before the subscription becomes active",
     )
+    # Whether the member actually got their receipt. Recorded rather than fired
+    # and forgotten, so a failed send is visible in the admin and can be retried.
+    receipt_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the subscription receipt was last emailed to the member.",
+    )
+    receipt_error = models.TextField(
+        blank=True,
+        default='',
+        help_text="Why the last receipt email failed, if it did.",
+    )
 
-    def calculate_eltan_dates(self):
+    # The renewal flow reuses the member's existing row for the new term, so by
+    # the time the dates are recomputed the row's own history is no longer
+    # visible to is_renewal()'s query. Set this to True/False to say outright
+    # which rule applies; leave it None to let the record decide.
+    renewal_override = None
+
+    def is_renewal(self):
+        """Whether this subscription continues a membership the member already had.
+
+        Read from the record — a previously paid subscription — rather than from
+        the membership type picked on the form, so a first-time member cannot
+        land on the renewal expiry rule just by choosing 'Renew Membership'.
+        """
+        if self.renewal_override is not None:
+            return self.renewal_override
+        previous = Subscription.objects.filter(user_id=self.user_id, payment_status='paid')
+        if self.pk:
+            previous = previous.exclude(pk=self.pk)
+        if self.start_date:
+            # Only membership taken out *before* this one makes it a renewal.
+            # Without this, recomputing a member's first year long after the fact
+            # would see the years that came after it and misread it as a renewal.
+            previous = previous.filter(start_date__lt=self.start_date)
+        return previous.exists()
+
+    def calculate_eltan_dates(self, is_renewal=None):
         """Return the {'eltan_year', 'start_date', 'end_date'} this subscription
         belongs to.
 
@@ -402,12 +443,28 @@ class Subscription(models.Model):
         back to the year covering the registration date. Dates always come from
         the ELTANYearSetting row for that year when one exists, so an admin can
         correct a year's dates in one place.
+
+        The expiry depends on whether this is a first membership or a renewal:
+
+        * A first membership rides the ELTAN year calendar — it expires on the
+          last day of the year joined, even for someone who joins on its eve.
+        * A renewal runs ``RENEWAL_DURATION_DAYS`` from the day it is taken out,
+          so renewing members get a full year whenever they renew.
         """
         label = normalize_eltan_year(self.eltan_year)
         if not label:
             label = eltan_year_for_date(self.start_date or date.today())
 
         start_date, end_date = ELTANYearSetting.dates_for(label)
+
+        if is_renewal is None:
+            is_renewal = self.is_renewal()
+        if is_renewal:
+            # start_date is auto_now_add, so on a new row it is only populated
+            # after the insert — today is the day of subscription either way.
+            subscribed_on = self.start_date or timezone.now().date()
+            end_date = subscribed_on + timedelta(days=RENEWAL_DURATION_DAYS)
+
         return {
             'eltan_year': label,
             'start_date': start_date,
@@ -460,9 +517,76 @@ class Certificate(models.Model):
     
     def __str__(self):
         return f"Certificate for {self.subscription.user.email} - {self.subscription.eltan_year}"
-        
+
     class Meta:
         db_table = 'membership_certificate'
+
+
+class CertificateSignatory(models.Model):
+    """A person who signs the membership certificate.
+
+    The president's and secretary's names and signature images used to be baked
+    into the certificate template, so every change of officer needed a code
+    deploy. They live here instead: an admin uploads the new signature, edits the
+    name, and the next certificate downloaded carries it.
+    """
+
+    name = models.CharField(
+        max_length=200,
+        help_text="Name as it should be printed, e.g. 'Dr. Kennedy Edegbe'.",
+    )
+    title = models.CharField(
+        max_length=120,
+        help_text="Title printed under the name, e.g. 'National President'.",
+    )
+    signature = models.ImageField(
+        upload_to='signatures/',
+        help_text=(
+            "Signature image, ideally a transparent PNG on a white background. "
+            "It is printed about 150x45pt, so a wide, short image works best."
+        ),
+    )
+    # Certificates are laid out for two signatures side by side; is_active lets an
+    # outgoing officer be kept on file rather than deleted mid-handover.
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Untick to leave this signatory off newly generated certificates.",
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Print order — lower numbers appear first (president before secretary).",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name = 'Certificate Signatory'
+        verbose_name_plural = 'Certificate Signatories'
+
+    def __str__(self):
+        return f"{self.name} — {self.title}"
+
+    @classmethod
+    def for_certificate(cls):
+        """The signatories to print, in order."""
+        return list(cls.objects.filter(is_active=True))
+
+    @property
+    def signature_source(self):
+        """The path the PDF renderer should read the signature from.
+
+        xhtml2pdf reads a local filesystem path far more reliably than a URL —
+        no network round trip, and it still works when the site is behind auth
+        or the media domain differs. Falls back to the URL if the file is
+        remote (e.g. S3) and has no local path.
+        """
+        if not self.signature:
+            return ''
+        try:
+            return self.signature.path
+        except (NotImplementedError, ValueError):
+            return self.signature.url
 
 
 

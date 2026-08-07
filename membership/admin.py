@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 #from  django_summernote.admin import SummernoteModelAdmin
 from django.utils.html import format_html
@@ -12,7 +13,7 @@ from django.db import models
 from django.http import HttpResponse
 from openpyxl import Workbook
 from datetime import datetime
-from .models import Conference, ConferenceRegistration, EltanConference, EltanConferenceRegistration, ConferenceDocument, MemberProfile, MembershipType, Subscription, Sigs, SigsRegistration, Events, News, Resource, Download, ELTANYearSetting, Newsletter, ConferenceSpeaker, ConferenceSchedule, ConferenceSponsor, ConferenceLocMember, ExcoMember, SponsorshipPackage, ConferenceAccommodation
+from .models import Conference, ConferenceRegistration, EltanConference, EltanConferenceRegistration, ConferenceDocument, MemberProfile, MembershipType, Subscription, Sigs, SigsRegistration, Events, News, Resource, Download, ELTANYearSetting, Newsletter, ConferenceSpeaker, ConferenceSchedule, ConferenceSponsor, ConferenceLocMember, ExcoMember, SponsorshipPackage, ConferenceAccommodation, CertificateSignatory, normalize_eltan_year
 
 
 
@@ -160,13 +161,64 @@ class MemberProfileAdmin(admin.ModelAdmin):
 
 
 
+class ELTANYearChoiceField(forms.ChoiceField):
+    """A year picker that treats '2025/2026' and '2025-2026' as the same choice.
+
+    Normalising in ``to_python`` rather than ``clean_<field>`` matters: a
+    ChoiceField checks the raw value against its choices first, so a legacy
+    slashed year would be rejected as "not one of the available choices" before
+    any later hook got the chance to canonicalise it.
+    """
+
+    def to_python(self, value):
+        return normalize_eltan_year(super().to_python(value))
+
+
+class SubscriptionAdminForm(forms.ModelForm):
+    """Admin form for a subscription.
+
+    ``eltan_year`` is a plain CharField on the model (the valid years live in
+    ELTANYearSetting rather than in hardcoded choices), which left the admin with
+    a free-text box — one typo there and the subscription belonged to a year that
+    does not exist. Offer the configured years as a dropdown instead.
+    """
+
+    class Meta:
+        model = Subscription
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        years = list(ELTANYearSetting.objects.order_by('-eltan_year').values_list('eltan_year', flat=True))
+
+        # Keep whatever this row already has, even if the year was since removed
+        # or is a legacy label — editing an old subscription must not be blocked
+        # by an unrelated field, and saving must not silently change its year.
+        current = normalize_eltan_year(self.instance.eltan_year if self.instance else '')
+        if current and current not in years:
+            years.insert(0, current)
+
+        self.fields['eltan_year'] = ELTANYearChoiceField(
+            label='ELTAN Year',
+            required=False,
+            choices=[('', '--- Select ELTAN year ---')] + [(year, year) for year in years],
+            initial=current or ELTANYearSetting.current_label(),
+            help_text='Years come from ELTAN Years — add one there to see it here.',
+        )
+
+
 class SubscriptionAdmin(admin.ModelAdmin):
+    form = SubscriptionAdminForm
     list_display = [
-        'user', 'get_eltan_number', 'membership_type', 'start_date', 'end_date',
-        'payment_status', 'amount_paid', 'cert_status_badge', 'qualification_cert_link',
-        'payment_proof_thumbnail',
+        'user', 'get_eltan_number', 'membership_type', 'eltan_year', 'start_date', 'end_date',
+        'payment_status', 'amount_paid', 'cert_status_badge', 'receipt_status',
+        'qualification_cert_link', 'payment_proof_thumbnail',
     ]
-    actions = ['recalculate_eltan_dates', 'approve_certificate', 'reject_certificate', 'export_to_excel']
+    actions = [
+        'recalculate_eltan_dates', 'send_subscription_receipts', 'approve_certificate',
+        'reject_certificate', 'export_to_excel',
+    ]
 
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'user__eltan_number',
                      'membership_type', 'payment_status', 'state_chapter']
@@ -178,6 +230,34 @@ class SubscriptionAdmin(admin.ModelAdmin):
     def get_eltan_number(self, obj):
         return obj.user.eltan_number
     get_eltan_number.short_description = 'ELTAN Number'
+
+    def save_model(self, request, obj, form, change):
+        """Email the confirmed receipt when staff mark a payment as paid.
+
+        A member who paid by bank transfer gets their 'we have your subscription'
+        receipt when they submit it; the confirmation is owed at the moment staff
+        verify the transfer, which happens here. Only on the transition, so
+        re-saving an already-paid subscription does not send it twice.
+        """
+        became_paid = obj.payment_status == 'paid' and 'payment_status' in form.changed_data
+        super().save_model(request, obj, form, change)
+
+        if not became_paid:
+            return
+
+        # Imported here rather than at module level: views imports models, and
+        # models is what loads this admin, so a top-level import would be circular.
+        from .views import send_subscription_receipt
+
+        ok, error = send_subscription_receipt(obj)
+        if ok:
+            self.message_user(request, f'Receipt emailed to {obj.user.email}.', messages.SUCCESS)
+        else:
+            self.message_user(
+                request,
+                f'Subscription saved, but the receipt could not be emailed: {error}',
+                messages.WARNING,
+            )
 
     def amount_paid(self, obj):
         return obj.payment_amount
@@ -196,6 +276,21 @@ class SubscriptionAdmin(admin.ModelAdmin):
             bg, color, color, label,
         )
     cert_status_badge.short_description = 'Cert Status'
+
+    def receipt_status(self, obj):
+        """Whether the member actually received their receipt."""
+        if obj.receipt_sent_at:
+            return format_html(
+                '<span style="color:#16a34a; font-size:12px;" title="Sent {}">&#10003; Sent</span>',
+                obj.receipt_sent_at.strftime('%Y-%m-%d %H:%M'),
+            )
+        if obj.receipt_error:
+            return format_html(
+                '<span style="color:#dc2626; font-size:12px;" title="{}">&#10007; Failed</span>',
+                obj.receipt_error[:300],
+            )
+        return format_html('<span style="color:#9ca3af; font-size:12px;">Not sent</span>')
+    receipt_status.short_description = 'Receipt'
 
     def qualification_cert_link(self, obj):
         if obj.qualification_certificate:
@@ -245,8 +340,9 @@ class SubscriptionAdmin(admin.ModelAdmin):
     # --- Actions ---
 
     def recalculate_eltan_dates(self, request, queryset):
-        """Reset end_date to the end of the subscription's ELTAN year, fixing
-        renewals that were given a flat one-year end date."""
+        """Reset end_date to what the membership rules say it should be: the end
+        of the ELTAN year for a first membership, 365 days from the start date
+        for a renewal."""
         updated = 0
         for subscription in queryset:
             dates = subscription.calculate_eltan_dates()
@@ -258,10 +354,40 @@ class SubscriptionAdmin(admin.ModelAdmin):
             updated += 1
         self.message_user(
             request,
-            f'{updated} subscription(s) recalculated to the correct ELTAN year end date.',
+            f'{updated} subscription(s) recalculated: first memberships end with the '
+            f'ELTAN year, renewals run 365 days from their start date.',
             messages.SUCCESS,
         )
-    recalculate_eltan_dates.short_description = 'Recalculate end date to ELTAN year end'
+    recalculate_eltan_dates.short_description = 'Recalculate end date (ELTAN year end, or 365 days for renewals)'
+
+    def send_subscription_receipts(self, request, queryset):
+        """(Re)send the subscription receipt to the selected members.
+
+        For a member who never got theirs — a mail outage, a bad address since
+        corrected — or when they simply ask for another copy.
+        """
+        # Imported here rather than at module level: views imports models, and
+        # models is what loads this admin, so a top-level import would be circular.
+        from .views import send_subscription_receipt
+
+        sent = 0
+        failures = []
+        for subscription in queryset:
+            ok, error = send_subscription_receipt(subscription)
+            if ok:
+                sent += 1
+            else:
+                failures.append(f'{subscription.user.email}: {error}')
+
+        if sent:
+            self.message_user(request, f'Receipt emailed to {sent} member(s).', messages.SUCCESS)
+        if failures:
+            self.message_user(
+                request,
+                f'{len(failures)} receipt(s) failed — ' + '; '.join(failures[:5]),
+                messages.ERROR,
+            )
+    send_subscription_receipts.short_description = 'Email subscription receipt to selected members'
 
     def approve_certificate(self, request, queryset):
         approved = queryset.filter(certificate_status__in=['pending', 'rejected'])
@@ -1042,6 +1168,66 @@ class SigsRegistrationAdmin(admin.ModelAdmin):
     list_filter = ['sig', 'registration_date']
     search_fields = ['user__email', 'user__first_name', 'user__last_name', 'sig__title']
     date_hierarchy = 'registration_date'
+
+@admin.register(CertificateSignatory)
+class CertificateSignatoryAdmin(admin.ModelAdmin):
+    """Who signs the membership certificate.
+
+    Changing the president or secretary is now an admin job: upload the new
+    signature image, edit the name and title, save. Every certificate generated
+    from then on carries it.
+    """
+
+    list_display = ('name', 'title', 'signature_preview', 'is_active', 'order', 'updated_at')
+    list_editable = ('is_active', 'order')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'title')
+    readonly_fields = ('signature_preview_large', 'created_at', 'updated_at')
+
+    fieldsets = (
+        ('Signatory', {
+            'fields': ('name', 'title'),
+            'description': (
+                'The name and title exactly as they should be printed on the certificate, '
+                'e.g. "Dr. Kennedy Edegbe" / "National President".'
+            ),
+        }),
+        ('Signature image', {
+            'fields': ('signature', 'signature_preview_large'),
+            'description': (
+                'A cropped image of the signature. The certificate prints it 45pt tall and '
+                'scales the width to match, so trim the whitespace around the signature.'
+            ),
+        }),
+        ('Display', {
+            'fields': ('is_active', 'order'),
+        }),
+        ('Record', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def signature_preview(self, obj):
+        if obj.signature:
+            return format_html(
+                '<img src="{}" style="max-height:40px; background:#fff; border:1px solid #ddd; '
+                'border-radius:4px; padding:2px;"/>',
+                obj.signature.url,
+            )
+        return format_html('<span style="color:#9ca3af;">No image</span>')
+    signature_preview.short_description = 'Signature'
+
+    def signature_preview_large(self, obj):
+        if obj.signature:
+            return format_html(
+                '<img src="{}" style="max-height:120px; background:#fff; border:1px solid #ddd; '
+                'border-radius:6px; padding:6px;"/>',
+                obj.signature.url,
+            )
+        return format_html('<span style="color:#9ca3af;">Upload a signature image to preview it here.</span>')
+    signature_preview_large.short_description = 'Preview'
+
 
 admin.site.register(Sigs, SigsAdmin)
 admin.site.register(SigsRegistration, SigsRegistrationAdmin)
