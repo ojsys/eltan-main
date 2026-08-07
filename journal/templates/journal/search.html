@@ -1,0 +1,40 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Search — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <form method="get" style="display:flex; gap:.6rem; flex-wrap:wrap;">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search by title, abstract, keyword or author"
+               class="form-control" style="flex:1; min-width:240px;">
+        <button type="submit" class="jeltan-btn">Search</button>
+    </form>
+</div>
+
+{% if query %}
+<p class="jeltan-muted">{{ result_count }} result{{ result_count|pluralize }} for &ldquo;{{ query }}&rdquo;</p>
+{% endif %}
+
+{% for article in page_obj %}
+<div class="jeltan-card">
+    <a href="{{ article.get_absolute_url }}" class="jeltan-article-title">{{ article.title }}</a>
+    <div class="jeltan-muted" style="margin-top:.3rem;">
+        {{ article.author_list }}{% if article.issue %} · {{ article.issue.label }}{% endif %}
+    </div>
+    <p class="jeltan-muted" style="margin-top:.5rem;">{{ article.abstract|truncatewords:45 }}</p>
+</div>
+{% empty %}
+{% if query %}<p class="jeltan-muted">Nothing matched that search.</p>{% endif %}
+{% endfor %}
+
+{% if page_obj.has_other_pages %}
+<div style="display:flex; gap:.5rem; justify-content:center; margin-top:1.5rem;">
+    {% if page_obj.has_previous %}
+    <a class="jeltan-btn-ghost" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">Previous</a>
+    {% endif %}
+    <span class="jeltan-muted" style="padding:.65rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a class="jeltan-btn-ghost" href="?q={{ query }}&page={{ page_obj.next_page_number }}">Next</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

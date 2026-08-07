@@ -1,0 +1,91 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}{{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-grid jeltan-grid-sidebar">
+    <div>
+        {% if journal.aims_and_scope %}
+        <div class="jeltan-card">
+            <h2 class="jeltan-h2">About the journal</h2>
+            <div class="jeltan-prose">{{ journal.aims_and_scope|safe|truncatewords_html:80 }}</div>
+            <p style="margin-top:1rem;"><a href="{% url 'journal:about' %}" class="jeltan-btn-ghost">Read more</a></p>
+        </div>
+        {% endif %}
+
+        {% if current_issue %}
+        <div class="jeltan-card">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap;">
+                <h2 class="jeltan-h2" style="margin-bottom:.3rem;">Current issue</h2>
+                <span class="jeltan-badge jeltan-badge-info">{{ current_issue.label }}</span>
+            </div>
+            {% if current_issue.title %}<p class="jeltan-muted">{{ current_issue.title }}</p>{% endif %}
+
+            {% for article in current_issue_articles %}
+            <div style="padding:1rem 0; border-top:1px solid var(--jeltan-line);">
+                <a href="{{ article.get_absolute_url }}" class="jeltan-article-title">{{ article.title }}</a>
+                <div class="jeltan-muted" style="margin-top:.25rem;">{{ article.author_list }}</div>
+                {% if article.page_range %}<div class="jeltan-muted" style="font-size:.82rem;">pp. {{ article.page_range }}</div>{% endif %}
+            </div>
+            {% empty %}
+            <p class="jeltan-muted">No articles in this issue yet.</p>
+            {% endfor %}
+
+            <p style="margin-top:1rem;"><a href="{{ current_issue.get_absolute_url }}" class="jeltan-btn-ghost">View the full issue</a></p>
+        </div>
+        {% endif %}
+
+        <div class="jeltan-card">
+            <h2 class="jeltan-h2">Recently published</h2>
+            {% for article in recent_articles %}
+            <div style="padding:.9rem 0; border-top:1px solid var(--jeltan-line);">
+                <a href="{{ article.get_absolute_url }}" class="jeltan-article-title">{{ article.title }}</a>
+                <div class="jeltan-muted" style="margin-top:.25rem;">
+                    {{ article.author_list }}{% if article.issue %} · {{ article.issue.label }}{% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="jeltan-muted">Nothing has been published yet. Articles will appear here as issues are released.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <aside>
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Submit your paper</h3>
+            {% if journal.is_accepting_submissions %}
+            <p class="jeltan-muted">{{ journal.short_name }} welcomes submissions from ELTAN members and the wider public.</p>
+            <a href="{% url 'journal:submit' %}" class="jeltan-btn" style="width:100%; text-align:center;">Start a submission</a>
+            {% else %}
+            <p class="jeltan-muted">{{ journal.closed_message }}</p>
+            {% endif %}
+            <p style="margin-top:.9rem;"><a href="{% url 'journal:guidelines' %}" class="jeltan-muted">Read the author guidelines →</a></p>
+        </div>
+
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Peer review</h3>
+            <p class="jeltan-muted" style="margin-bottom:.6rem;">
+                Every research paper is read by at least {{ journal.reviews_required }} independent
+                reviewer{{ journal.reviews_required|pluralize }} under double-blind review.
+            </p>
+            <a href="{% url 'journal:policies' %}" class="jeltan-muted">Our policies →</a>
+        </div>
+
+        {% if board_count %}
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Editorial board</h3>
+            <p class="jeltan-muted">{{ board_count }} editor{{ board_count|pluralize }} and board member{{ board_count|pluralize }}.</p>
+            <a href="{% url 'journal:editorial_board' %}" class="jeltan-muted">Meet the board →</a>
+        </div>
+        {% endif %}
+
+        {% if sections %}
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Sections</h3>
+            <ul class="jeltan-muted" style="padding-left:1.1rem; margin:0;">
+                {% for section in sections %}<li>{{ section.name }}</li>{% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </aside>
+</div>
+{% endblock %}

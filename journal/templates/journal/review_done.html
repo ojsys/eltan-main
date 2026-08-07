@@ -1,0 +1,21 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Review submitted — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card" style="text-align:center; padding:2.5rem 1.5rem;">
+    <h2 class="jeltan-h2">Thank you{% if just_submitted %} — your review has been received{% endif %}</h2>
+    <p class="jeltan-muted">
+        Your report on &ldquo;{{ submission.title }}&rdquo; is with the handling editor.
+    </p>
+    <p class="jeltan-muted">
+        Peer review is unpaid work that the whole field depends on, and we are grateful for the time you gave it.
+    </p>
+    <div style="margin-top:1.4rem; text-align:left; max-width:520px; margin-left:auto; margin-right:auto;">
+        <table class="jeltan-table">
+            <tr><th>Manuscript</th><td>{{ submission.manuscript_id }}</td></tr>
+            <tr><th>Your recommendation</th><td>{{ assignment.get_recommendation_display }}</td></tr>
+            <tr><th>Submitted</th><td>{{ assignment.completed_at|date:"j F Y" }}</td></tr>
+        </table>
+    </div>
+</div>
+{% endblock %}

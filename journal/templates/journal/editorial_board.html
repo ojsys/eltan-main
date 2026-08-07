@@ -1,0 +1,24 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Editorial Board — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<h2 class="jeltan-h2">Editorial board</h2>
+<div class="jeltan-grid jeltan-grid-2">
+    {% for member in board %}
+    <div class="jeltan-card" style="display:flex; gap:1rem;">
+        {% if member.photo %}
+        <img src="{{ member.photo.url }}" alt="{{ member.name }}" style="width:76px; height:76px; border-radius:12px; object-fit:cover;">
+        {% endif %}
+        <div>
+            <div style="font-weight:700; color:var(--jeltan-ink);">{{ member.name }}</div>
+            <div style="color:var(--jeltan-accent); font-size:.86rem; font-weight:600;">{{ member.position }}</div>
+            {% if member.affiliation %}<div class="jeltan-muted">{{ member.affiliation }}{% if member.country %}, {{ member.country }}{% endif %}</div>{% endif %}
+            {% if member.orcid %}<div class="jeltan-muted" style="font-size:.8rem;">ORCID: {{ member.orcid }}</div>{% endif %}
+            {% if member.bio %}<p class="jeltan-muted" style="margin-top:.5rem;">{{ member.bio }}</p>{% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <p class="jeltan-muted">The editorial board has not been published yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

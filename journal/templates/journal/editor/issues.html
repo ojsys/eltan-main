@@ -1,0 +1,33 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Issues — editorial{% endblock %}
+
+{% block journal_content %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <h2 class="jeltan-h2" style="margin:0;">Issues</h2>
+    <a href="{% url 'journal:issue_create' %}" class="jeltan-btn">New issue</a>
+</div>
+
+<div class="jeltan-card">
+    <div class="jeltan-table-wrap">
+        <table class="jeltan-table">
+            <thead><tr><th>Issue</th><th>Theme</th><th>Articles</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                {% for issue in issues %}
+                <tr>
+                    <td><strong>{{ issue.label }}</strong></td>
+                    <td class="jeltan-muted">{{ issue.title|default:"—" }}</td>
+                    <td>{{ issue.article_count }}</td>
+                    <td>
+                        {% if issue.is_published %}<span class="jeltan-badge jeltan-badge-good">Published</span>
+                        {% else %}<span class="jeltan-badge jeltan-badge-warn">Draft</span>{% endif %}
+                    </td>
+                    <td><a href="{% url 'journal:issue_edit' issue.pk %}" class="jeltan-btn-ghost">Edit</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="jeltan-muted" style="text-align:center; padding:2rem;">No issues yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

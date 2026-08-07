@@ -1,0 +1,78 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Submit a paper — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <h2 class="jeltan-h2">Submit a paper to {{ journal.short_name }}</h2>
+    <p class="jeltan-muted">
+        Review is double-blind, so we need two files: your manuscript with every identifying detail
+        removed, and a separate title page carrying the author details. Reviewers only ever see the
+        first of these.
+    </p>
+    <p class="jeltan-muted"><a href="{% url 'journal:guidelines' %}">Read the full author guidelines →</a></p>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <div class="jeltan-card">
+        <h3 class="jeltan-h2">1. About your paper</h3>
+        {% include 'journal/_form.html' with form=form %}
+    </div>
+
+    <div class="jeltan-card">
+        <h3 class="jeltan-h2">2. Authors</h3>
+        <p class="jeltan-muted">
+            List every author in the order they should be credited, and tick the corresponding author —
+            that is the address all correspondence about this paper will go to.
+        </p>
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}
+        <div class="jeltan-alert jeltan-alert-bad">
+            {% for error in formset.non_form_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+        <div id="author-forms">
+            {% for author_form in formset %}
+            <div class="author-form" style="border:1px solid var(--jeltan-line); border-radius:10px; padding:1rem; margin-bottom:.9rem;">
+                <div style="font-weight:700; color:var(--jeltan-ink); margin-bottom:.6rem;">Author {{ forloop.counter }}</div>
+                {{ author_form.id }}
+                {% include 'journal/_form.html' with form=author_form %}
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="jeltan-btn-ghost" onclick="addAuthor()">+ Add another author</button>
+    </div>
+
+    <div class="jeltan-card">
+        <button type="submit" class="jeltan-btn">Submit manuscript</button>
+        <p class="jeltan-muted" style="margin-top:.8rem;">
+            You will get a confirmation email with your manuscript reference. Nothing is charged to submit.
+        </p>
+    </div>
+</form>
+
+<template id="author-template">
+    <div class="author-form" style="border:1px solid var(--jeltan-line); border-radius:10px; padding:1rem; margin-bottom:.9rem;">
+        <div style="font-weight:700; color:var(--jeltan-ink); margin-bottom:.6rem;">Author __num__</div>
+        {% include 'journal/_form.html' with form=formset.empty_form %}
+    </div>
+</template>
+
+<script>
+    // Adds another author row by cloning the formset's empty form and renumbering
+    // it, then telling Django how many forms to expect.
+    function addAuthor() {
+        const total = document.getElementById('id_authors-TOTAL_FORMS');
+        const index = parseInt(total.value, 10);
+        const markup = document.getElementById('author-template').innerHTML
+            .replace(/__prefix__/g, index)
+            .replace(/__num__/g, index + 1);
+        const holder = document.createElement('div');
+        holder.innerHTML = markup;
+        document.getElementById('author-forms').appendChild(holder.firstElementChild);
+        total.value = index + 1;
+    }
+</script>
+{% endblock %}

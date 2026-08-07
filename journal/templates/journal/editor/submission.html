@@ -1,0 +1,224 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}{{ submission.manuscript_id }} — editorial{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+        <div>
+            <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
+            <span class="jeltan-badge jeltan-badge-info">{{ submission.get_status_display }}</span>
+            <h2 class="jeltan-h2" style="margin:.7rem 0 .3rem;">{{ submission.title }}</h2>
+            <div class="jeltan-muted">{{ submission.section.name }} · round {{ submission.current_round }} · submitted {{ submission.submitted_at|date:"j M Y" }}</div>
+        </div>
+        <a href="{% url 'journal:editor_dashboard' %}" class="jeltan-btn-ghost" style="height:fit-content;">Back to queue</a>
+    </div>
+</div>
+
+<div class="jeltan-grid jeltan-grid-sidebar">
+    <div>
+        <div class="jeltan-card">
+            <h3 class="jeltan-h2">Abstract</h3>
+            <div class="jeltan-prose">{{ submission.abstract|linebreaks }}</div>
+            <div class="jeltan-muted" style="margin-top:.8rem;"><strong>Keywords:</strong> {{ submission.keywords }}</div>
+        </div>
+
+        <div class="jeltan-card">
+            <h3 class="jeltan-h2">Peer review</h3>
+            {% for assignment in assignments %}
+            <div style="border-top:1px solid var(--jeltan-line); padding:1rem 0;">
+                <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                    <div>
+                        <strong style="color:var(--jeltan-ink);">{{ assignment.reviewer_name }}</strong>
+                        <div class="jeltan-muted" style="font-size:.84rem;">
+                            {{ assignment.reviewer_email }}{% if assignment.reviewer_affiliation %} · {{ assignment.reviewer_affiliation }}{% endif %}
+                        </div>
+                        <div class="jeltan-muted" style="font-size:.82rem;">
+                            Round {{ assignment.round }} · invited {{ assignment.invited_at|date:"j M Y" }}
+                            {% if assignment.due_date %} · due {{ assignment.due_date|date:"j M Y" }}{% endif %}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        {% if assignment.status == 'submitted' %}<span class="jeltan-badge jeltan-badge-good">Review submitted</span>
+                        {% elif assignment.status == 'declined' %}<span class="jeltan-badge jeltan-badge-bad">Declined</span>
+                        {% elif assignment.is_overdue %}<span class="jeltan-badge jeltan-badge-bad">Overdue</span>
+                        {% else %}<span class="jeltan-badge jeltan-badge-info">{{ assignment.get_status_display }}</span>{% endif %}
+                    </div>
+                </div>
+
+                {% if assignment.status == 'submitted' %}
+                <div style="background:var(--jeltan-soft); border-radius:10px; padding:1rem; margin-top:.8rem;">
+                    <div style="font-weight:700; color:var(--jeltan-ink); font-size:.9rem;">
+                        Recommendation: {{ assignment.get_recommendation_display }}
+                    </div>
+                    <div class="jeltan-muted" style="font-size:.82rem; margin-top:.3rem;">
+                        Originality {{ assignment.rating_originality|default:"—" }} ·
+                        Methodology {{ assignment.rating_methodology|default:"—" }} ·
+                        Clarity {{ assignment.rating_clarity|default:"—" }} ·
+                        Relevance {{ assignment.rating_relevance|default:"—" }}
+                    </div>
+                    <div style="margin-top:.8rem;">
+                        <div style="font-size:.82rem; font-weight:700; color:var(--jeltan-ink);">Comments to the author</div>
+                        <div class="jeltan-prose" style="font-size:.9rem;">{{ assignment.comments_to_author|linebreaks }}</div>
+                    </div>
+                    {% if assignment.confidential_comments %}
+                    <div style="margin-top:.8rem; border-top:1px dashed #d4d8de; padding-top:.7rem;">
+                        <div style="font-size:.82rem; font-weight:700; color:#b45309;">Confidential — editors only</div>
+                        <div class="jeltan-prose" style="font-size:.9rem;">{{ assignment.confidential_comments|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% elif assignment.status == 'declined' and assignment.decline_reason %}
+                <div class="jeltan-muted" style="margin-top:.5rem;">Reason: {{ assignment.decline_reason }}</div>
+                {% endif %}
+
+                {% if assignment.is_open %}
+                <div style="display:flex; gap:.4rem; margin-top:.8rem; flex-wrap:wrap;">
+                    <form method="post" action="{% url 'journal:resend_invitation' assignment.pk %}">{% csrf_token %}
+                        <button class="jeltan-btn-ghost" type="submit">Resend invitation</button></form>
+                    <form method="post" action="{% url 'journal:remind_reviewer' assignment.pk %}">{% csrf_token %}
+                        <button class="jeltan-btn-ghost" type="submit">Send reminder</button></form>
+                    <form method="post" action="{% url 'journal:cancel_review' assignment.pk %}"
+                          onsubmit="return confirm('Cancel this review request?');">{% csrf_token %}
+                        <button class="jeltan-btn-ghost jeltan-btn-danger" type="submit">Cancel</button></form>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="jeltan-muted">No reviewers have been invited yet.</p>
+            {% endfor %}
+
+            <div style="margin-top:1rem;">
+                <a href="{% url 'journal:invite_reviewer' submission.pk %}" class="jeltan-btn">Invite a reviewer</a>
+                {% if not submission.has_enough_reviews and submission.status == 'under_review' %}
+                <span class="jeltan-muted" style="margin-left:.6rem;">
+                    {{ journal.reviews_required }} review{{ journal.reviews_required|pluralize }} expected before deciding.
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="jeltan-card">
+            <h3 class="jeltan-h2">Record a decision</h3>
+            {% if submission.is_open %}
+            <form method="post" action="{% url 'journal:record_decision' submission.pk %}" novalidate>
+                {% csrf_token %}
+                {% include 'journal/_form.html' with form=decision_form %}
+                <button type="submit" class="jeltan-btn">Record decision and email the author</button>
+            </form>
+            {% else %}
+            <p class="jeltan-muted">This manuscript is closed ({{ submission.get_status_display }}).</p>
+            {% endif %}
+        </div>
+
+        {% for decision in decisions %}
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700; color:var(--jeltan-ink);">{{ decision.get_decision_display }}</h3>
+            <div class="jeltan-muted" style="font-size:.82rem;">
+                Round {{ decision.round }} · {{ decision.decided_at|date:"j M Y" }}
+                {% if decision.editor %} · {{ decision.editor.get_full_name|default:decision.editor.email }}{% endif %}
+            </div>
+            <div class="jeltan-prose" style="margin-top:.7rem;">{{ decision.letter_to_author|linebreaks }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <aside>
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Authors</h3>
+            {% for author in submission.authors.all %}
+            <div style="padding:.5rem 0; border-top:1px solid var(--jeltan-line); font-size:.88rem;">
+                <strong>{{ author.full_name }}</strong>{% if author.is_corresponding %}
+                <span class="jeltan-badge jeltan-badge-info">Corresponding</span>{% endif %}
+                <div class="jeltan-muted" style="font-size:.8rem;">{{ author.email }}</div>
+                {% if author.affiliation %}<div class="jeltan-muted" style="font-size:.8rem;">{{ author.affiliation }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Handling editor</h3>
+            <form method="post" action="{% url 'journal:assign_editor' submission.pk %}">
+                {% csrf_token %}
+                <select name="editor" class="form-control" style="margin-bottom:.6rem;">
+                    <option value="">— Unassigned —</option>
+                    {% for role in editors %}
+                    <option value="{{ role.pk }}" {% if submission.handling_editor_id == role.user_id %}selected{% endif %}>
+                        {{ role.user.get_full_name|default:role.user.email }} ({{ role.get_role_display }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="jeltan-btn-ghost" style="width:100%;">Assign</button>
+            </form>
+        </div>
+
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Files</h3>
+            {% for round_number, files in files_by_round %}
+            <div style="margin-top:.6rem;">
+                <div class="jeltan-muted" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.05em;">Round {{ round_number }}</div>
+                {% for file in files %}
+                <div style="padding:.45rem 0; font-size:.86rem;">
+                    <a href="{% url 'journal:submission_file' file.pk %}">{{ file.get_kind_display }}</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Declarations</h3>
+            <table class="jeltan-table">
+                <tr><th>Original work</th><td>{{ submission.is_original_work|yesno:"Yes,No" }}</td></tr>
+                <tr><th>Not elsewhere</th><td>{{ submission.not_under_review_elsewhere|yesno:"Yes,No" }}</td></tr>
+                <tr><th>Competing interests</th><td>{{ submission.conflict_of_interest|default:"—" }}</td></tr>
+                <tr><th>Funding</th><td>{{ submission.funding_statement|default:"—" }}</td></tr>
+                <tr><th>Ethics</th><td>{{ submission.ethics_statement|default:"—" }}</td></tr>
+            </table>
+            {% if submission.cover_letter %}
+            <div style="margin-top:.8rem;">
+                <div style="font-size:.82rem; font-weight:700; color:var(--jeltan-ink);">Cover letter</div>
+                <div class="jeltan-muted">{{ submission.cover_letter|linebreaks }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if submission.apc_status != 'not_applicable' %}
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Article processing charge</h3>
+            <p class="jeltan-muted">
+                {{ submission.get_apc_status_display }}
+                {% if submission.apc_amount %} — {{ journal.apc_currency }} {{ submission.apc_amount|floatformat:2 }}{% endif %}
+            </p>
+            {% if submission.apc_is_due %}
+            <form method="post" action="{% url 'journal:waive_apc' submission.pk %}"
+                  onsubmit="return confirm('Waive the charge for this paper?');">
+                {% csrf_token %}
+                <button type="submit" class="jeltan-btn-ghost" style="width:100%;">Waive the charge</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if can_publish %}
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Production</h3>
+            <a href="{% url 'journal:publish' submission.pk %}" class="jeltan-btn" style="width:100%; text-align:center;">
+                {% if article %}Edit the published article{% else %}Publish this article{% endif %}
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">History</h3>
+            {% for event in events %}
+            <div style="padding:.5rem 0; border-top:1px solid var(--jeltan-line); font-size:.84rem;">
+                <div style="color:var(--jeltan-ink);">{{ event.event }}{% if not event.is_public %}
+                    <span class="jeltan-badge" style="font-size:.65rem;">internal</span>{% endif %}</div>
+                <div class="jeltan-muted" style="font-size:.78rem;">{{ event.created_at|date:"j M Y, H:i" }}</div>
+                {% if event.note %}<div class="jeltan-muted">{{ event.note }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </aside>
+</div>
+{% endblock %}

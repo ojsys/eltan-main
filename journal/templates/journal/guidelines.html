@@ -1,0 +1,79 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Author Guidelines — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-grid jeltan-grid-sidebar">
+    <div>
+        <div class="jeltan-card">
+            <h2 class="jeltan-h2">Author guidelines</h2>
+            <div class="jeltan-prose">
+                {% if journal.author_guidelines %}{{ journal.author_guidelines|safe }}
+                {% else %}<p class="jeltan-muted">The author guidelines have not been published yet.</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="jeltan-card">
+            <h2 class="jeltan-h2">What you will need to submit</h2>
+            <div class="jeltan-prose">
+                <p><strong>1. An anonymised manuscript.</strong> Review is double-blind, so this file must not
+                name you: remove author names and affiliations, acknowledgements, funding details that identify
+                you, and any self-citation phrased as "as we showed in&hellip;".</p>
+                <p><strong>2. A separate title page.</strong> Title, every author, their affiliations, and which
+                one is the corresponding author. Reviewers never see this file.</p>
+                <p><strong>3. An abstract</strong> of 50&ndash;250 words and 3&ndash;6 keywords.</p>
+                <p><strong>4. Declarations.</strong> That the work is original and not under review elsewhere,
+                any competing interests, funding, and ethical approval where people took part in the research.</p>
+                <p><strong>5. Supplementary material</strong> such as instruments or data, if you have any.</p>
+            </div>
+        </div>
+
+        {% if sections %}
+        <div class="jeltan-card">
+            <h2 class="jeltan-h2">Sections</h2>
+            {% for section in sections %}
+            <div style="padding:.8rem 0; border-top:1px solid var(--jeltan-line);">
+                <strong style="color:var(--jeltan-ink);">{{ section.name }}</strong>
+                {% if section.peer_reviewed %}<span class="jeltan-badge jeltan-badge-info">Peer reviewed</span>
+                {% else %}<span class="jeltan-badge">Editor reviewed</span>{% endif %}
+                {% if section.description %}<div class="jeltan-muted">{{ section.description }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <aside>
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">How your paper travels</h3>
+            <ol class="jeltan-muted" style="padding-left:1.1rem; line-height:1.9;">
+                <li>Submission and editorial check</li>
+                <li>Double-blind peer review</li>
+                <li>Decision and revisions</li>
+                <li>Acceptance</li>
+                <li>Article processing charge</li>
+                <li>Production and proofs</li>
+                <li>Publication in an issue</li>
+            </ol>
+        </div>
+        <div class="jeltan-card">
+            <h3 style="font-size:1rem; font-weight:700;">Article processing charge</h3>
+            {% if journal.apc_is_waived %}
+            <p class="jeltan-muted">There is currently no charge to publish in {{ journal.short_name }}.</p>
+            {% else %}
+            <p class="jeltan-muted">
+                {{ journal.apc_currency }} {{ journal.apc_amount|floatformat:2 }}, payable by the corresponding
+                author only after a paper has been accepted. Nothing is charged to submit, and payment plays no
+                part in the review decision.
+            </p>
+            {% endif %}
+        </div>
+        <div class="jeltan-card">
+            {% if journal.is_accepting_submissions %}
+            <a href="{% url 'journal:submit' %}" class="jeltan-btn" style="width:100%; text-align:center;">Submit a paper</a>
+            {% else %}
+            <p class="jeltan-muted">{{ journal.closed_message }}</p>
+            {% endif %}
+        </div>
+    </aside>
+</div>
+{% endblock %}

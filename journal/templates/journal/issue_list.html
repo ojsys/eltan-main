@@ -1,0 +1,23 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Issues — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<h2 class="jeltan-h2">Issue archive</h2>
+<div class="jeltan-grid jeltan-grid-3">
+    {% for issue in issues %}
+    <div class="jeltan-card">
+        {% if issue.cover_image %}
+        <img src="{{ issue.cover_image.url }}" alt="{{ issue.label }}" style="width:100%; border-radius:10px; margin-bottom:.8rem;">
+        {% endif %}
+        <a href="{{ issue.get_absolute_url }}" class="jeltan-article-title" style="font-size:1.05rem;">{{ issue.label }}</a>
+        {% if issue.title %}<div class="jeltan-muted" style="margin-top:.3rem;">{{ issue.title }}</div>{% endif %}
+        <div class="jeltan-muted" style="margin-top:.5rem; font-size:.82rem;">
+            {{ issue.public_articles.count }} article{{ issue.public_articles.count|pluralize }}
+            {% if issue.published_at %} · {{ issue.published_at|date:"F Y" }}{% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <p class="jeltan-muted">No issues have been published yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

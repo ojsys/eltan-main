@@ -1,0 +1,43 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}My submissions — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <h2 class="jeltan-h2" style="margin:0;">My submissions</h2>
+    <a href="{% url 'journal:submit' %}" class="jeltan-btn">Submit a new paper</a>
+</div>
+
+{% for submission in submissions %}
+<div class="jeltan-card">
+    <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+        <div>
+            <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
+            <a href="{% url 'journal:submission_detail' submission.pk %}" class="jeltan-article-title" style="display:block; margin-top:.4rem;">
+                {{ submission.title }}
+            </a>
+            <div class="jeltan-muted" style="margin-top:.3rem;">
+                {{ submission.section.name }} · submitted {{ submission.submitted_at|date:"j M Y" }}
+                {% if submission.current_round > 1 %} · round {{ submission.current_round }}{% endif %}
+            </div>
+        </div>
+        <div style="text-align:right;">
+            {% if submission.status == 'published' %}<span class="jeltan-badge jeltan-badge-good">{{ submission.get_status_display }}</span>
+            {% elif submission.status in 'desk_rejected rejected withdrawn' %}<span class="jeltan-badge jeltan-badge-bad">{{ submission.get_status_display }}</span>
+            {% elif submission.awaiting_author %}<span class="jeltan-badge jeltan-badge-warn">{{ submission.get_status_display }}</span>
+            {% else %}<span class="jeltan-badge jeltan-badge-info">{{ submission.get_status_display }}</span>{% endif %}
+
+            {% if submission.awaiting_author %}
+            <div style="margin-top:.6rem;"><a href="{% url 'journal:upload_revision' submission.pk %}" class="jeltan-btn">Upload revision</a></div>
+            {% elif submission.apc_is_due %}
+            <div style="margin-top:.6rem;"><a href="{% url 'journal:pay_apc' submission.pk %}" class="jeltan-btn">Pay the charge</a></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="jeltan-card" style="text-align:center; padding:2.5rem;">
+    <p class="jeltan-muted">You have not submitted anything to {{ journal.short_name }} yet.</p>
+    <a href="{% url 'journal:submit' %}" class="jeltan-btn">Submit your first paper</a>
+</div>
+{% endfor %}
+{% endblock %}

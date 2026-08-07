@@ -421,3 +421,7 @@ SECURITY_INCIDENT_RESOLUTION.md
 !.env.example
 !settings.example.py
 !config.example.yml
+
+# Manuscripts under peer review — kept out of MEDIA_ROOT so they cannot be
+# served directly, and out of the repo because they are unpublished work.
+/private_media/

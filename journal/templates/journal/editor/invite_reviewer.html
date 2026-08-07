@@ -1,0 +1,23 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Invite a reviewer — {{ submission.manuscript_id }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
+    <h2 class="jeltan-h2" style="margin-top:.6rem;">Invite a reviewer</h2>
+    <p class="jeltan-muted">{{ submission.title }}</p>
+    <p class="jeltan-muted">
+        The reviewer gets an email with a private link. They do not need an account, and they will only ever
+        see the anonymised manuscript — never the title page or the author list.
+    </p>
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="jeltan-card">
+        {% include 'journal/_form.html' with form=form %}
+        <button type="submit" class="jeltan-btn">Send the invitation</button>
+        <a href="{% url 'journal:editor_submission' submission.pk %}" class="jeltan-btn-ghost">Cancel</a>
+    </div>
+</form>
+{% endblock %}

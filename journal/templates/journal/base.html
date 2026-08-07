@@ -1,0 +1,149 @@
+{% extends 'base/modern_base.html' %}
+{% load static %}
+
+{% comment %}
+Shared shell for every JELTAN page: the journal masthead, its own navigation and
+the message area. Individual pages fill in {% block journal_content %}.
+{% endcomment %}
+
+{% block title %}{% block journal_title %}{{ journal.name }}{% endblock %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --jeltan-ink: #12263f;
+        --jeltan-accent: #E67918;
+        --jeltan-line: #e6e9ef;
+        --jeltan-muted: #6b7280;
+        --jeltan-soft: #f7f8fa;
+    }
+    .jeltan-wrap { max-width: 1140px; margin: 0 auto; padding: 0 1rem; }
+    .jeltan-masthead {
+        background: linear-gradient(120deg, #12263f 0%, #1c3557 55%, #C5630C 100%);
+        color: #fff; padding: 2.5rem 0 1rem;
+    }
+    .jeltan-masthead h1 { font-size: 2rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
+    .jeltan-masthead p { margin: .4rem 0 0; color: #dbe3ee; font-size: .95rem; }
+    .jeltan-issn { font-size: .78rem; color: #b9c6d8; margin-top: .5rem; }
+    .jeltan-nav { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: 1.4rem; }
+    .jeltan-nav a {
+        color: #dbe3ee; text-decoration: none; font-size: .88rem; font-weight: 600;
+        padding: .6rem .9rem; border-radius: 8px 8px 0 0;
+    }
+    .jeltan-nav a:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .jeltan-nav a.active { background: #fff; color: var(--jeltan-ink); }
+    .jeltan-body { padding: 2rem 0 4rem; background: #fff; }
+
+    .jeltan-card {
+        border: 1px solid var(--jeltan-line); border-radius: 14px; padding: 1.4rem;
+        background: #fff; margin-bottom: 1.2rem;
+    }
+    .jeltan-card h2, .jeltan-card h3 { color: var(--jeltan-ink); }
+    .jeltan-h2 { font-size: 1.3rem; font-weight: 700; color: var(--jeltan-ink); margin-bottom: 1rem; }
+    .jeltan-muted { color: var(--jeltan-muted); font-size: .9rem; }
+    .jeltan-prose { color: #333; line-height: 1.75; }
+    .jeltan-prose h2 { font-size: 1.2rem; margin-top: 1.6rem; }
+
+    .jeltan-btn {
+        display: inline-block; background: var(--jeltan-accent); color: #fff; border: 0;
+        padding: .7rem 1.2rem; border-radius: 9px; font-weight: 600; font-size: .92rem;
+        text-decoration: none; cursor: pointer;
+    }
+    .jeltan-btn:hover { background: #c5630c; color: #fff; }
+    .jeltan-btn-ghost {
+        display: inline-block; background: #fff; color: var(--jeltan-ink);
+        border: 1px solid var(--jeltan-line); padding: .65rem 1.1rem; border-radius: 9px;
+        font-weight: 600; font-size: .9rem; text-decoration: none; cursor: pointer;
+    }
+    .jeltan-btn-ghost:hover { background: var(--jeltan-soft); color: var(--jeltan-ink); }
+    .jeltan-btn-danger { background: #fff; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .jeltan-badge {
+        display: inline-block; padding: .25rem .6rem; border-radius: 999px;
+        font-size: .74rem; font-weight: 700; letter-spacing: .02em;
+        background: var(--jeltan-soft); color: var(--jeltan-muted);
+    }
+    .jeltan-badge-info { background: #eff6ff; color: #1d4ed8; }
+    .jeltan-badge-warn { background: #fffbeb; color: #b45309; }
+    .jeltan-badge-good { background: #f0fdf4; color: #15803d; }
+    .jeltan-badge-bad { background: #fef2f2; color: #b91c1c; }
+
+    .jeltan-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .jeltan-table th {
+        text-align: left; font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
+        color: var(--jeltan-muted); padding: .6rem .5rem; border-bottom: 1px solid var(--jeltan-line);
+    }
+    .jeltan-table td { padding: .8rem .5rem; border-bottom: 1px solid var(--jeltan-line); vertical-align: top; }
+    .jeltan-table-wrap { overflow-x: auto; }
+
+    .jeltan-field { margin-bottom: 1.1rem; }
+    .jeltan-field label { display: block; font-weight: 600; font-size: .88rem; color: var(--jeltan-ink); margin-bottom: .35rem; }
+    .jeltan-field .helptext, .jeltan-field small { display: block; color: var(--jeltan-muted); font-size: .82rem; margin-top: .3rem; }
+    .jeltan-field input[type=text], .jeltan-field input[type=email], .jeltan-field input[type=number],
+    .jeltan-field input[type=date], .jeltan-field select, .jeltan-field textarea, .form-control {
+        width: 100%; padding: .65rem .8rem; border: 1px solid var(--jeltan-line);
+        border-radius: 9px; font-size: .92rem; background: #fff;
+    }
+    .jeltan-field .errorlist { list-style: none; padding: 0; margin: .35rem 0 0; color: #b91c1c; font-size: .84rem; }
+    .jeltan-checkbox { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .8rem; font-size: .9rem; }
+    .jeltan-checkbox input { margin-top: .25rem; }
+
+    .jeltan-alert { padding: .9rem 1.1rem; border-radius: 10px; font-size: .9rem; margin-bottom: 1rem; }
+    .jeltan-alert-info { background: #eff6ff; color: #1e40af; }
+    .jeltan-alert-warn { background: #fffbeb; color: #92400e; }
+    .jeltan-alert-good { background: #f0fdf4; color: #166534; }
+    .jeltan-alert-bad { background: #fef2f2; color: #991b1b; }
+
+    .jeltan-grid { display: grid; gap: 1.2rem; }
+    @media (min-width: 768px) {
+        .jeltan-grid-2 { grid-template-columns: 1fr 1fr; }
+        .jeltan-grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .jeltan-grid-sidebar { grid-template-columns: 2fr 1fr; }
+    }
+    .jeltan-article-title { color: var(--jeltan-ink); font-weight: 700; text-decoration: none; }
+    .jeltan-article-title:hover { color: var(--jeltan-accent); }
+</style>
+{% block journal_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="jeltan-masthead">
+    <div class="jeltan-wrap">
+        <h1>{{ journal.name }}</h1>
+        {% if journal.tagline %}<p>{{ journal.tagline }}</p>{% endif %}
+        {% if journal.issn_online or journal.issn_print %}
+        <div class="jeltan-issn">
+            {% if journal.issn_online %}ISSN (online): {{ journal.issn_online }}{% endif %}
+            {% if journal.issn_print %} &nbsp;·&nbsp; ISSN (print): {{ journal.issn_print }}{% endif %}
+        </div>
+        {% endif %}
+        <nav class="jeltan-nav">
+            <a href="{% url 'journal:home' %}" class="{% if nav == 'home' %}active{% endif %}">Home</a>
+            <a href="{% url 'journal:about' %}" class="{% if nav == 'about' %}active{% endif %}">About</a>
+            <a href="{% url 'journal:issue_list' %}" class="{% if nav == 'issues' %}active{% endif %}">Issues</a>
+            <a href="{% url 'journal:editorial_board' %}" class="{% if nav == 'board' %}active{% endif %}">Editorial Board</a>
+            <a href="{% url 'journal:guidelines' %}" class="{% if nav == 'guidelines' %}active{% endif %}">For Authors</a>
+            <a href="{% url 'journal:policies' %}" class="{% if nav == 'policies' %}active{% endif %}">Policies</a>
+            <a href="{% url 'journal:search' %}" class="{% if nav == 'search' %}active{% endif %}">Search</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'journal:my_submissions' %}" class="{% if nav == 'mine' %}active{% endif %}">My Submissions</a>
+            {% endif %}
+            <a href="{% url 'journal:submit' %}" class="{% if nav == 'submit' %}active{% endif %}">Submit a Paper</a>
+        </nav>
+    </div>
+</div>
+
+<div class="jeltan-body">
+    <div class="jeltan-wrap">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="jeltan-alert jeltan-alert-{% if message.tags == 'error' %}bad{% elif message.tags == 'warning' %}warn{% elif message.tags == 'success' %}good{% else %}info{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block journal_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

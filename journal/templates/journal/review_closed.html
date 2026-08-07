@@ -1,0 +1,11 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Review — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card" style="text-align:center; padding:2.5rem 1.5rem;">
+    <h2 class="jeltan-h2">This review is closed</h2>
+    <p class="jeltan-muted">{{ reason }}</p>
+    <p class="jeltan-muted">If you think this is a mistake, please contact the editorial office
+    {% if journal.contact_email %}at <a href="mailto:{{ journal.contact_email }}">{{ journal.contact_email }}</a>{% endif %}.</p>
+</div>
+{% endblock %}

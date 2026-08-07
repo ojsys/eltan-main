@@ -1,0 +1,23 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Upload revision — {{ submission.manuscript_id }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
+    <h2 class="jeltan-h2" style="margin-top:.6rem;">Upload your revision</h2>
+    <p class="jeltan-muted">{{ submission.title }}</p>
+    <p class="jeltan-muted">
+        This will become round {{ submission.current_round|add:1 }}. Your earlier files stay on record —
+        nothing is overwritten. Keep the manuscript anonymised: it may go back to the same reviewers.
+    </p>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div class="jeltan-card">
+        {% include 'journal/_form.html' with form=form %}
+        <button type="submit" class="jeltan-btn">Submit revision</button>
+        <a href="{% url 'journal:submission_detail' submission.pk %}" class="jeltan-btn-ghost">Cancel</a>
+    </div>
+</form>
+{% endblock %}

@@ -164,6 +164,10 @@
           <a class="nav-link {% if request.resolver_match.url_name == 'resource' %}active{% endif %}"
              href="{% url 'resource' %}">Resources</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.app_name == 'journal' %}active{% endif %}"
+             href="{% url 'journal:home' %}">JELTAN</a>
+        </li>
       </ul>
 
       <!-- CTA buttons -->

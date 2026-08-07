@@ -1,0 +1,10 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Submissions closed — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card" style="text-align:center; padding:3rem 1.5rem;">
+    <h2 class="jeltan-h2">Submissions are closed</h2>
+    <p class="jeltan-muted">{{ journal.closed_message }}</p>
+    <a href="{% url 'journal:home' %}" class="jeltan-btn-ghost" style="margin-top:1rem;">Back to the journal</a>
+</div>
+{% endblock %}

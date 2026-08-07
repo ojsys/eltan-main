@@ -1,0 +1,33 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}{{ issue.label }} — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <div class="jeltan-badge jeltan-badge-info">{{ issue.label }}</div>
+    {% if issue.title %}<h2 class="jeltan-h2" style="margin-top:.6rem;">{{ issue.title }}</h2>{% endif %}
+    {% if issue.published_at %}<div class="jeltan-muted">Published {{ issue.published_at|date:"F Y" }}</div>{% endif %}
+    {% if issue.description %}<div class="jeltan-prose" style="margin-top:1rem;">{{ issue.description|safe }}</div>{% endif %}
+</div>
+
+<div class="jeltan-card">
+    <h3 class="jeltan-h2">Table of contents</h3>
+    {% for article in articles %}
+    <div style="padding:1rem 0; border-top:1px solid var(--jeltan-line);">
+        {% if article.section %}<span class="jeltan-badge">{{ article.section.name }}</span>{% endif %}
+        <div style="margin-top:.4rem;">
+            <a href="{{ article.get_absolute_url }}" class="jeltan-article-title">{{ article.title }}</a>
+        </div>
+        <div class="jeltan-muted" style="margin-top:.25rem;">{{ article.author_list }}</div>
+        <div class="jeltan-muted" style="font-size:.82rem; margin-top:.25rem;">
+            {% if article.page_range %}pp. {{ article.page_range }}{% endif %}
+            {% if article.doi %} · DOI: {{ article.doi }}{% endif %}
+        </div>
+        {% if article.pdf %}
+        <a href="{% url 'journal:article_pdf' article.slug %}" class="jeltan-btn-ghost" style="margin-top:.6rem;">PDF</a>
+        {% endif %}
+    </div>
+    {% empty %}
+    <p class="jeltan-muted">This issue has no published articles yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

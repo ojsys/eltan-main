@@ -1,0 +1,18 @@
+{{ heading }}
+
+{{ intro }}
+{% if details %}
+{% for label, value in details %}{{ label }}: {{ value }}
+{% endfor %}{% endif %}
+{% for paragraph in body_paragraphs %}
+{{ paragraph }}
+{% endfor %}
+{% if action_url %}
+{{ action_label|default:"Open" }}: {{ action_url }}
+{% endif %}
+{% if footnote %}{{ footnote }}
+{% endif %}
+Questions? Write to {{ contact_email }}
+
+{{ journal.name }}
+Published by {{ journal.publisher }}

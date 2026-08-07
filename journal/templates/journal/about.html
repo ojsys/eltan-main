@@ -1,0 +1,27 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}About — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <h2 class="jeltan-h2">Aims and scope</h2>
+    <div class="jeltan-prose">
+        {% if journal.aims_and_scope %}{{ journal.aims_and_scope|safe }}
+        {% else %}<p class="jeltan-muted">The aims and scope have not been published yet.</p>{% endif %}
+    </div>
+</div>
+
+<div class="jeltan-card">
+    <h2 class="jeltan-h2">Journal information</h2>
+    <div class="jeltan-table-wrap">
+        <table class="jeltan-table">
+            <tr><th>Title</th><td>{{ journal.name }}</td></tr>
+            <tr><th>Publisher</th><td>{{ journal.publisher }}</td></tr>
+            {% if journal.issn_online %}<tr><th>ISSN (online)</th><td>{{ journal.issn_online }}</td></tr>{% endif %}
+            {% if journal.issn_print %}<tr><th>ISSN (print)</th><td>{{ journal.issn_print }}</td></tr>{% endif %}
+            <tr><th>Review model</th><td>Double-blind peer review</td></tr>
+            <tr><th>Reviews per paper</th><td>At least {{ journal.reviews_required }}</td></tr>
+            {% if journal.contact_email %}<tr><th>Contact</th><td><a href="mailto:{{ journal.contact_email }}">{{ journal.contact_email }}</a></td></tr>{% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

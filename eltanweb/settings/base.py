@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'mainapp',
     'membership',
     'core',
+    'journal',
 ]
 
 MIDDLEWARE = [
@@ -152,6 +153,11 @@ STATICFILES_FINDERS = [
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Manuscripts under peer review are NOT served from MEDIA_ROOT: they are handed
+# out only by a view that checks the requester, so that a title page cannot be
+# reached by guessing a URL and double-blind review actually holds.
+JOURNAL_PRIVATE_ROOT = BASE_DIR / 'private_media' / 'journal'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

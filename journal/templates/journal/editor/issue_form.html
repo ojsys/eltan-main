@@ -1,0 +1,36 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}{% if issue %}{{ issue.label }}{% else %}New issue{% endif %} — editorial{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <h2 class="jeltan-h2">{% if issue %}Edit {{ issue.label }}{% else %}Create an issue{% endif %}</h2>
+    <p class="jeltan-muted">An issue stays invisible to the public until it is marked published.</p>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div class="jeltan-card">
+        {% include 'journal/_form.html' with form=form %}
+        <button type="submit" class="jeltan-btn">Save</button>
+        <a href="{% url 'journal:editor_issues' %}" class="jeltan-btn-ghost">Back</a>
+    </div>
+</form>
+
+{% if issue %}
+<div class="jeltan-card">
+    <h3 class="jeltan-h2">Articles in this issue</h3>
+    {% for article in articles %}
+    <div style="padding:.7rem 0; border-top:1px solid var(--jeltan-line);">
+        <strong style="color:var(--jeltan-ink);">{{ article.title }}</strong>
+        <div class="jeltan-muted" style="font-size:.84rem;">
+            {{ article.author_list }}{% if article.page_range %} · pp. {{ article.page_range }}{% endif %}
+            {% if not article.is_published %} · <span class="jeltan-badge jeltan-badge-warn">Not published</span>{% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <p class="jeltan-muted">No articles have been assigned to this issue yet. Assign them from each accepted
+    manuscript's publish page.</p>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
