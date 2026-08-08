@@ -35,7 +35,7 @@
     --j-accent-wash:   #fdf6ee;
 
     --j-good:       #15803d;
-    --j-good-wash:  #f971fdf4;
+    --j-good-wash:  #f0fdf4;
     --j-warn:       #b45309;
     --j-warn-wash:  #fffbeb;
     --j-bad:        #b91c1c;
@@ -58,9 +58,6 @@
     --j-shadow: 0 1px 2px rgba(16, 32, 47, .04), 0 8px 24px rgba(16, 32, 47, .05);
 }
 
-/* Fix a typo-safe fallback: the good wash must be a colour. */
-:root { --j-good-wash: #f0fdf4; }
-
 /* --------------------------------------------------------------- structure */
 
 .jeltan-wrap {
@@ -69,19 +66,17 @@
     padding: 0 1.25rem;
 }
 
-.jeltan-skip {
+/* Present to screen readers, invisible on screen — for labels a sighted user
+   reads from context but an assistive technology still needs announced. */
+.jeltan-sr-only {
     position: absolute;
-    left: -9999px;
-    top: 0;
-    background: var(--j-ink);
-    color: #fff;
-    padding: .75rem 1.1rem;
-    border-radius: 0 0 var(--j-radius-sm) 0;
-    z-index: 100;
-    font-family: var(--j-sans);
-    font-size: .9rem;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
-.jeltan-skip:focus { left: 0; color: #fff; }
 
 /* ---------------------------------------------------------------- masthead */
 
@@ -732,31 +727,14 @@
     border-top: 1px dashed var(--j-line-2);
 }
 
-/* -------------------------------------------------------------- footer bar */
-
-.jeltan-footer {
-    border-top: 1px solid var(--j-line);
-    background: var(--j-surface);
-    padding: 2.5rem 0;
-    font-family: var(--j-sans);
-    font-size: .82rem;
-    color: var(--j-muted);
-}
-.jeltan-footer a { color: var(--j-ink-2); text-decoration: none; }
-.jeltan-footer a:hover { color: var(--j-accent-strong); text-decoration: underline; }
-.jeltan-footer-cols { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-.jeltan-footer h4 {
-    font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
-    color: var(--j-ink); margin: 0 0 .7rem;
-}
-.jeltan-footer ul { list-style: none; margin: 0; padding: 0; line-height: 2; }
+/* The journal has no footer of its own: the site's shared footer closes every
+   page, and a second one is just noise. */
 
 /* ----------------------------------------------------------- accessibility */
 
 .jeltan-body a:focus-visible,
 .jeltan-body button:focus-visible,
-.jeltan-nav a:focus-visible,
-.jeltan-footer a:focus-visible {
+.jeltan-nav a:focus-visible {
     outline: 2px solid var(--j-accent-strong);
     outline-offset: 3px;
     border-radius: 3px;
@@ -772,7 +750,7 @@
 /* Journals get printed. The article page should come out as a clean document:
    no navigation, no buttons, and links spelled out so a paper copy stays useful. */
 @media print {
-    .jeltan-nav, .jeltan-footer, .jeltan-btn, .jeltan-btn-ghost, .jeltan-skip,
+    .jeltan-nav, .jeltan-btn, .jeltan-btn-ghost,
     .jeltan-no-print, nav, footer { display: none !important; }
 
     body { background: #fff; }

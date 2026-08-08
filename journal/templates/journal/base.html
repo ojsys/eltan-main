@@ -28,9 +28,13 @@ from the site shell and is reused for the interface.
 {% block journal_css %}{% endblock %}
 {% endblock %}
 
+{% comment %}
+No <main> and no skip link here: the site shell already wraps this block in
+<main id="main-content"> and provides the skip link that targets it. A second
+main landmark is invalid HTML and gives screen readers two "main" regions to
+choose between.
+{% endcomment %}
 {% block content %}
-<a class="jeltan-skip" href="#jeltan-main">Skip to content</a>
-
 <header class="jeltan-masthead">
     <div class="jeltan-wrap">
         <div class="jeltan-masthead-inner">
@@ -75,7 +79,7 @@ from the site shell and is reused for the interface.
     </div>
 </header>
 
-<main class="jeltan-body" id="jeltan-main">
+<div class="jeltan-body">
     <div class="jeltan-wrap">
         {% if messages %}
         <div role="status" aria-live="polite">
@@ -88,55 +92,6 @@ from the site shell and is reused for the interface.
         {% endif %}
 
         {% block journal_content %}{% endblock %}
-    </div>
-</main>
-
-<div class="jeltan-footer jeltan-no-print">
-    <div class="jeltan-wrap">
-        <div class="jeltan-footer-cols">
-            <div>
-                <h4>{{ journal.short_name }}</h4>
-                <p style="margin:0; line-height:1.7;">
-                    {{ journal.name }}<br>
-                    Published by {{ journal.publisher }}.
-                    {% if journal.issn_online %}<br>ISSN {{ journal.issn_online }}{% endif %}
-                </p>
-            </div>
-            <div>
-                <h4>For authors</h4>
-                <ul>
-                    <li><a href="{% url 'journal:guidelines' %}">Author guidelines</a></li>
-                    <li><a href="{% url 'journal:submit' %}">Submit a paper</a></li>
-                    <li><a href="{% url 'journal:policies' %}">Peer review &amp; ethics</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4>Explore</h4>
-                <ul>
-                    <li><a href="{% url 'journal:issue_list' %}">All issues</a></li>
-                    <li><a href="{% url 'journal:search' %}">Search articles</a></li>
-                    <li><a href="{% url 'journal:editorial_board' %}">Editorial board</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4>Machine readable</h4>
-                <ul>
-                    {% comment %}
-                    Advertised on the page as well as in the head: a librarian setting
-                    up a harvest looks for these, and should not have to read the HTML
-                    source to find them.
-                    {% endcomment %}
-                    <li><a href="{% url 'journal:oai' %}?verb=Identify">OAI-PMH endpoint</a></li>
-                    <li><a href="{% url 'journal:articles_feed' %}">RSS feed</a></li>
-                    <li><a href="{% url 'journal:django.contrib.sitemaps.views.sitemap' %}">Sitemap</a></li>
-                </ul>
-            </div>
-        </div>
-        {% if journal.contact_email %}
-        <p style="margin:2rem 0 0; padding-top:1.25rem; border-top:1px solid var(--j-line);">
-            Editorial office: <a href="mailto:{{ journal.contact_email }}">{{ journal.contact_email }}</a>
-        </p>
-        {% endif %}
     </div>
 </div>
 {% endblock %}
