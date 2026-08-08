@@ -1,0 +1,40 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Correct and resubmit — {{ submission.manuscript_id }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
+    <h2 class="jeltan-h2" style="margin-top:.6rem;">Correct and resubmit</h2>
+    <p class="jeltan-muted">{{ submission.title }}</p>
+    <div class="jeltan-alert jeltan-alert-info" style="margin-top:1rem;">
+        Your manuscript has <strong>not</strong> been rejected. The editorial office found a few things to put
+        right before it goes to the editors. Your reference and history stay the same.
+    </div>
+</div>
+
+{% if screening %}
+<div class="jeltan-card">
+    <h3 class="jeltan-h2">What needs correcting</h3>
+    {% if screening.failed_checks %}
+    <ul class="jeltan-prose">
+        {% for item in screening.failed_checks %}<li>{{ item }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if screening.notes_to_author %}
+    <div style="background:var(--jeltan-soft); border-radius:10px; padding:1rem; margin-top:.8rem;">
+        <div style="font-size:.82rem; font-weight:700; color:var(--jeltan-ink);">Notes from the editorial office</div>
+        <div class="jeltan-prose" style="margin-top:.4rem;">{{ screening.notes_to_author|linebreaks }}</div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div class="jeltan-card">
+        {% include 'journal/_form.html' with form=form %}
+        <button type="submit" class="jeltan-btn">Resubmit</button>
+        <a href="{% url 'journal:submission_detail' submission.pk %}" class="jeltan-btn-ghost">Cancel</a>
+    </div>
+</form>
+{% endblock %}

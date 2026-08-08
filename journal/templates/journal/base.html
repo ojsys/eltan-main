@@ -2,148 +2,141 @@
 {% load static %}
 
 {% comment %}
-Shared shell for every JELTAN page: the journal masthead, its own navigation and
-the message area. Individual pages fill in {% block journal_content %}.
+The shell for every JELTAN page: masthead, journal navigation, messages, footer.
+Pages fill in {% block journal_content %} and set `nav` to mark the active tab.
+
+The design splits by purpose — serif for everything read, sans for everything
+operated. See journal/static/journal/jeltan.css.
 {% endcomment %}
 
 {% block title %}{% block journal_title %}{{ journal.name }}{% endblock %}{% endblock %}
 
 {% block extra_css %}
-<style>
-    :root {
-        --jeltan-ink: #12263f;
-        --jeltan-accent: #E67918;
-        --jeltan-line: #e6e9ef;
-        --jeltan-muted: #6b7280;
-        --jeltan-soft: #f7f8fa;
-    }
-    .jeltan-wrap { max-width: 1140px; margin: 0 auto; padding: 0 1rem; }
-    .jeltan-masthead {
-        background: linear-gradient(120deg, #12263f 0%, #1c3557 55%, #C5630C 100%);
-        color: #fff; padding: 2.5rem 0 1rem;
-    }
-    .jeltan-masthead h1 { font-size: 2rem; font-weight: 800; margin: 0; letter-spacing: -.02em; }
-    .jeltan-masthead p { margin: .4rem 0 0; color: #dbe3ee; font-size: .95rem; }
-    .jeltan-issn { font-size: .78rem; color: #b9c6d8; margin-top: .5rem; }
-    .jeltan-nav { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: 1.4rem; }
-    .jeltan-nav a {
-        color: #dbe3ee; text-decoration: none; font-size: .88rem; font-weight: 600;
-        padding: .6rem .9rem; border-radius: 8px 8px 0 0;
-    }
-    .jeltan-nav a:hover { background: rgba(255,255,255,.12); color: #fff; }
-    .jeltan-nav a.active { background: #fff; color: var(--jeltan-ink); }
-    .jeltan-body { padding: 2rem 0 4rem; background: #fff; }
+{% comment %}
+One serif family, loaded for the reading surface. Poppins is already on the page
+from the site shell and is reused for the interface.
+{% endcomment %}
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap"
+      rel="stylesheet">
+<link rel="stylesheet" href="{% static 'journal/jeltan.css' %}">
 
-    .jeltan-card {
-        border: 1px solid var(--jeltan-line); border-radius: 14px; padding: 1.4rem;
-        background: #fff; margin-bottom: 1.2rem;
-    }
-    .jeltan-card h2, .jeltan-card h3 { color: var(--jeltan-ink); }
-    .jeltan-h2 { font-size: 1.3rem; font-weight: 700; color: var(--jeltan-ink); margin-bottom: 1rem; }
-    .jeltan-muted { color: var(--jeltan-muted); font-size: .9rem; }
-    .jeltan-prose { color: #333; line-height: 1.75; }
-    .jeltan-prose h2 { font-size: 1.2rem; margin-top: 1.6rem; }
-
-    .jeltan-btn {
-        display: inline-block; background: var(--jeltan-accent); color: #fff; border: 0;
-        padding: .7rem 1.2rem; border-radius: 9px; font-weight: 600; font-size: .92rem;
-        text-decoration: none; cursor: pointer;
-    }
-    .jeltan-btn:hover { background: #c5630c; color: #fff; }
-    .jeltan-btn-ghost {
-        display: inline-block; background: #fff; color: var(--jeltan-ink);
-        border: 1px solid var(--jeltan-line); padding: .65rem 1.1rem; border-radius: 9px;
-        font-weight: 600; font-size: .9rem; text-decoration: none; cursor: pointer;
-    }
-    .jeltan-btn-ghost:hover { background: var(--jeltan-soft); color: var(--jeltan-ink); }
-    .jeltan-btn-danger { background: #fff; color: #b91c1c; border: 1px solid #fecaca; }
-
-    .jeltan-badge {
-        display: inline-block; padding: .25rem .6rem; border-radius: 999px;
-        font-size: .74rem; font-weight: 700; letter-spacing: .02em;
-        background: var(--jeltan-soft); color: var(--jeltan-muted);
-    }
-    .jeltan-badge-info { background: #eff6ff; color: #1d4ed8; }
-    .jeltan-badge-warn { background: #fffbeb; color: #b45309; }
-    .jeltan-badge-good { background: #f0fdf4; color: #15803d; }
-    .jeltan-badge-bad { background: #fef2f2; color: #b91c1c; }
-
-    .jeltan-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-    .jeltan-table th {
-        text-align: left; font-size: .74rem; text-transform: uppercase; letter-spacing: .05em;
-        color: var(--jeltan-muted); padding: .6rem .5rem; border-bottom: 1px solid var(--jeltan-line);
-    }
-    .jeltan-table td { padding: .8rem .5rem; border-bottom: 1px solid var(--jeltan-line); vertical-align: top; }
-    .jeltan-table-wrap { overflow-x: auto; }
-
-    .jeltan-field { margin-bottom: 1.1rem; }
-    .jeltan-field label { display: block; font-weight: 600; font-size: .88rem; color: var(--jeltan-ink); margin-bottom: .35rem; }
-    .jeltan-field .helptext, .jeltan-field small { display: block; color: var(--jeltan-muted); font-size: .82rem; margin-top: .3rem; }
-    .jeltan-field input[type=text], .jeltan-field input[type=email], .jeltan-field input[type=number],
-    .jeltan-field input[type=date], .jeltan-field select, .jeltan-field textarea, .form-control {
-        width: 100%; padding: .65rem .8rem; border: 1px solid var(--jeltan-line);
-        border-radius: 9px; font-size: .92rem; background: #fff;
-    }
-    .jeltan-field .errorlist { list-style: none; padding: 0; margin: .35rem 0 0; color: #b91c1c; font-size: .84rem; }
-    .jeltan-checkbox { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .8rem; font-size: .9rem; }
-    .jeltan-checkbox input { margin-top: .25rem; }
-
-    .jeltan-alert { padding: .9rem 1.1rem; border-radius: 10px; font-size: .9rem; margin-bottom: 1rem; }
-    .jeltan-alert-info { background: #eff6ff; color: #1e40af; }
-    .jeltan-alert-warn { background: #fffbeb; color: #92400e; }
-    .jeltan-alert-good { background: #f0fdf4; color: #166534; }
-    .jeltan-alert-bad { background: #fef2f2; color: #991b1b; }
-
-    .jeltan-grid { display: grid; gap: 1.2rem; }
-    @media (min-width: 768px) {
-        .jeltan-grid-2 { grid-template-columns: 1fr 1fr; }
-        .jeltan-grid-3 { grid-template-columns: repeat(3, 1fr); }
-        .jeltan-grid-sidebar { grid-template-columns: 2fr 1fr; }
-    }
-    .jeltan-article-title { color: var(--jeltan-ink); font-weight: 700; text-decoration: none; }
-    .jeltan-article-title:hover { color: var(--jeltan-accent); }
-</style>
+<link rel="alternate" type="application/rss+xml" title="{{ journal.short_name }} — latest articles"
+      href="{% url 'journal:articles_feed' %}">
+<link rel="alternate" type="application/atom+xml" title="{{ journal.short_name }} — latest articles (Atom)"
+      href="{% url 'journal:articles_atom_feed' %}">
 {% block journal_css %}{% endblock %}
 {% endblock %}
 
 {% block content %}
-<div class="jeltan-masthead">
+<a class="jeltan-skip" href="#jeltan-main">Skip to content</a>
+
+<header class="jeltan-masthead">
     <div class="jeltan-wrap">
-        <h1>{{ journal.name }}</h1>
-        {% if journal.tagline %}<p>{{ journal.tagline }}</p>{% endif %}
-        {% if journal.issn_online or journal.issn_print %}
-        <div class="jeltan-issn">
-            {% if journal.issn_online %}ISSN (online): {{ journal.issn_online }}{% endif %}
-            {% if journal.issn_print %} &nbsp;·&nbsp; ISSN (print): {{ journal.issn_print }}{% endif %}
-        </div>
-        {% endif %}
-        <nav class="jeltan-nav">
-            <a href="{% url 'journal:home' %}" class="{% if nav == 'home' %}active{% endif %}">Home</a>
-            <a href="{% url 'journal:about' %}" class="{% if nav == 'about' %}active{% endif %}">About</a>
-            <a href="{% url 'journal:issue_list' %}" class="{% if nav == 'issues' %}active{% endif %}">Issues</a>
-            <a href="{% url 'journal:editorial_board' %}" class="{% if nav == 'board' %}active{% endif %}">Editorial Board</a>
-            <a href="{% url 'journal:guidelines' %}" class="{% if nav == 'guidelines' %}active{% endif %}">For Authors</a>
-            <a href="{% url 'journal:policies' %}" class="{% if nav == 'policies' %}active{% endif %}">Policies</a>
-            <a href="{% url 'journal:search' %}" class="{% if nav == 'search' %}active{% endif %}">Search</a>
-            {% if user.is_authenticated %}
-            <a href="{% url 'journal:my_submissions' %}" class="{% if nav == 'mine' %}active{% endif %}">My Submissions</a>
+        <div class="jeltan-masthead-inner">
+            <div>
+                <h1 class="jeltan-wordmark"><a href="{% url 'journal:home' %}">{{ journal.name }}</a></h1>
+                <div class="jeltan-rule" aria-hidden="true"></div>
+                {% if journal.tagline %}<p class="jeltan-tagline">{{ journal.tagline }}</p>{% endif %}
+                <p class="jeltan-imprint">
+                    <span>Published by {{ journal.publisher }}</span>
+                    {% if journal.issn_online %}<span>ISSN {{ journal.issn_online }} (online)</span>{% endif %}
+                    {% if journal.issn_print %}<span>ISSN {{ journal.issn_print }} (print)</span>{% endif %}
+                    <span>Double-blind peer reviewed</span>
+                </p>
+            </div>
+
+            {% block masthead_aside %}
+            {% if current_issue %}
+            <div class="jeltan-masthead-aside jeltan-no-print">
+                <span>Current issue</span>
+                <strong>{{ current_issue.label }}</strong>
+            </div>
             {% endif %}
-            <a href="{% url 'journal:submit' %}" class="{% if nav == 'submit' %}active{% endif %}">Submit a Paper</a>
+            {% endblock %}
+        </div>
+
+        <nav class="jeltan-nav jeltan-no-print" aria-label="Journal">
+            <a href="{% url 'journal:home' %}" {% if nav == 'home' %}aria-current="page"{% endif %}>Home</a>
+            <a href="{% url 'journal:about' %}" {% if nav == 'about' %}aria-current="page"{% endif %}>About</a>
+            <a href="{% url 'journal:issue_list' %}" {% if nav == 'issues' %}aria-current="page"{% endif %}>Issues</a>
+            <a href="{% url 'journal:editorial_board' %}" {% if nav == 'board' %}aria-current="page"{% endif %}>Editorial Board</a>
+            <a href="{% url 'journal:guidelines' %}" {% if nav == 'guidelines' %}aria-current="page"{% endif %}>For Authors</a>
+            <a href="{% url 'journal:policies' %}" {% if nav == 'policies' %}aria-current="page"{% endif %}>Policies</a>
+            <a href="{% url 'journal:search' %}" {% if nav == 'search' %}aria-current="page"{% endif %}>Search</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'journal:my_submissions' %}" {% if nav == 'mine' %}aria-current="page"{% endif %}>My Submissions</a>
+            {% endif %}
+            {% if is_journal_editor %}
+            <a href="{% url 'journal:editor_dashboard' %}" {% if nav == 'editor' %}aria-current="page"{% endif %}>Editorial Office</a>
+            {% endif %}
+            <a class="jeltan-nav-cta" href="{% url 'journal:submit' %}">Submit a paper</a>
         </nav>
     </div>
-</div>
+</header>
 
-<div class="jeltan-body">
+<main class="jeltan-body" id="jeltan-main">
     <div class="jeltan-wrap">
         {% if messages %}
+        <div role="status" aria-live="polite">
             {% for message in messages %}
             <div class="jeltan-alert jeltan-alert-{% if message.tags == 'error' %}bad{% elif message.tags == 'warning' %}warn{% elif message.tags == 'success' %}good{% else %}info{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
+        </div>
         {% endif %}
 
         {% block journal_content %}{% endblock %}
+    </div>
+</main>
+
+<div class="jeltan-footer jeltan-no-print">
+    <div class="jeltan-wrap">
+        <div class="jeltan-footer-cols">
+            <div>
+                <h4>{{ journal.short_name }}</h4>
+                <p style="margin:0; line-height:1.7;">
+                    {{ journal.name }}<br>
+                    Published by {{ journal.publisher }}.
+                    {% if journal.issn_online %}<br>ISSN {{ journal.issn_online }}{% endif %}
+                </p>
+            </div>
+            <div>
+                <h4>For authors</h4>
+                <ul>
+                    <li><a href="{% url 'journal:guidelines' %}">Author guidelines</a></li>
+                    <li><a href="{% url 'journal:submit' %}">Submit a paper</a></li>
+                    <li><a href="{% url 'journal:policies' %}">Peer review &amp; ethics</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Explore</h4>
+                <ul>
+                    <li><a href="{% url 'journal:issue_list' %}">All issues</a></li>
+                    <li><a href="{% url 'journal:search' %}">Search articles</a></li>
+                    <li><a href="{% url 'journal:editorial_board' %}">Editorial board</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4>Machine readable</h4>
+                <ul>
+                    {% comment %}
+                    Advertised on the page as well as in the head: a librarian setting
+                    up a harvest looks for these, and should not have to read the HTML
+                    source to find them.
+                    {% endcomment %}
+                    <li><a href="{% url 'journal:oai' %}?verb=Identify">OAI-PMH endpoint</a></li>
+                    <li><a href="{% url 'journal:articles_feed' %}">RSS feed</a></li>
+                    <li><a href="{% url 'journal:django.contrib.sitemaps.views.sitemap' %}">Sitemap</a></li>
+                </ul>
+            </div>
+        </div>
+        {% if journal.contact_email %}
+        <p style="margin:2rem 0 0; padding-top:1.25rem; border-top:1px solid var(--j-line);">
+            Editorial office: <a href="mailto:{{ journal.contact_email }}">{{ journal.contact_email }}</a>
+        </p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

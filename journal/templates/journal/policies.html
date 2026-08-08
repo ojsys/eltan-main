@@ -2,63 +2,86 @@
 {% block journal_title %}Policies — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<div class="jeltan-card">
-    <h2 class="jeltan-h2">Peer review policy</h2>
-    <div class="jeltan-prose">
-        {% if journal.peer_review_policy %}{{ journal.peer_review_policy|safe }}
-        {% else %}
-        <p>{{ journal.short_name }} operates <strong>double-blind peer review</strong>: authors do not know who
-        reviewed their paper, and reviewers are not told who wrote it.</p>
-        <p>Every submission is first checked by an editor for scope, completeness and adherence to the author
-        guidelines. Papers that pass that check are sent to at least
-        {{ journal.reviews_required }} independent reviewer{{ journal.reviews_required|pluralize }}, who are
-        asked to report within {{ journal.review_days }} days. Reviewers recommend acceptance, minor revisions,
-        major revisions, or rejection, and the handling editor takes the decision.</p>
-        <p>Authors receive the reviewers' comments with the decision letter. Papers returned for revision are
-        resubmitted with a point-by-point response and may be sent back to the same reviewers.</p>
+<div class="jeltan-grid jeltan-grid-sidebar">
+    <div>
+        <h1 class="jeltan-h1">Policies</h1>
+
+        <section aria-labelledby="review" style="margin-bottom:2.5rem;">
+            <h2 class="jeltan-h2" id="review">Peer review</h2>
+            <div class="jeltan-prose">
+                {% if journal.peer_review_policy %}{{ journal.peer_review_policy|safe }}
+                {% else %}
+                <p>{{ journal.short_name }} operates <strong>double-blind peer review</strong>: authors do not
+                know who reviewed their paper, and reviewers are not told who wrote it.</p>
+                <p>Every submission is first checked by the editorial office for completeness, anonymity and
+                adherence to the author guidelines. Papers that pass are considered by an editor for scope,
+                then sent to at least {{ journal.reviews_required }} independent
+                reviewer{{ journal.reviews_required|pluralize }}, who are asked to report within
+                {{ journal.review_days }} days. Reviewers recommend acceptance, minor revisions, major
+                revisions, or rejection, and the handling editor takes the decision.</p>
+                <p>Authors receive the reviewers' comments with the decision letter. Papers returned for
+                revision are resubmitted with a point-by-point response and may go back to the same
+                reviewers.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <section aria-labelledby="ethics" style="margin-bottom:2.5rem;">
+            <h2 class="jeltan-h2" id="ethics">Publication ethics</h2>
+            <div class="jeltan-prose">
+                {% if journal.publication_ethics %}{{ journal.publication_ethics|safe }}
+                {% else %}
+                <p>Submitting to {{ journal.short_name }} means the work is original, has not been published
+                before, and is not under consideration by another journal. All sources must be cited, and text
+                taken from other work must be quoted and attributed.</p>
+                <p>Everyone listed as an author must have contributed to the work and approved the submission;
+                anyone who contributed but does not meet that bar should be acknowledged instead. Competing
+                interests and funding must be declared. Research involving people requires ethical approval
+                and informed consent.</p>
+                <p>Where an error is found after publication we will issue a correction; where the findings are
+                invalidated, the article will be retracted and the notice will say why.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <section aria-labelledby="access">
+            <h2 class="jeltan-h2" id="access">Open access and copyright</h2>
+            <div class="jeltan-prose">
+                {% if journal.open_access_policy %}{{ journal.open_access_policy|safe }}{% endif %}
+                {% if journal.copyright_notice %}{{ journal.copyright_notice|safe }}{% endif %}
+                {% if not journal.open_access_policy and not journal.copyright_notice %}
+                <p>Articles in {{ journal.short_name }} are free to read and download. Authors retain
+                copyright in their work.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        {% if not journal.apc_is_waived %}
+        <section aria-labelledby="apc" style="margin-top:2.5rem;">
+            <h2 class="jeltan-h2" id="apc">Article processing charge</h2>
+            <div class="jeltan-prose">
+                <p>A charge of {{ journal.apc_currency }} {{ journal.apc_amount|floatformat:2 }} becomes payable
+                once a paper has been accepted. There is no charge to submit, and the charge has no bearing on
+                the editorial decision — it is raised only after acceptance.</p>
+                <p>Authors who cannot meet the charge should write to the editorial office; waivers are
+                considered case by case.</p>
+            </div>
+        </section>
         {% endif %}
     </div>
-</div>
 
-<div class="jeltan-card">
-    <h2 class="jeltan-h2">Publication ethics</h2>
-    <div class="jeltan-prose">
-        {% if journal.publication_ethics %}{{ journal.publication_ethics|safe }}
-        {% else %}
-        <p>Submitting to {{ journal.short_name }} means the work is original, has not been published before, and
-        is not under consideration by another journal. All sources must be cited, and text taken from other work
-        must be quoted and attributed.</p>
-        <p>Everyone listed as an author must have contributed to the work and approved the submission; anyone who
-        contributed but does not meet that bar should be acknowledged instead. Competing interests and funding
-        must be declared. Research involving people requires ethical approval and informed consent.</p>
-        <p>Where an error is found after publication we will issue a correction; where the findings are
-        invalidated, the article will be retracted and the notice will say why.</p>
-        {% endif %}
-    </div>
+    <aside class="jeltan-no-print">
+        <div class="jeltan-sticky">
+            <div class="jeltan-card jeltan-card-quiet">
+                <h2 class="jeltan-h3">On this page</h2>
+                <ul style="list-style:none; padding:0; margin:0; line-height:2.1;">
+                    <li><a class="jeltan-small" href="#review">Peer review</a></li>
+                    <li><a class="jeltan-small" href="#ethics">Publication ethics</a></li>
+                    <li><a class="jeltan-small" href="#access">Open access and copyright</a></li>
+                    {% if not journal.apc_is_waived %}<li><a class="jeltan-small" href="#apc">Article processing charge</a></li>{% endif %}
+                </ul>
+            </div>
+        </div>
+    </aside>
 </div>
-
-<div class="jeltan-card">
-    <h2 class="jeltan-h2">Open access and copyright</h2>
-    <div class="jeltan-prose">
-        {% if journal.open_access_policy %}{{ journal.open_access_policy|safe }}{% endif %}
-        {% if journal.copyright_notice %}{{ journal.copyright_notice|safe }}{% endif %}
-        {% if not journal.open_access_policy and not journal.copyright_notice %}
-        <p>Articles in {{ journal.short_name }} are freely available to read and download. Authors retain
-        copyright in their work.</p>
-        {% endif %}
-    </div>
-</div>
-
-{% if not journal.apc_is_waived %}
-<div class="jeltan-card">
-    <h2 class="jeltan-h2">Article processing charge</h2>
-    <div class="jeltan-prose">
-        <p>An article processing charge of {{ journal.apc_currency }} {{ journal.apc_amount|floatformat:2 }}
-        becomes payable once a paper has been accepted. There is no charge to submit, and the charge has no
-        bearing on the editorial decision — it is raised only after acceptance.</p>
-        <p>Authors who cannot meet the charge should write to the editorial office; waivers are considered
-        case by case.</p>
-    </div>
-</div>
-{% endif %}
 {% endblock %}

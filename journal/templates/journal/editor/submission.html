@@ -22,8 +22,49 @@
             <div class="jeltan-muted" style="margin-top:.8rem;"><strong>Keywords:</strong> {{ submission.keywords }}</div>
         </div>
 
+        {% if needs_screening %}
+        <div class="jeltan-card" style="border-color:#fcd9a8; background:#fffdf7;">
+            <h3 style="font-size:1rem; font-weight:700; color:#92400e;">Awaiting administrative screening</h3>
+            <p class="jeltan-muted">
+                Check the files and confirm the manuscript is properly anonymised before it goes any further.
+                Reviewers cannot be invited until this is done.
+            </p>
+            <a href="{% url 'journal:screen' submission.pk %}" class="jeltan-btn">Screen this manuscript</a>
+        </div>
+        {% endif %}
+
+        {% if screening_reports %}
+        <div class="jeltan-card">
+            <h3 class="jeltan-h2">Screening</h3>
+            {% for report in screening_reports %}
+            <div style="padding:.8rem 0; border-top:1px solid var(--jeltan-line);">
+                {% if report.passed %}<span class="jeltan-badge jeltan-badge-good">Passed</span>
+                {% else %}<span class="jeltan-badge jeltan-badge-warn">Returned to author</span>{% endif %}
+                <span class="jeltan-muted" style="margin-left:.4rem;">
+                    Round {{ report.round }} · {{ report.screened_at|date:"j M Y" }}
+                    {% if report.screened_by %} · {{ report.screened_by.get_full_name|default:report.screened_by.email }}{% endif %}
+                </span>
+                {% if report.failed_checks %}
+                <ul class="jeltan-muted" style="margin:.5rem 0 0; padding-left:1.1rem; font-size:.86rem;">
+                    {% for item in report.failed_checks %}<li>{{ item }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+                {% if report.notes_to_author %}<div class="jeltan-muted" style="margin-top:.4rem;">{{ report.notes_to_author }}</div>{% endif %}
+                {% if report.internal_notes %}
+                <div class="jeltan-muted" style="margin-top:.4rem; font-style:italic;">Internal: {{ report.internal_notes }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="jeltan-card">
             <h3 class="jeltan-h2">Peer review</h3>
+            {% if not is_screened %}
+            <div class="jeltan-alert jeltan-alert-warn">
+                Reviewers cannot be invited until this round has passed administrative screening.
+            </div>
+            {% endif %}
             {% for assignment in assignments %}
             <div style="border-top:1px solid var(--jeltan-line); padding:1rem 0;">
                 <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
@@ -88,7 +129,9 @@
             {% endfor %}
 
             <div style="margin-top:1rem;">
+                {% if is_screened %}
                 <a href="{% url 'journal:invite_reviewer' submission.pk %}" class="jeltan-btn">Invite a reviewer</a>
+                {% endif %}
                 {% if not submission.has_enough_reviews and submission.status == 'under_review' %}
                 <span class="jeltan-muted" style="margin-left:.6rem;">
                     {{ journal.reviews_required }} review{{ journal.reviews_required|pluralize }} expected before deciding.
@@ -202,6 +245,41 @@
         {% if can_publish %}
         <div class="jeltan-card">
             <h3 style="font-size:1rem; font-weight:700;">Production</h3>
+
+            {% if in_production %}
+            <a href="{% url 'journal:upload_copyedit' submission.pk %}" class="jeltan-btn-ghost"
+               style="width:100%; text-align:center; margin-bottom:.5rem;">Upload copyedited file</a>
+            <a href="{% url 'journal:send_proof' submission.pk %}" class="jeltan-btn-ghost"
+               style="width:100%; text-align:center; margin-bottom:.5rem;">
+                {% if latest_proof %}Send another proof{% else %}Send a proof to the author{% endif %}
+            </a>
+            {% endif %}
+
+            {% if latest_proof %}
+            <div style="background:var(--jeltan-soft); border-radius:10px; padding:.8rem; margin:.6rem 0; font-size:.84rem;">
+                <div><strong>Proof v{{ latest_proof.version }}</strong> — {{ latest_proof.get_status_display }}</div>
+                {% if latest_proof.is_overdue %}
+                <div style="color:#b91c1c; margin-top:.2rem;">Overdue since {{ latest_proof.due_date|date:"j M Y" }}</div>
+                {% elif latest_proof.due_date and latest_proof.is_open %}
+                <div class="jeltan-muted" style="margin-top:.2rem;">Due {{ latest_proof.due_date|date:"j M Y" }}</div>
+                {% endif %}
+                {% if latest_proof.corrections %}
+                <div style="margin-top:.5rem;">
+                    <div style="font-weight:700; color:var(--jeltan-ink);">Corrections requested</div>
+                    <div class="jeltan-muted">{{ latest_proof.corrections|linebreaks }}</div>
+                </div>
+                {% endif %}
+                <a href="{% url 'journal:proof_file' latest_proof.pk %}" style="font-size:.84rem;">Download proof</a>
+            </div>
+            {% endif %}
+
+            {% if submission.status != 'proof_approved' and not article %}
+            <div class="jeltan-alert jeltan-alert-warn" style="font-size:.82rem;">
+                The author has not approved a proof yet. You can still publish, but the proof is their only
+                chance to catch a typesetting error before it becomes permanent.
+            </div>
+            {% endif %}
+
             <a href="{% url 'journal:publish' submission.pk %}" class="jeltan-btn" style="width:100%; text-align:center;">
                 {% if article %}Edit the published article{% else %}Publish this article{% endif %}
             </a>

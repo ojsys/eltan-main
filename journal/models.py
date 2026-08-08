@@ -258,32 +258,42 @@ class SubmissionQuerySet(models.QuerySet):
         return self.exclude(status__in=Submission.CLOSED_STATUSES)
 
     def needing_editor_attention(self):
-        return self.filter(status__in=[Submission.SUBMITTED, Submission.RESUBMITTED])
+        return self.filter(status__in=[
+            Submission.SUBMITTED, Submission.EDITORIAL_SCREENING, Submission.RESUBMITTED,
+        ])
 
 
 class Submission(models.Model):
     """A manuscript moving through peer review."""
 
     SUBMITTED = 'submitted'
+    RETURNED = 'returned'
+    EDITORIAL_SCREENING = 'editorial_screening'
     UNDER_REVIEW = 'under_review'
     MINOR_REVISION = 'minor_revision'
     MAJOR_REVISION = 'major_revision'
     RESUBMITTED = 'resubmitted'
     ACCEPTED = 'accepted'
     IN_PRODUCTION = 'in_production'
+    PROOF_REVIEW = 'proof_review'
+    PROOF_APPROVED = 'proof_approved'
     PUBLISHED = 'published'
     DESK_REJECTED = 'desk_rejected'
     REJECTED = 'rejected'
     WITHDRAWN = 'withdrawn'
 
     STATUS_CHOICES = [
-        (SUBMITTED, 'Submitted — awaiting desk check'),
+        (SUBMITTED, 'Submitted — awaiting administrative screening'),
+        (RETURNED, 'Returned to author for correction'),
+        (EDITORIAL_SCREENING, 'Passed screening — awaiting editorial decision'),
         (UNDER_REVIEW, 'Under peer review'),
         (MINOR_REVISION, 'Minor revisions requested'),
         (MAJOR_REVISION, 'Major revisions requested'),
         (RESUBMITTED, 'Revision submitted — awaiting editor'),
         (ACCEPTED, 'Accepted'),
-        (IN_PRODUCTION, 'In production'),
+        (IN_PRODUCTION, 'In production — copyediting'),
+        (PROOF_REVIEW, 'Proof with the author'),
+        (PROOF_APPROVED, 'Proof approved — ready to publish'),
         (PUBLISHED, 'Published'),
         (DESK_REJECTED, 'Desk rejected'),
         (REJECTED, 'Rejected after review'),
@@ -292,8 +302,10 @@ class Submission(models.Model):
 
     # Nothing further happens to a manuscript in one of these states.
     CLOSED_STATUSES = [PUBLISHED, DESK_REJECTED, REJECTED, WITHDRAWN]
-    # States where the ball is in the author's court.
+    # States where the ball is in the author's court for a revision.
     AUTHOR_ACTION_STATUSES = [MINOR_REVISION, MAJOR_REVISION]
+    # Production: accepted, but not yet public.
+    PRODUCTION_STATUSES = [IN_PRODUCTION, PROOF_REVIEW, PROOF_APPROVED]
 
     APC_NOT_APPLICABLE = 'not_applicable'
     APC_PENDING = 'pending'
@@ -438,7 +450,35 @@ class Submission(models.Model):
 
     @property
     def awaiting_author(self):
+        """Revisions have been asked for after review."""
         return self.status in self.AUTHOR_ACTION_STATUSES
+
+    @property
+    def needs_correction(self):
+        """Returned at administrative screening — not rejected, just incomplete."""
+        return self.status == self.RETURNED
+
+    @property
+    def awaiting_proof_approval(self):
+        return self.status == self.PROOF_REVIEW
+
+    @property
+    def is_screened(self):
+        """Whether administrative screening has been passed for this round.
+
+        Peer review cannot start before it has: screening is where a manuscript's
+        anonymity is actually verified, and sending an un-screened paper to a
+        reviewer is how an author's name reaches the person judging them.
+        """
+        return self.screening_reports.filter(round=self.current_round, passed=True).exists()
+
+    @property
+    def latest_screening(self):
+        return self.screening_reports.filter(round=self.current_round).first()
+
+    @property
+    def latest_proof(self):
+        return self.proofs.first()
 
     @property
     def completed_reviews(self):
@@ -702,6 +742,125 @@ class ReviewAssignment(models.Model):
         self.save(update_fields=['status'])
 
 
+class ScreeningReport(models.Model):
+    """The administrative check a manuscript passes before it reaches an editor.
+
+    This is the technical check, not a judgement on the work: are the files
+    there, is the manuscript actually anonymised, are the declarations complete.
+    Failing it returns the paper to the author for correction — it is not a
+    rejection, and the author resubmits into the same record.
+
+    It is recorded rather than done by eye because the anonymity check is the one
+    thing standing between an author's name and the reviewer judging them, and
+    'we always check' is not something a journal can demonstrate later.
+    """
+
+    CHECKS = [
+        ('files_complete', 'All required files are present and open correctly'),
+        ('is_anonymised', 'The manuscript is genuinely anonymised (no author names, affiliations, '
+                          'identifying acknowledgements or self-identifying citations)'),
+        ('title_page_separate', 'A separate title page carries the author details'),
+        ('abstract_and_keywords', 'The abstract and keywords meet the guidelines'),
+        ('declarations_complete', 'Declarations (originality, competing interests, ethics) are complete'),
+        ('references_formatted', 'References follow the journal style'),
+    ]
+
+    submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name='screening_reports')
+    round = models.PositiveIntegerField(default=1)
+
+    files_complete = models.BooleanField(default=False)
+    is_anonymised = models.BooleanField(default=False)
+    title_page_separate = models.BooleanField(default=False)
+    abstract_and_keywords = models.BooleanField(default=False)
+    declarations_complete = models.BooleanField(default=False)
+    references_formatted = models.BooleanField(default=False)
+
+    passed = models.BooleanField(default=False)
+    notes_to_author = models.TextField(
+        blank=True,
+        help_text='What the author must put right. Sent to them when the manuscript is returned.',
+    )
+    internal_notes = models.TextField(blank=True, help_text='Editorial office only.')
+
+    screened_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    screened_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-screened_at']
+        verbose_name = 'Screening Report'
+
+    def __str__(self):
+        return f"{self.submission.manuscript_id} — {'passed' if self.passed else 'returned'}"
+
+    @property
+    def failed_checks(self):
+        """The checklist items that were not ticked, for the letter to the author."""
+        return [label for field, label in self.CHECKS if not getattr(self, field)]
+
+
+class Proof(models.Model):
+    """A typeset proof sent to the author for approval before publication.
+
+    Versioned, because an author who asks for corrections gets a second proof —
+    and the record of what they were shown, and what they said about it, is the
+    journal's answer when a published error is disputed later.
+    """
+
+    SENT = 'sent'
+    APPROVED = 'approved'
+    CORRECTIONS_REQUESTED = 'corrections_requested'
+    SUPERSEDED = 'superseded'
+
+    STATUS_CHOICES = [
+        (SENT, 'With the author'),
+        (APPROVED, 'Approved by the author'),
+        (CORRECTIONS_REQUESTED, 'Corrections requested'),
+        (SUPERSEDED, 'Superseded by a later proof'),
+    ]
+
+    submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name='proofs')
+    version = models.PositiveIntegerField(default=1)
+    file = models.FileField(upload_to='proofs/%Y/', storage=private_storage)
+    original_name = models.CharField(max_length=255, blank=True)
+
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default=SENT)
+    note_to_author = models.TextField(blank=True)
+    due_date = models.DateField(
+        null=True, blank=True,
+        help_text='Proofs are usually returned within a few days.',
+    )
+
+    sent_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+    corrections = models.TextField(blank=True, help_text="The author's corrections, in their words.")
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-version']
+
+    def __str__(self):
+        return f"{self.submission.manuscript_id} proof v{self.version}"
+
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.version:
+            self.version = self.submission.proofs.count() + 1
+        if self.file and not self.original_name:
+            self.original_name = self.file.name.rsplit('/', 1)[-1][:255]
+        super().save(*args, **kwargs)
+
+    @property
+    def is_open(self):
+        return self.status == self.SENT
+
+    @property
+    def is_overdue(self):
+        return bool(self.is_open and self.due_date and self.due_date < timezone.now().date())
+
+
 class EditorialDecision(models.Model):
     """A decision recorded by an editor, with the letter the author was sent."""
 
@@ -721,7 +880,8 @@ class EditorialDecision(models.Model):
         (REJECT, 'Reject'),
     ]
 
-    # What each decision does to the manuscript.
+    # What each decision does to the manuscript. A decision that does not move
+    # the paper is not a decision, so every choice appears here.
     RESULTING_STATUS = {
         SEND_FOR_REVIEW: Submission.UNDER_REVIEW,
         DESK_REJECT: Submission.DESK_REJECTED,
@@ -905,6 +1065,11 @@ class Article(models.Model):
         if self.first_page and self.last_page:
             return f"{self.first_page}–{self.last_page}"
         return str(self.first_page or '')
+
+    @property
+    def keyword_list(self):
+        """Keywords as a list — indexing metadata needs one tag per keyword."""
+        return [keyword.strip() for keyword in (self.keywords or '').split(',') if keyword.strip()]
 
     @property
     def citation(self):

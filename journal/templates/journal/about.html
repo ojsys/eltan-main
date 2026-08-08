@@ -2,26 +2,45 @@
 {% block journal_title %}About — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<div class="jeltan-card">
-    <h2 class="jeltan-h2">Aims and scope</h2>
-    <div class="jeltan-prose">
-        {% if journal.aims_and_scope %}{{ journal.aims_and_scope|safe }}
-        {% else %}<p class="jeltan-muted">The aims and scope have not been published yet.</p>{% endif %}
+<div class="jeltan-grid jeltan-grid-sidebar">
+    <div>
+        <h1 class="jeltan-h1">About the journal</h1>
+        <section aria-labelledby="scope">
+            <h2 class="jeltan-eyebrow jeltan-eyebrow-muted" id="scope">Aims and scope</h2>
+            <div class="jeltan-prose">
+                {% if journal.aims_and_scope %}{{ journal.aims_and_scope|safe }}
+                {% else %}
+                <p>{{ journal.name }} publishes peer-reviewed research on the teaching and learning of
+                English in Nigeria and beyond — classroom practice, teacher education, language policy,
+                materials and assessment.</p>
+                {% endif %}
+            </div>
+        </section>
     </div>
-</div>
 
-<div class="jeltan-card">
-    <h2 class="jeltan-h2">Journal information</h2>
-    <div class="jeltan-table-wrap">
-        <table class="jeltan-table">
-            <tr><th>Title</th><td>{{ journal.name }}</td></tr>
-            <tr><th>Publisher</th><td>{{ journal.publisher }}</td></tr>
-            {% if journal.issn_online %}<tr><th>ISSN (online)</th><td>{{ journal.issn_online }}</td></tr>{% endif %}
-            {% if journal.issn_print %}<tr><th>ISSN (print)</th><td>{{ journal.issn_print }}</td></tr>{% endif %}
-            <tr><th>Review model</th><td>Double-blind peer review</td></tr>
-            <tr><th>Reviews per paper</th><td>At least {{ journal.reviews_required }}</td></tr>
-            {% if journal.contact_email %}<tr><th>Contact</th><td><a href="mailto:{{ journal.contact_email }}">{{ journal.contact_email }}</a></td></tr>{% endif %}
-        </table>
-    </div>
+    <aside>
+        <div class="jeltan-card">
+            <h2 class="jeltan-h3">Journal information</h2>
+            <table class="jeltan-deflist">
+                <tr><th>Title</th><td>{{ journal.name }}</td></tr>
+                <tr><th>Publisher</th><td>{{ journal.publisher }}</td></tr>
+                {% if journal.issn_online %}<tr><th>ISSN (online)</th><td class="jeltan-mono">{{ journal.issn_online }}</td></tr>{% endif %}
+                {% if journal.issn_print %}<tr><th>ISSN (print)</th><td class="jeltan-mono">{{ journal.issn_print }}</td></tr>{% endif %}
+                <tr><th>Review model</th><td>Double-blind</td></tr>
+                <tr><th>Reviews per paper</th><td>At least {{ journal.reviews_required }}</td></tr>
+                <tr><th>Access</th><td>Free to read</td></tr>
+                {% if journal.contact_email %}
+                <tr><th>Contact</th><td><a href="mailto:{{ journal.contact_email }}">{{ journal.contact_email }}</a></td></tr>
+                {% endif %}
+            </table>
+        </div>
+        <div class="jeltan-card jeltan-card-quiet">
+            <h2 class="jeltan-h3">Harvesting our metadata</h2>
+            <p class="jeltan-muted" style="margin-bottom:.8rem;">
+                {{ journal.short_name }} exposes its metadata over OAI-PMH for indexing services.
+            </p>
+            <a class="jeltan-btn-ghost jeltan-btn-block jeltan-btn-sm" href="{% url 'journal:oai' %}?verb=Identify">OAI-PMH endpoint</a>
+        </div>
+    </aside>
 </div>
 {% endblock %}

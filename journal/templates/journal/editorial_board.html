@@ -2,23 +2,34 @@
 {% block journal_title %}Editorial Board — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<h2 class="jeltan-h2">Editorial board</h2>
+<h1 class="jeltan-h1">Editorial board</h1>
+<p class="jeltan-muted" style="max-width:58ch; margin-bottom:2rem;">
+    The editors and board members responsible for {{ journal.name }}.
+</p>
+
 <div class="jeltan-grid jeltan-grid-2">
     {% for member in board %}
-    <div class="jeltan-card" style="display:flex; gap:1rem;">
+    <div class="jeltan-card" style="display:flex; gap:1.1rem;">
         {% if member.photo %}
-        <img src="{{ member.photo.url }}" alt="{{ member.name }}" style="width:76px; height:76px; border-radius:12px; object-fit:cover;">
+        <img src="{{ member.photo.url }}" alt=""
+             style="width:74px; height:74px; border-radius:50%; object-fit:cover; flex:none;">
         {% endif %}
-        <div>
-            <div style="font-weight:700; color:var(--jeltan-ink);">{{ member.name }}</div>
-            <div style="color:var(--jeltan-accent); font-size:.86rem; font-weight:600;">{{ member.position }}</div>
-            {% if member.affiliation %}<div class="jeltan-muted">{{ member.affiliation }}{% if member.country %}, {{ member.country }}{% endif %}</div>{% endif %}
-            {% if member.orcid %}<div class="jeltan-muted" style="font-size:.8rem;">ORCID: {{ member.orcid }}</div>{% endif %}
-            {% if member.bio %}<p class="jeltan-muted" style="margin-top:.5rem;">{{ member.bio }}</p>{% endif %}
+        <div style="min-width:0;">
+            <p class="jeltan-eyebrow" style="margin-bottom:.3rem;">{{ member.position }}</p>
+            <div style="font-family:var(--j-serif); font-size:1.15rem; font-weight:600; color:var(--j-ink); line-height:1.3;">
+                {{ member.name }}
+            </div>
+            {% if member.affiliation %}
+            <p class="jeltan-muted" style="margin:.3rem 0 0;">{{ member.affiliation }}{% if member.country %}, {{ member.country }}{% endif %}</p>
+            {% endif %}
+            {% if member.orcid %}<p class="jeltan-small jeltan-mono" style="margin:.25rem 0 0;">ORCID {{ member.orcid }}</p>{% endif %}
+            {% if member.bio %}<p class="jeltan-muted" style="margin-top:.6rem;">{{ member.bio }}</p>{% endif %}
         </div>
     </div>
     {% empty %}
-    <p class="jeltan-muted">The editorial board has not been published yet.</p>
+    <div class="jeltan-card" style="grid-column:1/-1; text-align:center; padding:3rem;">
+        <p class="jeltan-muted">The editorial board has not been published yet.</p>
+    </div>
     {% endfor %}
 </div>
 {% endblock %}

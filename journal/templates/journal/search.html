@@ -2,39 +2,55 @@
 {% block journal_title %}Search — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<div class="jeltan-card">
-    <form method="get" style="display:flex; gap:.6rem; flex-wrap:wrap;">
-        <input type="text" name="q" value="{{ query }}" placeholder="Search by title, abstract, keyword or author"
-               class="form-control" style="flex:1; min-width:240px;">
-        <button type="submit" class="jeltan-btn">Search</button>
-    </form>
-</div>
+<h1 class="jeltan-h1">Search {{ journal.short_name }}</h1>
+<p class="jeltan-muted" style="max-width:56ch;">
+    Search the full archive by title, abstract, keyword or author.
+</p>
+
+<form method="get" role="search" style="display:flex; gap:.6rem; flex-wrap:wrap; margin:1.5rem 0 2rem;">
+    <label class="jeltan-skip" for="q">Search articles</label>
+    <input type="search" name="q" id="q" value="{{ query }}"
+           placeholder="e.g. reading comprehension, or Obi"
+           style="flex:1; min-width:240px;">
+    <button type="submit" class="jeltan-btn">Search</button>
+</form>
 
 {% if query %}
-<p class="jeltan-muted">{{ result_count }} result{{ result_count|pluralize }} for &ldquo;{{ query }}&rdquo;</p>
+<p class="jeltan-eyebrow jeltan-eyebrow-muted">
+    {{ result_count }} result{{ result_count|pluralize }} for &ldquo;{{ query }}&rdquo;
+</p>
 {% endif %}
 
-{% for article in page_obj %}
+{% if page_obj %}
 <div class="jeltan-card">
-    <a href="{{ article.get_absolute_url }}" class="jeltan-article-title">{{ article.title }}</a>
-    <div class="jeltan-muted" style="margin-top:.3rem;">
-        {{ article.author_list }}{% if article.issue %} · {{ article.issue.label }}{% endif %}
+    {% for article in page_obj %}
+    <div class="jeltan-entry">
+        {% if article.section %}<p class="jeltan-eyebrow">{{ article.section.name }}</p>{% endif %}
+        <a class="jeltan-entry-title" href="{{ article.get_absolute_url }}">{{ article.title }}</a>
+        <p class="jeltan-authors">{{ article.author_list }}</p>
+        <p class="jeltan-prose" style="font-size:.98rem; margin:.5rem 0 0;">{{ article.abstract|truncatewords:42 }}</p>
+        <p class="jeltan-entry-meta" style="margin-top:.5rem;">
+            {% if article.issue %}<span>{{ article.issue.label }}</span>{% endif %}
+            {% if article.page_range %}<span>pp. {{ article.page_range }}</span>{% endif %}
+        </p>
     </div>
-    <p class="jeltan-muted" style="margin-top:.5rem;">{{ article.abstract|truncatewords:45 }}</p>
+    {% endfor %}
 </div>
-{% empty %}
-{% if query %}<p class="jeltan-muted">Nothing matched that search.</p>{% endif %}
-{% endfor %}
+{% elif query %}
+<div class="jeltan-card" style="text-align:center; padding:3rem;">
+    <p class="jeltan-muted">Nothing matched that search. Try a broader term, or an author's surname.</p>
+</div>
+{% endif %}
 
 {% if page_obj.has_other_pages %}
-<div style="display:flex; gap:.5rem; justify-content:center; margin-top:1.5rem;">
+<nav class="jeltan-btn-row" style="justify-content:center; margin-top:2rem;" aria-label="Search results pages">
     {% if page_obj.has_previous %}
-    <a class="jeltan-btn-ghost" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">Previous</a>
+    <a class="jeltan-btn-ghost" href="?q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}">&larr; Previous</a>
     {% endif %}
-    <span class="jeltan-muted" style="padding:.65rem;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    <span class="jeltan-small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
     {% if page_obj.has_next %}
-    <a class="jeltan-btn-ghost" href="?q={{ query }}&page={{ page_obj.next_page_number }}">Next</a>
+    <a class="jeltan-btn-ghost" href="?q={{ query|urlencode }}&page={{ page_obj.next_page_number }}">Next &rarr;</a>
     {% endif %}
-</div>
+</nav>
 {% endif %}
 {% endblock %}

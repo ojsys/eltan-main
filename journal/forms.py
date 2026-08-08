@@ -9,7 +9,9 @@ from .models import (
     ArticleAuthor,
     EditorialDecision,
     Issue,
+    Proof,
     ReviewAssignment,
+    ScreeningReport,
     Section,
     Submission,
     SubmissionAuthor,
@@ -206,6 +208,171 @@ class RevisionForm(BootstrapFormMixin, forms.Form):
         )
 
 
+class ScreeningForm(BootstrapFormMixin, forms.ModelForm):
+    """The administrative screening checklist.
+
+    Failing the check returns the manuscript to the author, so the notes are
+    required in that case — 'returned' with no explanation is a message the
+    author cannot act on.
+    """
+
+    class Meta:
+        model = ScreeningReport
+        fields = [
+            'files_complete', 'is_anonymised', 'title_page_separate',
+            'abstract_and_keywords', 'declarations_complete', 'references_formatted',
+            'notes_to_author', 'internal_notes',
+        ]
+        widgets = {
+            'notes_to_author': forms.Textarea(attrs={'rows': 5}),
+            'internal_notes': forms.Textarea(attrs={'rows': 3}),
+        }
+        labels = dict(ScreeningReport.CHECKS)
+        help_texts = {
+            'notes_to_author': 'Required if you are returning the manuscript. Say exactly what to put right.',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 'outcome' rather than a bare 'passed' checkbox: an editor should have to
+        # say what they are doing, not leave a box unticked by accident.
+        self.fields['outcome'] = forms.ChoiceField(
+            label='Outcome',
+            choices=[
+                ('pass', 'Passes screening — send to editorial screening'),
+                ('return', 'Return to the author for correction'),
+            ],
+            widget=forms.RadioSelect,
+            initial='pass',
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('outcome') == 'return' and not (cleaned.get('notes_to_author') or '').strip():
+            self.add_error(
+                'notes_to_author',
+                'Tell the author what needs correcting — they cannot act on a bare "returned".',
+            )
+        if cleaned.get('outcome') == 'pass' and not cleaned.get('is_anonymised'):
+            self.add_error(
+                'is_anonymised',
+                'A manuscript cannot pass screening until it is confirmed anonymised — '
+                'reviewers must not be able to identify the authors.',
+            )
+        return cleaned
+
+
+class CorrectedSubmissionForm(BootstrapFormMixin, forms.Form):
+    """What an author uploads after a manuscript is returned at screening.
+
+    Deliberately not the revision form: nothing has been reviewed yet, so there
+    are no reviewers to respond to, and this does not open a new review round.
+    """
+
+    corrected_manuscript = forms.FileField(
+        label='Corrected anonymised manuscript',
+        help_text='With the points raised by the editorial office put right.',
+    )
+    corrected_title_page = forms.FileField(
+        label='Title page (optional)',
+        required=False,
+        help_text='Only if the title page also needed correcting.',
+    )
+    note_to_editor = forms.CharField(
+        label='What you changed',
+        widget=forms.Textarea(attrs={'rows': 4}),
+        help_text='A short note on how you addressed each point.',
+    )
+
+    def clean_corrected_manuscript(self):
+        return validate_upload(
+            self.cleaned_data.get('corrected_manuscript'), MANUSCRIPT_EXTENSIONS, 'The manuscript',
+        )
+
+    def clean_corrected_title_page(self):
+        return validate_upload(
+            self.cleaned_data.get('corrected_title_page'), MANUSCRIPT_EXTENSIONS, 'The title page',
+        )
+
+
+class CopyeditForm(BootstrapFormMixin, forms.Form):
+    """The copyedited manuscript, uploaded by the editorial office."""
+
+    copyedited_file = forms.FileField(
+        label='Copyedited manuscript',
+        help_text='The manuscript after copyediting. Kept on file; not sent to the author by itself.',
+    )
+    note = forms.CharField(
+        label='Note (optional)', required=False, widget=forms.Textarea(attrs={'rows': 2}),
+    )
+
+    def clean_copyedited_file(self):
+        return validate_upload(
+            self.cleaned_data.get('copyedited_file'), SUPPLEMENTARY_EXTENSIONS, 'The copyedited file',
+        )
+
+
+class ProofForm(BootstrapFormMixin, forms.ModelForm):
+    """An editor sending a typeset proof to the author for approval."""
+
+    class Meta:
+        model = Proof
+        fields = ['file', 'note_to_author', 'due_date']
+        widgets = {
+            'note_to_author': forms.Textarea(attrs={'rows': 4}),
+            'due_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+        labels = {
+            'file': 'Typeset proof (PDF)',
+            'note_to_author': 'Note to the author',
+            'due_date': 'Corrections due by',
+        }
+        help_texts = {
+            'note_to_author': 'What to check, and what may still be changed at this stage.',
+        }
+
+    def clean_file(self):
+        return validate_upload(self.cleaned_data.get('file'), ['.pdf'], 'The proof')
+
+    def clean_due_date(self):
+        due_date = self.cleaned_data.get('due_date')
+        if due_date and due_date < timezone.now().date():
+            raise forms.ValidationError('That date has already passed.')
+        return due_date
+
+
+class ProofResponseForm(BootstrapFormMixin, forms.Form):
+    """The author approving a proof, or asking for corrections.
+
+    Approval is the last point at which an error can be caught, so the two
+    outcomes are an explicit choice rather than two buttons that look alike.
+    """
+
+    APPROVE = 'approve'
+    CORRECTIONS = 'corrections'
+
+    response = forms.ChoiceField(
+        label='Your response',
+        choices=[
+            (APPROVE, 'I approve this proof for publication'),
+            (CORRECTIONS, 'Corrections are needed before publication'),
+        ],
+        widget=forms.RadioSelect,
+    )
+    corrections = forms.CharField(
+        label='Corrections',
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 8}),
+        help_text='List each correction with the page and line it applies to.',
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('response') == self.CORRECTIONS and not (cleaned.get('corrections') or '').strip():
+            self.add_error('corrections', 'List the corrections you need.')
+        return cleaned
+
+
 class ReviewerInviteForm(BootstrapFormMixin, forms.ModelForm):
     """An editor inviting someone to review."""
 
@@ -344,6 +511,12 @@ class DecisionForm(BootstrapFormMixin, forms.ModelForm):
         # Desk decisions and post-review decisions are different moments; offering
         # all six choices at both invites the wrong one to be clicked.
         if submission and submission.status == Submission.SUBMITTED:
+            # Before screening, the only thing an editor may do is reject: a
+            # rejected paper never reaches a reviewer, so it cannot leak an
+            # identity, while sending one for review before the anonymity check
+            # is exactly the mistake screening exists to prevent.
+            allowed = [EditorialDecision.DESK_REJECT]
+        elif submission and submission.status == Submission.EDITORIAL_SCREENING:
             allowed = [EditorialDecision.SEND_FOR_REVIEW, EditorialDecision.DESK_REJECT]
         else:
             allowed = [

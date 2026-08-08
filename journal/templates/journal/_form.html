@@ -1,7 +1,7 @@
 {% comment %}
 Renders a form's fields with the journal's field styling. Include with:
     {% include 'journal/_form.html' with form=form %}
-Checkboxes get the label beside the box; everything else gets it above.
+Checkboxes put the label beside the box; everything else puts it above.
 {% endcomment %}
 {% if form.non_field_errors %}
 <div class="jeltan-alert jeltan-alert-bad">
@@ -14,7 +14,7 @@ Checkboxes get the label beside the box; everything else gets it above.
     <div class="jeltan-checkbox">
         {{ field }}
         <div>
-            <label for="{{ field.id_for_label }}" style="font-weight:600;">{{ field.label }}</label>
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
             {% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}
             {{ field.errors }}
         </div>
@@ -22,7 +22,7 @@ Checkboxes get the label beside the box; everything else gets it above.
     {% else %}
     <div class="jeltan-field">
         <label for="{{ field.id_for_label }}">
-            {{ field.label }}{% if field.field.required %} <span style="color:#b91c1c;">*</span>{% endif %}
+            {{ field.label }}{% if field.field.required %} <span class="jeltan-req" title="Required">*</span>{% endif %}
         </label>
         {{ field }}
         {% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}

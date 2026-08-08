@@ -1,0 +1,53 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Proof — {{ submission.manuscript_id }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
+    <h2 class="jeltan-h2" style="margin-top:.6rem;">Your proof is ready</h2>
+    <p class="jeltan-muted">{{ submission.title }}</p>
+    <p class="jeltan-muted">
+        Proof version {{ proof.version }}{% if proof.due_date %} · corrections due by
+        <strong>{{ proof.due_date|date:"j F Y" }}</strong>{% endif %}
+    </p>
+
+    <div class="jeltan-alert jeltan-alert-warn" style="margin-top:1rem;">
+        This is the last point at which an error can be corrected. Please check the author names and
+        affiliations, the abstract, all tables and figures, and every reference. Corrections at this stage
+        are limited to errors of fact, typesetting and spelling — the text cannot be rewritten.
+    </div>
+
+    <a href="{% url 'journal:proof_file' proof.pk %}" class="jeltan-btn">Download the proof</a>
+</div>
+
+{% if proof.note_to_author %}
+<div class="jeltan-card">
+    <h3 style="font-size:1rem; font-weight:700;">Note from the production team</h3>
+    <div class="jeltan-prose">{{ proof.note_to_author|linebreaks }}</div>
+</div>
+{% endif %}
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="jeltan-card">
+        <h3 class="jeltan-h2">Your response</h3>
+        {% include 'journal/_form.html' with form=form %}
+        <button type="submit" class="jeltan-btn">Send my response</button>
+        <a href="{% url 'journal:submission_detail' submission.pk %}" class="jeltan-btn-ghost">Back</a>
+    </div>
+</form>
+
+{% if submission.proofs.count > 1 %}
+<div class="jeltan-card">
+    <h3 class="jeltan-h2">Earlier proofs</h3>
+    {% for earlier in submission.proofs.all %}
+    {% if earlier.pk != proof.pk %}
+    <div style="padding:.6rem 0; border-top:1px solid var(--jeltan-line); font-size:.88rem;">
+        <a href="{% url 'journal:proof_file' earlier.pk %}">Version {{ earlier.version }}</a>
+        <span class="jeltan-muted"> — {{ earlier.get_status_display }}, sent {{ earlier.sent_at|date:"j M Y" }}</span>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

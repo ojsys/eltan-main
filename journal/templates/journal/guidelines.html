@@ -4,75 +4,96 @@
 {% block journal_content %}
 <div class="jeltan-grid jeltan-grid-sidebar">
     <div>
-        <div class="jeltan-card">
-            <h2 class="jeltan-h2">Author guidelines</h2>
-            <div class="jeltan-prose">
-                {% if journal.author_guidelines %}{{ journal.author_guidelines|safe }}
-                {% else %}<p class="jeltan-muted">The author guidelines have not been published yet.</p>{% endif %}
-            </div>
-        </div>
+        <h1 class="jeltan-h1">Author guidelines</h1>
 
-        <div class="jeltan-card">
-            <h2 class="jeltan-h2">What you will need to submit</h2>
+        {% if journal.author_guidelines %}
+        <div class="jeltan-prose">{{ journal.author_guidelines|safe }}</div>
+        {% endif %}
+
+        <section style="margin-top:2.5rem;" aria-labelledby="need">
+            <h2 class="jeltan-h2" id="need">What you will need</h2>
             <div class="jeltan-prose">
-                <p><strong>1. An anonymised manuscript.</strong> Review is double-blind, so this file must not
-                name you: remove author names and affiliations, acknowledgements, funding details that identify
-                you, and any self-citation phrased as "as we showed in&hellip;".</p>
-                <p><strong>2. A separate title page.</strong> Title, every author, their affiliations, and which
-                one is the corresponding author. Reviewers never see this file.</p>
-                <p><strong>3. An abstract</strong> of 50&ndash;250 words and 3&ndash;6 keywords.</p>
-                <p><strong>4. Declarations.</strong> That the work is original and not under review elsewhere,
-                any competing interests, funding, and ethical approval where people took part in the research.</p>
-                <p><strong>5. Supplementary material</strong> such as instruments or data, if you have any.</p>
+                <h3>1. An anonymised manuscript</h3>
+                <p>Review is double-blind, so this file must not identify you. Remove author names and
+                affiliations, identifying acknowledgements, funding details that give you away, and any
+                self-citation phrased as &ldquo;as we showed in&hellip;&rdquo;. The editorial office checks
+                this before your paper goes to reviewers, and will return it to you if anything is left in.</p>
+
+                <h3>2. A separate title page</h3>
+                <p>Title, every author, their affiliations, and which one is the corresponding author.
+                Reviewers never see this file.</p>
+
+                <h3>3. An abstract and keywords</h3>
+                <p>Between 50 and 250 words, and 3 to 6 keywords.</p>
+
+                <h3>4. Declarations</h3>
+                <p>That the work is original and not under review elsewhere, any competing interests,
+                funding, and ethical approval where people took part in the research.</p>
+
+                <h3>5. Supplementary material</h3>
+                <p>Instruments, data or appendices, if you have any.</p>
             </div>
-        </div>
+        </section>
 
         {% if sections %}
-        <div class="jeltan-card">
-            <h2 class="jeltan-h2">Sections</h2>
-            {% for section in sections %}
-            <div style="padding:.8rem 0; border-top:1px solid var(--jeltan-line);">
-                <strong style="color:var(--jeltan-ink);">{{ section.name }}</strong>
-                {% if section.peer_reviewed %}<span class="jeltan-badge jeltan-badge-info">Peer reviewed</span>
-                {% else %}<span class="jeltan-badge">Editor reviewed</span>{% endif %}
-                {% if section.description %}<div class="jeltan-muted">{{ section.description }}</div>{% endif %}
+        <section style="margin-top:2.5rem;" aria-labelledby="sections">
+            <h2 class="jeltan-h2" id="sections">Sections</h2>
+            <div class="jeltan-card">
+                {% for section in sections %}
+                <div class="jeltan-entry">
+                    <div style="display:flex; gap:.7rem; align-items:baseline; flex-wrap:wrap;">
+                        <span class="jeltan-h3" style="margin:0;">{{ section.name }}</span>
+                        {% if section.peer_reviewed %}<span class="jeltan-badge jeltan-badge-info">Peer reviewed</span>
+                        {% else %}<span class="jeltan-badge">Editor reviewed</span>{% endif %}
+                    </div>
+                    {% if section.description %}<p class="jeltan-muted" style="margin:.4rem 0 0;">{{ section.description }}</p>{% endif %}
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
+        </section>
         {% endif %}
     </div>
 
     <aside>
-        <div class="jeltan-card">
-            <h3 style="font-size:1rem; font-weight:700;">How your paper travels</h3>
-            <ol class="jeltan-muted" style="padding-left:1.1rem; line-height:1.9;">
-                <li>Submission and editorial check</li>
-                <li>Double-blind peer review</li>
-                <li>Decision and revisions</li>
-                <li>Acceptance</li>
-                <li>Article processing charge</li>
-                <li>Production and proofs</li>
-                <li>Publication in an issue</li>
-            </ol>
-        </div>
-        <div class="jeltan-card">
-            <h3 style="font-size:1rem; font-weight:700;">Article processing charge</h3>
-            {% if journal.apc_is_waived %}
-            <p class="jeltan-muted">There is currently no charge to publish in {{ journal.short_name }}.</p>
-            {% else %}
-            <p class="jeltan-muted">
-                {{ journal.apc_currency }} {{ journal.apc_amount|floatformat:2 }}, payable by the corresponding
-                author only after a paper has been accepted. Nothing is charged to submit, and payment plays no
-                part in the review decision.
-            </p>
-            {% endif %}
-        </div>
-        <div class="jeltan-card">
-            {% if journal.is_accepting_submissions %}
-            <a href="{% url 'journal:submit' %}" class="jeltan-btn" style="width:100%; text-align:center;">Submit a paper</a>
-            {% else %}
-            <p class="jeltan-muted">{{ journal.closed_message }}</p>
-            {% endif %}
+        <div class="jeltan-sticky">
+            <div class="jeltan-card jeltan-card-paper">
+                {% if journal.is_accepting_submissions %}
+                <h2 class="jeltan-h3">Ready to submit?</h2>
+                <p class="jeltan-muted" style="margin-bottom:1rem;">Nothing is charged to submit.</p>
+                <a class="jeltan-btn jeltan-btn-block" href="{% url 'journal:submit' %}">Submit a paper</a>
+                {% else %}
+                <h2 class="jeltan-h3">Submissions closed</h2>
+                <p class="jeltan-muted">{{ journal.closed_message }}</p>
+                {% endif %}
+            </div>
+
+            <div class="jeltan-card">
+                <h2 class="jeltan-h3">How your paper travels</h2>
+                <ol class="jeltan-muted" style="padding-left:1.15rem; line-height:2; margin:0;">
+                    <li>Submission</li>
+                    <li>Administrative screening</li>
+                    <li>Editorial screening</li>
+                    <li>Double-blind peer review</li>
+                    <li>Decision and revisions</li>
+                    <li>Acceptance</li>
+                    {% if not journal.apc_is_waived %}<li>Article processing charge</li>{% endif %}
+                    <li>Copyediting and proofs</li>
+                    <li>Publication</li>
+                </ol>
+            </div>
+
+            <div class="jeltan-card">
+                <h2 class="jeltan-h3">Article processing charge</h2>
+                {% if journal.apc_is_waived %}
+                <p class="jeltan-muted">There is currently no charge to publish in {{ journal.short_name }}.</p>
+                {% else %}
+                <p class="jeltan-muted">
+                    {{ journal.apc_currency }} {{ journal.apc_amount|floatformat:2 }}, payable only after a
+                    paper has been accepted. Nothing is charged to submit, and the charge plays no part in
+                    the editorial decision.
+                </p>
+                {% endif %}
+            </div>
         </div>
     </aside>
 </div>

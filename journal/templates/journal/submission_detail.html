@@ -2,111 +2,150 @@
 {% block journal_title %}{{ submission.manuscript_id }} — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<div class="jeltan-card">
-    <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
-    <h2 class="jeltan-h2" style="margin:.6rem 0 .3rem;">{{ submission.title }}</h2>
-    <div class="jeltan-muted">{{ submission.author_list }}</div>
-    <div style="margin-top:.8rem;">
-        {% if submission.status == 'published' %}<span class="jeltan-badge jeltan-badge-good">{{ submission.get_status_display }}</span>
-        {% elif submission.status in 'desk_rejected rejected withdrawn' %}<span class="jeltan-badge jeltan-badge-bad">{{ submission.get_status_display }}</span>
-        {% elif submission.awaiting_author %}<span class="jeltan-badge jeltan-badge-warn">{{ submission.get_status_display }}</span>
-        {% else %}<span class="jeltan-badge jeltan-badge-info">{{ submission.get_status_display }}</span>{% endif %}
-        <span class="jeltan-muted" style="margin-left:.5rem;">Round {{ submission.current_round }} · {{ submission.section.name }}</span>
+<header class="jeltan-article-head">
+    <p class="jeltan-eyebrow jeltan-mono">{{ submission.manuscript_id }}</p>
+    <h1 class="jeltan-h1" style="max-width:34ch;">{{ submission.title }}</h1>
+    <p class="jeltan-authors">{{ submission.author_list }}</p>
+    <p class="jeltan-entry-meta" style="margin-top:.7rem;">
+        <span>{{ submission.section.name }}</span>
+        <span>Round {{ submission.current_round }}</span>
+        <span>Submitted {{ submission.submitted_at|date:"j M Y" }}</span>
+    </p>
+    <div style="margin-top:1rem;">
+        {% if submission.status == 'published' %}
+            <span class="jeltan-badge jeltan-badge-good">{{ submission.get_status_display }}</span>
+        {% elif submission.status == 'desk_rejected' or submission.status == 'rejected' or submission.status == 'withdrawn' %}
+            <span class="jeltan-badge jeltan-badge-bad">{{ submission.get_status_display }}</span>
+        {% elif submission.awaiting_author or submission.needs_correction or submission.awaiting_proof_approval %}
+            <span class="jeltan-badge jeltan-badge-warn">{{ submission.get_status_display }}</span>
+        {% else %}
+            <span class="jeltan-badge jeltan-badge-info">{{ submission.get_status_display }}</span>
+        {% endif %}
     </div>
-</div>
+</header>
 
 {% if can_revise %}
-<div class="jeltan-card" style="border-color:#fcd9a8; background:#fffdf7;">
-    <h3 style="font-size:1rem; font-weight:700; color:#92400e;">Revisions have been requested</h3>
-    <p class="jeltan-muted">Upload your revised manuscript together with a point-by-point response to the reviewers.</p>
-    <a href="{% url 'journal:upload_revision' submission.pk %}" class="jeltan-btn">Upload my revision</a>
+<div class="jeltan-card jeltan-card-action">
+    <h2 class="jeltan-h3">Revisions have been requested</h2>
+    <p class="jeltan-muted" style="margin-bottom:1rem;">
+        Upload your revised manuscript together with a point-by-point response to the reviewers.
+    </p>
+    <a class="jeltan-btn" href="{% url 'journal:upload_revision' submission.pk %}">Upload my revision</a>
+</div>
+{% endif %}
+
+{% if submission.needs_correction %}
+<div class="jeltan-card jeltan-card-action">
+    <h2 class="jeltan-h3">Returned for correction</h2>
+    <p class="jeltan-muted" style="margin-bottom:1rem;">
+        Your manuscript has <strong>not</strong> been rejected. The editorial office found a few things to
+        put right before it goes to the editors.
+    </p>
+    <a class="jeltan-btn" href="{% url 'journal:resubmit' submission.pk %}">See what to correct</a>
+</div>
+{% endif %}
+
+{% if submission.awaiting_proof_approval %}
+<div class="jeltan-card jeltan-card-action">
+    <h2 class="jeltan-h3">Your proof is ready for approval</h2>
+    <p class="jeltan-muted" style="margin-bottom:1rem;">
+        This is the last point at which an error can be corrected before publication.
+        {% if submission.latest_proof.due_date %}Corrections are due by
+        {{ submission.latest_proof.due_date|date:"j F Y" }}.{% endif %}
+    </p>
+    <a class="jeltan-btn" href="{% url 'journal:proof_response' submission.pk %}">Review the proof</a>
 </div>
 {% endif %}
 
 {% if submission.apc_is_due %}
-<div class="jeltan-card" style="border-color:#fcd9a8; background:#fffdf7;">
-    <h3 style="font-size:1rem; font-weight:700; color:#92400e;">Article processing charge</h3>
-    <p class="jeltan-muted">
-        Your paper has been accepted. The charge of {{ journal.apc_currency }} {{ submission.apc_amount|floatformat:2 }}
-        is payable before it goes into production.
+<div class="jeltan-card jeltan-card-action">
+    <h2 class="jeltan-h3">Article processing charge</h2>
+    <p class="jeltan-muted" style="margin-bottom:1rem;">
+        Your paper has been accepted. The charge of {{ journal.apc_currency }}
+        {{ submission.apc_amount|floatformat:2 }} is payable before it goes into production.
     </p>
-    <a href="{% url 'journal:pay_apc' submission.pk %}" class="jeltan-btn">Pay now</a>
+    <a class="jeltan-btn" href="{% url 'journal:pay_apc' submission.pk %}">Pay now</a>
 </div>
 {% endif %}
 
 <div class="jeltan-grid jeltan-grid-sidebar">
     <div>
         {% for decision in decisions %}
-        <div class="jeltan-card">
-            <h3 style="font-size:1rem; font-weight:700; color:var(--jeltan-ink);">
-                Decision — {{ decision.get_decision_display }}
-            </h3>
-            <div class="jeltan-muted" style="font-size:.82rem;">Round {{ decision.round }} · {{ decision.decided_at|date:"j F Y" }}</div>
-            <div class="jeltan-prose" style="margin-top:.8rem;">{{ decision.letter_to_author|linebreaks }}</div>
-        </div>
+        <section class="jeltan-card">
+            <p class="jeltan-eyebrow">Decision · round {{ decision.round }}</p>
+            <h2 class="jeltan-h2" style="margin-bottom:.3rem;">{{ decision.get_decision_display }}</h2>
+            <p class="jeltan-entry-meta">{{ decision.decided_at|date:"j F Y" }}</p>
+            <div class="jeltan-prose" style="margin-top:1rem;">{{ decision.letter_to_author|linebreaks }}</div>
+        </section>
         {% endfor %}
 
         {% if shared_reviews %}
-        <div class="jeltan-card">
-            <h3 class="jeltan-h2">Reviewers' comments</h3>
+        <section class="jeltan-card">
+            <h2 class="jeltan-h2">Reviewers' comments</h2>
             <p class="jeltan-muted">Reviews are anonymous — reviewers are identified by number only.</p>
             {% for review in shared_reviews %}
-            <div style="border-top:1px solid var(--jeltan-line); padding-top:1rem; margin-top:1rem;">
-                <div style="font-weight:700; color:var(--jeltan-ink);">Reviewer {{ forloop.counter }}</div>
-                <div class="jeltan-muted" style="font-size:.82rem;">Recommendation: {{ review.get_recommendation_display }}</div>
-                <div class="jeltan-prose" style="margin-top:.6rem;">{{ review.comments_to_author|linebreaks }}</div>
+            <div class="jeltan-report" style="margin-top:1.1rem;">
+                <p class="jeltan-eyebrow" style="margin-bottom:.3rem;">Reviewer {{ forloop.counter }}</p>
+                <p class="jeltan-small" style="margin:0 0 .7rem;">Recommendation: {{ review.get_recommendation_display }}</p>
+                <div class="jeltan-prose" style="font-size:1rem;">{{ review.comments_to_author|linebreaks }}</div>
             </div>
             {% endfor %}
-        </div>
+        </section>
         {% endif %}
 
-        <div class="jeltan-card">
-            <h3 class="jeltan-h2">History</h3>
-            {% for event in events %}
-            <div style="display:flex; gap:.9rem; padding:.7rem 0; border-top:1px solid var(--jeltan-line);">
-                <div class="jeltan-muted" style="min-width:110px; font-size:.82rem;">{{ event.created_at|date:"j M Y" }}</div>
-                <div>
-                    <div style="font-size:.92rem; color:var(--jeltan-ink);">{{ event.event }}</div>
-                    {% if event.note %}<div class="jeltan-muted">{{ event.note }}</div>{% endif %}
+        <section class="jeltan-card">
+            <h2 class="jeltan-h2">History</h2>
+            <div class="jeltan-timeline">
+                {% for event in events %}
+                <div class="jeltan-event {% if forloop.last %}jeltan-event-now{% endif %}">
+                    <div class="jeltan-event-title">{{ event.event }}</div>
+                    <div class="jeltan-event-time">{{ event.created_at|date:"j F Y" }}</div>
+                    {% if event.note %}<div class="jeltan-event-note">{{ event.note }}</div>{% endif %}
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
+        </section>
     </div>
 
     <aside>
-        <div class="jeltan-card">
-            <h3 style="font-size:1rem; font-weight:700;">Your files</h3>
-            {% for file in submission.files.all %}
-            {% if file.kind != 'review_attachment' %}
-            <div style="padding:.6rem 0; border-top:1px solid var(--jeltan-line); font-size:.86rem;">
-                <a href="{% url 'journal:submission_file' file.pk %}">{{ file.get_kind_display }}</a>
-                <div class="jeltan-muted" style="font-size:.78rem;">Round {{ file.round }} · {{ file.uploaded_at|date:"j M Y" }}</div>
+        <div class="jeltan-sticky">
+            <div class="jeltan-card">
+                <h2 class="jeltan-h3">Your files</h2>
+                {% for file in submission.files.all %}
+                {% if file.kind != 'review_attachment' %}
+                <div style="padding:.6rem 0; border-top:1px solid var(--j-line);">
+                    <a class="jeltan-small" style="font-weight:500; color:var(--j-ink);"
+                       href="{% url 'journal:submission_file' file.pk %}">{{ file.get_kind_display }}</a>
+                    <div class="jeltan-event-time">Round {{ file.round }} · {{ file.uploaded_at|date:"j M Y" }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="jeltan-card">
+                <h2 class="jeltan-h3">Details</h2>
+                <table class="jeltan-deflist">
+                    <tr><th>Submitted</th><td>{{ submission.submitted_at|date:"j M Y" }}</td></tr>
+                    <tr><th>Section</th><td>{{ submission.section.name }}</td></tr>
+                    <tr><th>Round</th><td>{{ submission.current_round }}</td></tr>
+                    {% if submission.apc_status != 'not_applicable' %}
+                    <tr><th>Charge</th><td>{{ submission.get_apc_status_display }}</td></tr>
+                    {% endif %}
+                </table>
+            </div>
+
+            {% if submission.is_open and submission.submitter == user %}
+            <div class="jeltan-card jeltan-card-quiet">
+                <form method="post" action="{% url 'journal:withdraw_submission' submission.pk %}"
+                      onsubmit="return confirm('Withdraw this manuscript? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="jeltan-btn-ghost jeltan-btn-danger jeltan-btn-block">
+                        Withdraw this submission
+                    </button>
+                </form>
             </div>
             {% endif %}
-            {% endfor %}
         </div>
-
-        <div class="jeltan-card">
-            <table class="jeltan-table">
-                <tr><th>Submitted</th><td>{{ submission.submitted_at|date:"j M Y" }}</td></tr>
-                <tr><th>Section</th><td>{{ submission.section.name }}</td></tr>
-                <tr><th>Round</th><td>{{ submission.current_round }}</td></tr>
-                {% if submission.apc_status != 'not_applicable' %}
-                <tr><th>Charge</th><td>{{ submission.get_apc_status_display }}</td></tr>
-                {% endif %}
-            </table>
-        </div>
-
-        {% if submission.is_open and submission.submitter == user %}
-        <div class="jeltan-card">
-            <form method="post" action="{% url 'journal:withdraw_submission' submission.pk %}"
-                  onsubmit="return confirm('Withdraw this manuscript? This cannot be undone.');">
-                {% csrf_token %}
-                <button type="submit" class="jeltan-btn-ghost jeltan-btn-danger" style="width:100%;">Withdraw this submission</button>
-            </form>
-        </div>
-        {% endif %}
     </aside>
 </div>
 {% endblock %}

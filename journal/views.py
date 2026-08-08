@@ -9,20 +9,28 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from . import emails
-from .forms import RevisionForm, SubmissionAuthorFormSet, SubmissionForm
+from .citations import to_bibtex, to_ris
+from .forms import (
+    CorrectedSubmissionForm,
+    ProofResponseForm,
+    RevisionForm,
+    SubmissionAuthorFormSet,
+    SubmissionForm,
+)
 from .models import (
     Article,
     EditorialBoardMember,
     Issue,
     JournalRole,
     JournalSettings,
+    Proof,
     ReviewAssignment,
     Section,
     Submission,
@@ -51,6 +59,7 @@ def home(request):
         .order_by('-published_at')[:6]
     )
     return render(request, 'journal/home.html', journal_context(
+        nav='home',
         current_issue=current_issue,
         current_issue_articles=current_issue.public_articles.prefetch_related('authors') if current_issue else [],
         recent_articles=recent_articles,
@@ -60,36 +69,38 @@ def home(request):
 
 
 def about(request):
-    return render(request, 'journal/about.html', journal_context())
+    return render(request, 'journal/about.html', journal_context(nav='about'))
 
 
 def editorial_board(request):
     return render(request, 'journal/editorial_board.html', journal_context(
+        nav='board',
         board=EditorialBoardMember.objects.filter(is_active=True),
     ))
 
 
 def guidelines(request):
     return render(request, 'journal/guidelines.html', journal_context(
+        nav='guidelines',
         sections=Section.objects.filter(is_active=True),
     ))
 
 
 def policies(request):
     """Peer review, publication ethics, open access and copyright in one place."""
-    return render(request, 'journal/policies.html', journal_context())
+    return render(request, 'journal/policies.html', journal_context(nav='policies'))
 
 
 def issue_list(request):
     issues = Issue.objects.filter(is_published=True).prefetch_related('articles')
-    return render(request, 'journal/issue_list.html', journal_context(issues=issues))
+    return render(request, 'journal/issue_list.html', journal_context(nav='issues', issues=issues))
 
 
 def issue_detail(request, slug):
     issue = get_object_or_404(Issue, slug=slug, is_published=True)
     articles = issue.public_articles.select_related('section').prefetch_related('authors')
     return render(request, 'journal/issue_detail.html', journal_context(
-        issue=issue, articles=articles,
+        nav='issues', issue=issue, articles=articles,
     ))
 
 
@@ -102,7 +113,7 @@ def article_detail(request, slug):
     # Counted with an UPDATE rather than a save() so two readers at once cannot
     # each write back the same stale number.
     Article.objects.filter(pk=article.pk).update(view_count=article.view_count + 1)
-    return render(request, 'journal/article_detail.html', journal_context(article=article))
+    return render(request, 'journal/article_detail.html', journal_context(nav='issues', article=article))
 
 
 def article_pdf(request, slug):
@@ -116,6 +127,26 @@ def article_pdf(request, slug):
         as_attachment=True,
         filename=f'{article.slug}.pdf',
     )
+
+
+def article_citation(request, slug, fmt):
+    """Download an article's citation for a reference manager.
+
+    Served as a file so that Zotero, Mendeley and EndNote import it on click
+    rather than showing it as text the reader has to copy.
+    """
+    article = get_object_or_404(
+        Article.objects.prefetch_related('authors').select_related('issue'),
+        slug=slug, is_published=True,
+    )
+    if fmt == 'bib':
+        body, content_type, extension = to_bibtex(article), 'application/x-bibtex', 'bib'
+    else:
+        body, content_type, extension = to_ris(article), 'application/x-research-info-systems', 'ris'
+
+    response = HttpResponse(body, content_type=f'{content_type}; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{article.slug}.{extension}"'
+    return response
 
 
 def search(request):
@@ -134,6 +165,7 @@ def search(request):
 
     page = Paginator(articles.order_by('-published_at'), 10).get_page(request.GET.get('page'))
     return render(request, 'journal/search.html', journal_context(
+        nav='search',
         query=query, page_obj=page, result_count=articles.count() if query else None,
     ))
 
@@ -182,7 +214,7 @@ def submit(request):
         )
         return redirect('journal:submission_detail', pk=submission.pk)
 
-    return render(request, 'journal/submit.html', journal_context(form=form, formset=formset))
+    return render(request, 'journal/submit.html', journal_context(nav='submit', form=form, formset=formset))
 
 
 def _save_authors(formset, submission, user):
@@ -226,7 +258,7 @@ def my_submissions(request):
         .select_related('section')
         .prefetch_related('authors')
     )
-    return render(request, 'journal/my_submissions.html', journal_context(submissions=submissions))
+    return render(request, 'journal/my_submissions.html', journal_context(nav='mine', submissions=submissions))
 
 
 @login_required
@@ -251,6 +283,7 @@ def submission_detail(request, pk):
         )
 
     return render(request, 'journal/submission_detail.html', journal_context(
+        nav='mine',
         submission=submission,
         events=submission.events.filter(is_public=True).select_related('actor'),
         decisions=submission.decisions.select_related('editor'),
@@ -297,6 +330,108 @@ def upload_revision(request, pk):
     return render(request, 'journal/upload_revision.html', journal_context(
         submission=submission, form=form,
     ))
+
+
+@login_required
+def resubmit(request, pk):
+    """Upload a corrected manuscript after it was returned at screening.
+
+    Unlike a revision, this does not open a new round: nothing has been reviewed,
+    so the corrected paper goes back into the screening queue at the same round
+    with its manuscript ID and history intact.
+    """
+    submission = get_object_or_404(Submission, pk=pk, submitter=request.user)
+    if not submission.needs_correction:
+        messages.error(request, 'This manuscript has not been returned for correction.')
+        return redirect('journal:submission_detail', pk=submission.pk)
+
+    form = CorrectedSubmissionForm(request.POST or None, request.FILES or None)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            _store_upload(submission, form.cleaned_data['corrected_manuscript'],
+                          SubmissionFile.ANONYMISED_MANUSCRIPT, request.user)
+            if form.cleaned_data.get('corrected_title_page'):
+                _store_upload(submission, form.cleaned_data['corrected_title_page'],
+                              SubmissionFile.TITLE_PAGE, request.user)
+
+            submission.status = Submission.SUBMITTED
+            submission.save(update_fields=['status', 'updated_at'])
+            submission.log(
+                'Corrected manuscript resubmitted',
+                actor=request.user,
+                note=form.cleaned_data['note_to_editor'],
+            )
+
+        emails.send_editors_corrected_submission(submission, request)
+        messages.success(request, 'Thank you — your corrected manuscript is back with the editorial office.')
+        return redirect('journal:submission_detail', pk=submission.pk)
+
+    return render(request, 'journal/resubmit.html', journal_context(
+        submission=submission,
+        form=form,
+        screening=submission.latest_screening,
+    ))
+
+
+@login_required
+def proof_response(request, pk):
+    """The author approving a proof, or asking for corrections."""
+    submission = get_object_or_404(Submission, pk=pk, submitter=request.user)
+    proof = submission.proofs.filter(status=Proof.SENT).first()
+
+    if not proof:
+        messages.info(request, 'There is no proof waiting for your approval.')
+        return redirect('journal:submission_detail', pk=submission.pk)
+
+    form = ProofResponseForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        approved = form.cleaned_data['response'] == ProofResponseForm.APPROVE
+        with transaction.atomic():
+            proof.status = Proof.APPROVED if approved else Proof.CORRECTIONS_REQUESTED
+            proof.corrections = form.cleaned_data.get('corrections', '')
+            proof.responded_at = timezone.now()
+            proof.save(update_fields=['status', 'corrections', 'responded_at'])
+
+            # Corrections put the paper back with the production team, who will
+            # send a further proof; approval clears it for publication.
+            submission.status = Submission.PROOF_APPROVED if approved else Submission.IN_PRODUCTION
+            submission.save(update_fields=['status', 'updated_at'])
+            submission.log(
+                f'Proof v{proof.version} approved by the author' if approved
+                else f'Corrections requested on proof v{proof.version}',
+                actor=request.user,
+                note='' if approved else proof.corrections,
+            )
+
+        emails.send_editors_proof_response(proof, request)
+        messages.success(
+            request,
+            'Thank you — your approval has been recorded and your article will be published shortly.'
+            if approved else
+            'Thank you — your corrections have been sent to the production team.',
+        )
+        return redirect('journal:submission_detail', pk=submission.pk)
+
+    return render(request, 'journal/proof_response.html', journal_context(
+        submission=submission, proof=proof, form=form,
+    ))
+
+
+@login_required
+def proof_file(request, pk):
+    """Download a proof — the author it was sent to, or an editor."""
+    proof = get_object_or_404(Proof.objects.select_related('submission'), pk=pk)
+    if proof.submission.submitter != request.user and not JournalRole.is_editor(request.user):
+        raise Http404('No such file.')
+
+    try:
+        handle = proof.file.open('rb')
+    except FileNotFoundError:
+        raise Http404('That file is no longer on the server.')
+    return FileResponse(
+        handle, as_attachment=True,
+        filename=proof.original_name or f'proof-v{proof.version}.pdf',
+    )
 
 
 @login_required

@@ -1,0 +1,788 @@
+/* ==========================================================================
+   JELTAN — Journal of ELTAN
+   Serif reading surface, sans interface.
+
+   The split is the whole design: everything a reader reads — titles, abstracts,
+   article text, citations — is set in a serif at a generous measure, because
+   that is what long-form scholarly text wants and what signals a journal rather
+   than a blog. Everything a person *operates* — navigation, buttons, forms,
+   tables, the editor's queue — is sans, because controls should read as
+   controls. Poppins is already loaded by the site, so the journal borrows it
+   for the interface and adds one serif family for reading.
+   ========================================================================== */
+
+:root {
+    /* Ink. Navy rather than pure black: softer on paper-white, and it lets the
+       accent sit beside it without the page looking like a warning. */
+    --j-ink:        #10202f;
+    --j-ink-2:      #35485c;
+    --j-muted:      #64788a;
+    --j-faint:      #8c9cab;
+
+    --j-bg:         #ffffff;
+    --j-surface:    #f6f8fa;
+    --j-surface-2:  #eef2f6;
+    --j-paper:      #fcfbf9;   /* warm tint for reading panels */
+
+    --j-line:       #e4e9ee;
+    --j-line-2:     #cfd8e0;
+
+    /* ELTAN orange. Two values on purpose: the bright brand tone has only ~3:1
+       against white, so it is used for rules, marks and active states, never for
+       text or as a button ground. --j-accent-strong is the accessible one. */
+    --j-accent:        #E67918;
+    --j-accent-strong: #B45309;
+    --j-accent-wash:   #fdf6ee;
+
+    --j-good:       #15803d;
+    --j-good-wash:  #f971fdf4;
+    --j-warn:       #b45309;
+    --j-warn-wash:  #fffbeb;
+    --j-bad:        #b91c1c;
+    --j-bad-wash:   #fef2f2;
+    --j-info:       #1d4ed8;
+    --j-info-wash:  #eff6ff;
+
+    --j-serif: 'Source Serif 4', 'Source Serif Pro', Charter, 'Iowan Old Style',
+               Georgia, 'Times New Roman', serif;
+    --j-sans:  'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+               Helvetica, Arial, sans-serif;
+    --j-mono:  ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+               'Liberation Mono', monospace;
+
+    --j-radius:    10px;
+    --j-radius-sm: 7px;
+    --j-measure:   68ch;      /* the reading column */
+    --j-wrap:      1140px;
+
+    --j-shadow: 0 1px 2px rgba(16, 32, 47, .04), 0 8px 24px rgba(16, 32, 47, .05);
+}
+
+/* Fix a typo-safe fallback: the good wash must be a colour. */
+:root { --j-good-wash: #f0fdf4; }
+
+/* --------------------------------------------------------------- structure */
+
+.jeltan-wrap {
+    max-width: var(--j-wrap);
+    margin: 0 auto;
+    padding: 0 1.25rem;
+}
+
+.jeltan-skip {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--j-ink);
+    color: #fff;
+    padding: .75rem 1.1rem;
+    border-radius: 0 0 var(--j-radius-sm) 0;
+    z-index: 100;
+    font-family: var(--j-sans);
+    font-size: .9rem;
+}
+.jeltan-skip:focus { left: 0; color: #fff; }
+
+/* ---------------------------------------------------------------- masthead */
+
+.jeltan-masthead {
+    background: var(--j-bg);
+    border-bottom: 1px solid var(--j-line);
+    padding: 2.75rem 0 0;
+}
+
+.jeltan-masthead-inner {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.jeltan-wordmark {
+    font-family: var(--j-serif);
+    font-weight: 600;
+    font-size: clamp(1.9rem, 1.35rem + 2vw, 2.9rem);
+    line-height: 1.1;
+    letter-spacing: -.015em;
+    color: var(--j-ink);
+    margin: 0;
+}
+.jeltan-wordmark a { color: inherit; text-decoration: none; }
+.jeltan-wordmark a:hover { color: var(--j-ink); }
+
+/* The short rule under the wordmark is the one place the bright brand orange
+   earns its keep: decorative, so its low contrast costs nothing. */
+.jeltan-rule {
+    width: 62px;
+    height: 3px;
+    background: var(--j-accent);
+    border-radius: 2px;
+    margin: .85rem 0 .7rem;
+}
+
+.jeltan-tagline {
+    font-family: var(--j-serif);
+    font-size: 1.05rem;
+    font-style: italic;
+    color: var(--j-ink-2);
+    margin: 0 0 .5rem;
+    max-width: 46ch;
+}
+
+.jeltan-imprint {
+    font-family: var(--j-sans);
+    font-size: .78rem;
+    color: var(--j-muted);
+    letter-spacing: .01em;
+    margin: 0;
+}
+.jeltan-imprint span + span::before { content: '·'; margin: 0 .5rem; color: var(--j-line-2); }
+
+.jeltan-masthead-aside {
+    font-family: var(--j-sans);
+    font-size: .78rem;
+    color: var(--j-muted);
+    text-align: right;
+    padding-bottom: .3rem;
+}
+.jeltan-masthead-aside strong { display: block; color: var(--j-ink); font-size: .95rem; font-weight: 600; }
+
+/* Once the masthead wraps onto two rows, the right-aligned block is no longer
+   beside anything — it just hangs mid-page. Align it with everything else. */
+@media (max-width: 700px) {
+    .jeltan-masthead { padding-top: 1.75rem; }
+    .jeltan-masthead-aside { text-align: left; padding-bottom: 0; }
+    .jeltan-masthead-inner { gap: 1.25rem; }
+}
+
+/* ------------------------------------------------------------------ navbar */
+
+.jeltan-nav {
+    display: flex;
+    gap: .25rem;
+    flex-wrap: wrap;
+    margin-top: 1.6rem;
+    font-family: var(--j-sans);
+}
+
+.jeltan-nav a {
+    position: relative;
+    display: block;
+    padding: .8rem .05rem;
+    margin-right: 1.5rem;
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--j-ink-2);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: color .15s ease, border-color .15s ease;
+}
+.jeltan-nav a:hover { color: var(--j-ink); border-bottom-color: var(--j-line-2); }
+.jeltan-nav a.active,
+.jeltan-nav a[aria-current='page'] {
+    color: var(--j-ink);
+    font-weight: 600;
+    border-bottom-color: var(--j-accent);
+}
+.jeltan-nav .jeltan-nav-cta {
+    margin-left: auto;
+    margin-right: 0;
+    align-self: center;
+    padding: .55rem 1.05rem;
+    background: var(--j-accent-strong);
+    color: #fff;
+    border-radius: var(--j-radius-sm);
+    border-bottom: 0;
+    font-weight: 600;
+}
+.jeltan-nav .jeltan-nav-cta:hover { background: #93400a; color: #fff; border-bottom-color: transparent; }
+
+/* On a narrow screen the nav wraps, and `margin-left:auto` would strand the
+   button on a line of its own pushed to the right. Let it sit inline instead. */
+@media (max-width: 700px) {
+    .jeltan-nav { gap: 0 .35rem; margin-top: 1rem; }
+    .jeltan-nav a { padding: .55rem .05rem; margin-right: 1.1rem; font-size: .85rem; }
+    .jeltan-nav .jeltan-nav-cta { margin: .6rem 0 .4rem; }
+}
+
+/* -------------------------------------------------------------------- body */
+
+.jeltan-body {
+    background: var(--j-bg);
+    padding: 2.5rem 0 5rem;
+    font-family: var(--j-sans);
+    color: var(--j-ink-2);
+}
+
+.jeltan-body h1, .jeltan-body h2, .jeltan-body h3 { color: var(--j-ink); }
+
+.jeltan-h1 {
+    font-family: var(--j-serif);
+    font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.25rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -.012em;
+    margin: 0 0 .75rem;
+}
+
+.jeltan-h2 {
+    font-family: var(--j-serif);
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--j-ink);
+    margin: 0 0 1rem;
+}
+
+.jeltan-h3 {
+    font-family: var(--j-sans);
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--j-ink);
+    margin: 0 0 .6rem;
+}
+
+/* Small caps label — section names, field groups, metadata headings. */
+.jeltan-eyebrow {
+    font-family: var(--j-sans);
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--j-accent-strong);
+    margin: 0 0 .5rem;
+}
+.jeltan-eyebrow-muted { color: var(--j-muted); }
+
+.jeltan-muted { color: var(--j-muted); font-size: .9rem; line-height: 1.6; }
+.jeltan-small { font-size: .8rem; color: var(--j-muted); }
+.jeltan-mono { font-family: var(--j-mono); font-size: .85em; letter-spacing: -.01em; }
+
+/* The reading surface. Everything an author or reader actually reads. */
+.jeltan-prose {
+    font-family: var(--j-serif);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: var(--j-ink-2);
+    max-width: var(--j-measure);
+}
+.jeltan-prose p { margin: 0 0 1.1em; }
+.jeltan-prose h2 {
+    font-family: var(--j-serif);
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--j-ink);
+    margin: 1.8em 0 .6em;
+}
+.jeltan-prose h3 {
+    font-family: var(--j-sans);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--j-ink);
+    margin: 1.6em 0 .5em;
+}
+.jeltan-prose ul, .jeltan-prose ol { margin: 0 0 1.1em; padding-left: 1.3em; }
+.jeltan-prose li { margin-bottom: .45em; }
+.jeltan-prose a { color: var(--j-ink); text-decoration: underline; text-decoration-color: var(--j-accent); text-underline-offset: .18em; }
+.jeltan-prose a:hover { color: var(--j-accent-strong); }
+.jeltan-prose strong { color: var(--j-ink); font-weight: 600; }
+.jeltan-prose blockquote {
+    margin: 1.4em 0;
+    padding-left: 1.1em;
+    border-left: 3px solid var(--j-accent);
+    font-style: italic;
+    color: var(--j-ink-2);
+}
+
+/* ------------------------------------------------------------------- cards */
+
+.jeltan-card {
+    background: var(--j-bg);
+    border: 1px solid var(--j-line);
+    border-radius: var(--j-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+.jeltan-card-quiet { background: var(--j-surface); border-color: transparent; }
+.jeltan-card-paper { background: var(--j-paper); border-color: #eee7dc; }
+.jeltan-card-flush { padding: 0; overflow: hidden; }
+
+/* A card that needs the reader to do something. */
+.jeltan-card-action {
+    border-color: #f0d8b4;
+    background: var(--j-accent-wash);
+}
+.jeltan-card-action .jeltan-h3 { color: #8a4a06; }
+
+/* ----------------------------------------------------------------- buttons */
+
+.jeltan-btn,
+.jeltan-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    font-family: var(--j-sans);
+    font-size: .875rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: .8rem 1.25rem;
+    border-radius: var(--j-radius-sm);
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.jeltan-btn { background: var(--j-accent-strong); color: #fff; }
+.jeltan-btn:hover { background: #93400a; color: #fff; }
+
+.jeltan-btn-ghost { background: var(--j-bg); color: var(--j-ink); border-color: var(--j-line-2); }
+.jeltan-btn-ghost:hover { background: var(--j-surface); color: var(--j-ink); border-color: var(--j-muted); }
+
+.jeltan-btn-navy { background: var(--j-ink); color: #fff; }
+.jeltan-btn-navy:hover { background: #061524; color: #fff; }
+
+.jeltan-btn-danger { color: var(--j-bad); border-color: #f3c8c8; background: #fff; }
+.jeltan-btn-danger:hover { background: var(--j-bad-wash); color: var(--j-bad); border-color: var(--j-bad); }
+
+.jeltan-btn-block { width: 100%; }
+.jeltan-btn-sm { padding: .55rem .85rem; font-size: .8rem; }
+
+.jeltan-btn-row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+/* ------------------------------------------------------------------ badges */
+
+.jeltan-badge {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--j-sans);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    padding: .3rem .6rem;
+    border-radius: 999px;
+    background: var(--j-surface-2);
+    color: var(--j-ink-2);
+    white-space: nowrap;
+}
+.jeltan-badge-info { background: var(--j-info-wash); color: var(--j-info); }
+.jeltan-badge-warn { background: var(--j-warn-wash); color: var(--j-warn); }
+.jeltan-badge-good { background: var(--j-good-wash); color: var(--j-good); }
+.jeltan-badge-bad  { background: var(--j-bad-wash);  color: var(--j-bad); }
+.jeltan-badge-id   { font-family: var(--j-mono); font-size: .72rem; letter-spacing: 0; }
+
+/* ------------------------------------------------------------------ tables */
+
+.jeltan-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.jeltan-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--j-sans);
+    font-size: .875rem;
+    font-variant-numeric: tabular-nums;
+}
+.jeltan-table th {
+    text-align: left;
+    font-size: .7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--j-muted);
+    padding: .65rem .6rem;
+    border-bottom: 1px solid var(--j-line-2);
+    white-space: nowrap;
+}
+.jeltan-table td {
+    padding: .85rem .6rem;
+    border-bottom: 1px solid var(--j-line);
+    vertical-align: top;
+    color: var(--j-ink-2);
+}
+.jeltan-table tbody tr:hover td { background: var(--j-surface); }
+.jeltan-table tr:last-child td { border-bottom: 0; }
+
+/* Definition table — label/value pairs in a sidebar. */
+.jeltan-deflist { width: 100%; font-family: var(--j-sans); font-size: .85rem; }
+.jeltan-deflist th {
+    text-align: left; font-weight: 500; color: var(--j-muted);
+    padding: .55rem 0; border-bottom: 1px solid var(--j-line); width: 42%;
+    text-transform: none; letter-spacing: 0; font-size: .85rem; white-space: normal;
+}
+.jeltan-deflist td {
+    text-align: right; color: var(--j-ink); font-weight: 500;
+    padding: .55rem 0; border-bottom: 1px solid var(--j-line);
+}
+.jeltan-deflist tr:last-child th, .jeltan-deflist tr:last-child td { border-bottom: 0; }
+
+/* ------------------------------------------------------------------- forms */
+
+.jeltan-field { margin-bottom: 1.35rem; }
+.jeltan-field > label {
+    display: block;
+    font-family: var(--j-sans);
+    font-weight: 600;
+    font-size: .85rem;
+    color: var(--j-ink);
+    margin-bottom: .4rem;
+}
+.jeltan-field small, .jeltan-field .helptext {
+    display: block;
+    font-size: .8rem;
+    color: var(--j-muted);
+    line-height: 1.55;
+    margin-top: .4rem;
+}
+.jeltan-req { color: var(--j-bad); font-weight: 400; }
+
+.jeltan-body input[type=text],
+.jeltan-body input[type=email],
+.jeltan-body input[type=number],
+.jeltan-body input[type=date],
+.jeltan-body input[type=url],
+.jeltan-body input[type=file],
+.jeltan-body select,
+.jeltan-body textarea,
+.jeltan-body .form-control {
+    width: 100%;
+    font-family: var(--j-sans);
+    font-size: .92rem;
+    color: var(--j-ink);
+    padding: .7rem .85rem;
+    background: var(--j-bg);
+    border: 1px solid var(--j-line-2);
+    border-radius: var(--j-radius-sm);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.jeltan-body textarea { line-height: 1.6; resize: vertical; }
+.jeltan-body input:focus,
+.jeltan-body select:focus,
+.jeltan-body textarea:focus,
+.jeltan-body .form-control:focus {
+    outline: none;
+    border-color: var(--j-accent-strong);
+    box-shadow: 0 0 0 3px rgba(180, 83, 9, .13);
+}
+.jeltan-body input[type=file] { padding: .55rem .6rem; background: var(--j-surface); }
+
+.jeltan-checkbox {
+    display: flex;
+    gap: .7rem;
+    align-items: flex-start;
+    margin-bottom: .9rem;
+    font-size: .9rem;
+    line-height: 1.55;
+}
+.jeltan-checkbox input { margin-top: .28rem; width: 1rem; height: 1rem; accent-color: var(--j-accent-strong); flex: none; }
+.jeltan-checkbox label { font-weight: 500; color: var(--j-ink); }
+
+/* Radio groups (review recommendation, screening outcome) as real choices. */
+.jeltan-field ul { list-style: none; margin: 0; padding: 0; }
+.jeltan-field ul li { margin-bottom: .5rem; }
+.jeltan-field ul li label {
+    display: flex;
+    gap: .65rem;
+    align-items: flex-start;
+    padding: .75rem .9rem;
+    border: 1px solid var(--j-line);
+    border-radius: var(--j-radius-sm);
+    font-size: .9rem;
+    color: var(--j-ink);
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+.jeltan-field ul li label:hover { border-color: var(--j-line-2); background: var(--j-surface); }
+.jeltan-field ul li input[type=radio] { margin-top: .2rem; accent-color: var(--j-accent-strong); flex: none; }
+
+.errorlist {
+    list-style: none;
+    margin: .45rem 0 0;
+    padding: 0;
+    color: var(--j-bad);
+    font-size: .82rem;
+}
+.jeltan-field ul.errorlist li label { border: 0; padding: 0; }
+
+/* ------------------------------------------------------------------ alerts */
+
+.jeltan-alert {
+    font-family: var(--j-sans);
+    font-size: .9rem;
+    line-height: 1.6;
+    padding: .95rem 1.15rem;
+    border-radius: var(--j-radius-sm);
+    margin-bottom: 1rem;
+    border-left: 3px solid transparent;
+}
+.jeltan-alert-info { background: var(--j-info-wash); color: #1e3a8a; border-left-color: var(--j-info); }
+.jeltan-alert-warn { background: var(--j-warn-wash); color: #7c3d06; border-left-color: var(--j-warn); }
+.jeltan-alert-good { background: var(--j-good-wash); color: #14532d; border-left-color: var(--j-good); }
+.jeltan-alert-bad  { background: var(--j-bad-wash);  color: #7f1d1d; border-left-color: var(--j-bad); }
+
+/* ------------------------------------------------------------------ layout */
+
+.jeltan-grid { display: grid; gap: 1.4rem; }
+@media (min-width: 820px) {
+    .jeltan-grid-2 { grid-template-columns: 1fr 1fr; }
+    .jeltan-grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .jeltan-grid-sidebar { grid-template-columns: minmax(0, 2.1fr) minmax(260px, 1fr); align-items: start; }
+}
+@media (min-width: 560px) and (max-width: 819px) {
+    .jeltan-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+.jeltan-sticky { position: sticky; top: 1.5rem; }
+
+/* ---------------------------------------------------- article & issue lists */
+
+/* One entry in a table of contents or a list of results. */
+.jeltan-entry { padding: 1.35rem 0; border-top: 1px solid var(--j-line); }
+.jeltan-entry:first-of-type { border-top: 0; padding-top: .35rem; }
+
+.jeltan-entry-title {
+    display: inline-block;
+    font-family: var(--j-serif);
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--j-ink);
+    text-decoration: none;
+    margin-bottom: .3rem;
+}
+.jeltan-entry-title:hover { color: var(--j-accent-strong); }
+
+.jeltan-authors {
+    font-family: var(--j-sans);
+    font-size: .875rem;
+    color: var(--j-ink-2);
+    margin: .15rem 0 .3rem;
+}
+.jeltan-entry-meta {
+    font-family: var(--j-sans);
+    font-size: .78rem;
+    color: var(--j-faint);
+    font-variant-numeric: tabular-nums;
+}
+.jeltan-entry-meta span + span::before { content: '·'; margin: 0 .45rem; }
+
+/* ------------------------------------------------------------ article page */
+
+.jeltan-article-head { padding-bottom: 1.6rem; border-bottom: 1px solid var(--j-line); margin-bottom: 1.6rem; }
+
+.jeltan-article-title {
+    font-family: var(--j-serif);
+    font-size: clamp(1.75rem, 1.25rem + 1.9vw, 2.5rem);
+    font-weight: 600;
+    line-height: 1.18;
+    letter-spacing: -.015em;
+    color: var(--j-ink);
+    margin: .6rem 0 1.1rem;
+    max-width: 24ch;
+    max-width: min(100%, 30ch);
+}
+
+.jeltan-author-line { font-family: var(--j-sans); font-size: .95rem; color: var(--j-ink); margin-bottom: .9rem; }
+.jeltan-author-line strong { font-weight: 600; }
+.jeltan-affil { display: block; font-size: .82rem; color: var(--j-muted); margin-top: .1rem; }
+
+.jeltan-abstract {
+    font-family: var(--j-serif);
+    font-size: 1.125rem;
+    line-height: 1.78;
+    color: var(--j-ink-2);
+    max-width: var(--j-measure);
+}
+.jeltan-abstract p { margin: 0 0 1em; }
+
+.jeltan-keywords { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1.2rem; }
+.jeltan-keyword {
+    font-family: var(--j-sans);
+    font-size: .78rem;
+    color: var(--j-ink-2);
+    background: var(--j-surface);
+    border: 1px solid var(--j-line);
+    border-radius: 999px;
+    padding: .3rem .7rem;
+    text-decoration: none;
+}
+.jeltan-keyword:hover { border-color: var(--j-accent); color: var(--j-ink); }
+
+.jeltan-citation {
+    font-family: var(--j-serif);
+    font-size: .98rem;
+    line-height: 1.7;
+    color: var(--j-ink-2);
+    padding: 1rem 1.1rem;
+    background: var(--j-paper);
+    border: 1px solid #eee7dc;
+    border-radius: var(--j-radius-sm);
+    /* A citation is copied by hand more often than any other text on the page. */
+    user-select: all;
+}
+
+.jeltan-metric { display: flex; gap: 1.5rem; font-family: var(--j-sans); }
+.jeltan-metric div { text-align: center; }
+.jeltan-metric strong {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--j-ink);
+    font-variant-numeric: tabular-nums;
+}
+.jeltan-metric span { font-size: .72rem; color: var(--j-muted); text-transform: uppercase; letter-spacing: .06em; }
+
+/* ------------------------------------------------------------ issue covers */
+
+.jeltan-issue-card {
+    display: block;
+    border: 1px solid var(--j-line);
+    border-radius: var(--j-radius);
+    overflow: hidden;
+    text-decoration: none;
+    background: var(--j-bg);
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    height: 100%;
+}
+.jeltan-issue-card:hover { border-color: var(--j-line-2); box-shadow: var(--j-shadow); transform: translateY(-2px); }
+
+.jeltan-issue-cover {
+    aspect-ratio: 3 / 4;
+    background: linear-gradient(150deg, #12263f 0%, #1c3557 55%, #7a3f08 130%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1.25rem;
+    color: #fff;
+}
+.jeltan-issue-cover img { width: 100%; height: 100%; object-fit: cover; }
+.jeltan-issue-cover .jeltan-issue-vol {
+    font-family: var(--j-serif);
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+.jeltan-issue-cover .jeltan-issue-year { font-family: var(--j-sans); font-size: .78rem; color: #cbd8e6; margin-top: .2rem; }
+.jeltan-issue-body { padding: 1rem 1.1rem; }
+
+/* ---------------------------------------------------------- editor's queue */
+
+.jeltan-stat {
+    border: 1px solid var(--j-line);
+    border-radius: var(--j-radius);
+    padding: 1.1rem 1.2rem;
+    background: var(--j-bg);
+}
+.jeltan-stat strong {
+    display: block;
+    font-family: var(--j-sans);
+    font-size: 1.9rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--j-ink);
+    font-variant-numeric: tabular-nums;
+}
+.jeltan-stat span { font-family: var(--j-sans); font-size: .8rem; color: var(--j-muted); }
+.jeltan-stat-alert strong { color: var(--j-bad); }
+.jeltan-stat-act strong { color: var(--j-accent-strong); }
+
+.jeltan-statrow { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1.5rem; }
+
+.jeltan-filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.jeltan-filters a {
+    font-family: var(--j-sans);
+    font-size: .82rem;
+    font-weight: 500;
+    padding: .5rem .85rem;
+    border-radius: 999px;
+    border: 1px solid var(--j-line);
+    color: var(--j-ink-2);
+    text-decoration: none;
+}
+.jeltan-filters a:hover { border-color: var(--j-line-2); background: var(--j-surface); color: var(--j-ink); }
+.jeltan-filters a.active { background: var(--j-ink); border-color: var(--j-ink); color: #fff; }
+
+/* Timeline of what happened to a manuscript. */
+.jeltan-timeline { position: relative; padding-left: 1.35rem; }
+.jeltan-timeline::before {
+    content: ''; position: absolute; left: 4px; top: .55rem; bottom: .55rem;
+    width: 1px; background: var(--j-line);
+}
+.jeltan-event { position: relative; padding: .5rem 0 .75rem; }
+.jeltan-event::before {
+    content: ''; position: absolute; left: -1.35rem; top: .85rem;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--j-line-2);
+}
+.jeltan-event-now::before { border-color: var(--j-accent); background: var(--j-accent); }
+.jeltan-event-title { font-family: var(--j-sans); font-size: .88rem; color: var(--j-ink); font-weight: 500; }
+.jeltan-event-time { font-family: var(--j-sans); font-size: .75rem; color: var(--j-faint); }
+.jeltan-event-note { font-family: var(--j-serif); font-size: .92rem; color: var(--j-ink-2); margin-top: .25rem; line-height: 1.6; }
+
+/* A reviewer's report as the editor reads it. */
+.jeltan-report {
+    background: var(--j-surface);
+    border-radius: var(--j-radius-sm);
+    padding: 1.1rem 1.25rem;
+    margin-top: .9rem;
+}
+.jeltan-report-confidential {
+    margin-top: .9rem;
+    padding-top: .8rem;
+    border-top: 1px dashed var(--j-line-2);
+}
+
+/* -------------------------------------------------------------- footer bar */
+
+.jeltan-footer {
+    border-top: 1px solid var(--j-line);
+    background: var(--j-surface);
+    padding: 2.5rem 0;
+    font-family: var(--j-sans);
+    font-size: .82rem;
+    color: var(--j-muted);
+}
+.jeltan-footer a { color: var(--j-ink-2); text-decoration: none; }
+.jeltan-footer a:hover { color: var(--j-accent-strong); text-decoration: underline; }
+.jeltan-footer-cols { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.jeltan-footer h4 {
+    font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--j-ink); margin: 0 0 .7rem;
+}
+.jeltan-footer ul { list-style: none; margin: 0; padding: 0; line-height: 2; }
+
+/* ----------------------------------------------------------- accessibility */
+
+.jeltan-body a:focus-visible,
+.jeltan-body button:focus-visible,
+.jeltan-nav a:focus-visible,
+.jeltan-footer a:focus-visible {
+    outline: 2px solid var(--j-accent-strong);
+    outline-offset: 3px;
+    border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+    .jeltan-issue-card:hover { transform: none; }
+}
+
+/* ------------------------------------------------------------------- print */
+
+/* Journals get printed. The article page should come out as a clean document:
+   no navigation, no buttons, and links spelled out so a paper copy stays useful. */
+@media print {
+    .jeltan-nav, .jeltan-footer, .jeltan-btn, .jeltan-btn-ghost, .jeltan-skip,
+    .jeltan-no-print, nav, footer { display: none !important; }
+
+    body { background: #fff; }
+    .jeltan-body { padding: 0; }
+    .jeltan-masthead { border-bottom: 1px solid #000; padding: 0 0 .5rem; }
+    .jeltan-card { border: 0; padding: 0; margin-bottom: 1rem; }
+    .jeltan-grid-sidebar { display: block; }
+    .jeltan-article-title { font-size: 20pt; }
+    .jeltan-abstract, .jeltan-prose { font-size: 11pt; max-width: none; }
+
+    .jeltan-prose a::after, .jeltan-citation a::after { content: ' (' attr(href) ')'; font-size: 9pt; }
+    a[href^='#']::after, a[href^='/']::after { content: ''; }
+}

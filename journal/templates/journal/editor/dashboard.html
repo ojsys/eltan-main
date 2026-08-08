@@ -1,78 +1,88 @@
 {% extends 'journal/base.html' %}
-{% block journal_title %}Editorial dashboard — {{ journal.name }}{% endblock %}
+{% block journal_title %}Editorial office — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
-    <h2 class="jeltan-h2" style="margin:0;">Editorial dashboard</h2>
-    <a href="{% url 'journal:editor_issues' %}" class="jeltan-btn-ghost">Manage issues</a>
+<div style="display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; flex-wrap:wrap; margin-bottom:1.75rem;">
+    <div>
+        <h1 class="jeltan-h1" style="margin-bottom:.25rem;">Editorial office</h1>
+        <p class="jeltan-muted" style="margin:0;">Everything in the pipeline, and who it is waiting on.</p>
+    </div>
+    <a class="jeltan-btn-ghost" href="{% url 'journal:editor_issues' %}">Manage issues</a>
 </div>
 
-<div class="jeltan-grid jeltan-grid-3" style="margin-bottom:1.4rem;">
-    <div class="jeltan-card" style="text-align:center;">
-        <div style="font-size:1.8rem; font-weight:800; color:var(--jeltan-accent);">{{ counts.awaiting_desk_check }}</div>
-        <div class="jeltan-muted">Awaiting editorial check</div>
+<div class="jeltan-statrow">
+    <div class="jeltan-stat {% if counts.awaiting_screening %}jeltan-stat-act{% endif %}">
+        <strong>{{ counts.awaiting_screening }}</strong><span>Awaiting screening</span>
     </div>
-    <div class="jeltan-card" style="text-align:center;">
-        <div style="font-size:1.8rem; font-weight:800; color:#1d4ed8;">{{ counts.under_review }}</div>
-        <div class="jeltan-muted">Under peer review</div>
+    <div class="jeltan-stat {% if counts.awaiting_decision %}jeltan-stat-act{% endif %}">
+        <strong>{{ counts.awaiting_decision }}</strong><span>Awaiting decision</span>
     </div>
-    <div class="jeltan-card" style="text-align:center;">
-        <div style="font-size:1.8rem; font-weight:800; color:#a855f7;">{{ counts.awaiting_revision }}</div>
-        <div class="jeltan-muted">Awaiting author revision</div>
+    <div class="jeltan-stat">
+        <strong>{{ counts.under_review }}</strong><span>Under peer review</span>
     </div>
-    <div class="jeltan-card" style="text-align:center;">
-        <div style="font-size:1.8rem; font-weight:800; color:#16a34a;">{{ counts.accepted }}</div>
-        <div class="jeltan-muted">Accepted / in production</div>
+    <div class="jeltan-stat">
+        <strong>{{ counts.awaiting_revision }}</strong><span>With the author</span>
     </div>
-    <div class="jeltan-card" style="text-align:center;">
-        <div style="font-size:1.8rem; font-weight:800; color:{% if counts.overdue_reviews %}#b91c1c{% else %}#6b7280{% endif %};">{{ counts.overdue_reviews }}</div>
-        <div class="jeltan-muted">Overdue reviews</div>
+    <div class="jeltan-stat">
+        <strong>{{ counts.in_production }}</strong><span>Accepted / in production</span>
+    </div>
+    <div class="jeltan-stat {% if counts.overdue_reviews %}jeltan-stat-alert{% endif %}">
+        <strong>{{ counts.overdue_reviews }}</strong><span>Overdue reviews</span>
     </div>
 </div>
 
-<div class="jeltan-card">
-    <div style="display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:1rem;">
-        <a href="?status=open" class="jeltan-btn-ghost {% if status_filter == 'open' %}active{% endif %}">In progress</a>
-        <a href="?status=mine" class="jeltan-btn-ghost">Assigned to me</a>
-        <a href="?status=submitted" class="jeltan-btn-ghost">Needs desk check</a>
-        <a href="?status=under_review" class="jeltan-btn-ghost">Under review</a>
-        <a href="?status=accepted" class="jeltan-btn-ghost">Accepted</a>
-        <a href="?status=all" class="jeltan-btn-ghost">All</a>
-    </div>
+<nav class="jeltan-filters" aria-label="Filter submissions">
+    <a href="?status=open" class="{% if status_filter == 'open' %}active{% endif %}">In progress</a>
+    <a href="?status=mine" class="{% if status_filter == 'mine' %}active{% endif %}">Assigned to me</a>
+    <a href="?status=submitted" class="{% if status_filter == 'submitted' %}active{% endif %}">Needs screening</a>
+    <a href="?status=editorial_screening" class="{% if status_filter == 'editorial_screening' %}active{% endif %}">Needs decision</a>
+    <a href="?status=under_review" class="{% if status_filter == 'under_review' %}active{% endif %}">Under review</a>
+    <a href="?status=accepted" class="{% if status_filter == 'accepted' %}active{% endif %}">Accepted</a>
+    <a href="?status=all" class="{% if status_filter == 'all' %}active{% endif %}">All</a>
+</nav>
 
+<div class="jeltan-card jeltan-card-flush">
     <div class="jeltan-table-wrap">
         <table class="jeltan-table">
             <thead>
                 <tr>
-                    <th>ID</th><th>Title</th><th>Section</th><th>Status</th>
-                    <th>Round</th><th>Reviews</th><th>Editor</th><th>Submitted</th>
+                    <th style="padding-left:1.25rem;">ID</th><th>Title</th><th>Section</th>
+                    <th>Status</th><th>Round</th><th>Reviews</th><th>Editor</th>
+                    <th style="padding-right:1.25rem;">Submitted</th>
                 </tr>
             </thead>
             <tbody>
                 {% for submission in submissions %}
                 <tr>
-                    <td style="white-space:nowrap;"><a href="{% url 'journal:editor_submission' submission.pk %}">{{ submission.manuscript_id }}</a></td>
-                    <td>
-                        <a href="{% url 'journal:editor_submission' submission.pk %}" class="jeltan-article-title">{{ submission.title|truncatewords:12 }}</a>
-                        <div class="jeltan-muted" style="font-size:.8rem;">{{ submission.author_list|truncatewords:8 }}</div>
+                    <td style="padding-left:1.25rem; white-space:nowrap;">
+                        <a class="jeltan-mono" href="{% url 'journal:editor_submission' submission.pk %}">{{ submission.manuscript_id }}</a>
                     </td>
-                    <td class="jeltan-muted">{{ submission.section.name }}</td>
+                    <td style="max-width:340px;">
+                        <a href="{% url 'journal:editor_submission' submission.pk %}"
+                           style="color:var(--j-ink); font-weight:500; text-decoration:none;">{{ submission.title|truncatewords:12 }}</a>
+                        <div class="jeltan-event-time">{{ submission.author_list|truncatewords:8 }}</div>
+                    </td>
+                    <td class="jeltan-small">{{ submission.section.name }}</td>
                     <td>
-                        {% if submission.status == 'submitted' or submission.status == 'resubmitted' %}
+                        {% if submission.status == 'submitted' or submission.status == 'editorial_screening' or submission.status == 'resubmitted' %}
                         <span class="jeltan-badge jeltan-badge-warn">{{ submission.get_status_display }}</span>
                         {% elif submission.status == 'published' or submission.status == 'accepted' %}
                         <span class="jeltan-badge jeltan-badge-good">{{ submission.get_status_display }}</span>
+                        {% elif submission.status == 'returned' %}
+                        <span class="jeltan-badge">{{ submission.get_status_display }}</span>
                         {% else %}
                         <span class="jeltan-badge jeltan-badge-info">{{ submission.get_status_display }}</span>
                         {% endif %}
                     </td>
                     <td>{{ submission.current_round }}</td>
                     <td>{{ submission.review_count }}</td>
-                    <td class="jeltan-muted">{% if submission.handling_editor %}{{ submission.handling_editor.get_full_name|default:submission.handling_editor.email }}{% else %}&mdash;{% endif %}</td>
-                    <td class="jeltan-muted" style="white-space:nowrap;">{{ submission.submitted_at|date:"j M Y" }}</td>
+                    <td class="jeltan-small">{% if submission.handling_editor %}{{ submission.handling_editor.get_full_name|default:submission.handling_editor.email }}{% else %}&mdash;{% endif %}</td>
+                    <td class="jeltan-small" style="padding-right:1.25rem; white-space:nowrap;">{{ submission.submitted_at|date:"j M Y" }}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="8" class="jeltan-muted" style="text-align:center; padding:2rem;">Nothing here.</td></tr>
+                <tr><td colspan="8" style="text-align:center; padding:3rem;">
+                    <span class="jeltan-muted">Nothing here.</span>
+                </td></tr>
                 {% endfor %}
             </tbody>
         </table>

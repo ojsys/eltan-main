@@ -14,10 +14,13 @@ from django.utils import timezone
 from . import emails
 from .forms import (
     ArticleAuthorFormSet,
+    CopyeditForm,
     DecisionForm,
     IssueForm,
+    ProofForm,
     PublishArticleForm,
     ReviewerInviteForm,
+    ScreeningForm,
 )
 from .models import (
     Article,
@@ -26,8 +29,10 @@ from .models import (
     Issue,
     JournalRole,
     JournalSettings,
+    Proof,
     ReviewAssignment,
     Submission,
+    SubmissionFile,
 )
 from .views import journal_context
 
@@ -61,13 +66,16 @@ def dashboard(request):
         queryset = submissions.filter(status=status_filter)
 
     counts = {
-        'awaiting_desk_check': submissions.needing_editor_attention().count(),
+        'awaiting_screening': submissions.filter(status=Submission.SUBMITTED).count(),
+        'awaiting_decision': submissions.filter(
+            status__in=[Submission.EDITORIAL_SCREENING, Submission.RESUBMITTED]
+        ).count(),
         'under_review': submissions.filter(status=Submission.UNDER_REVIEW).count(),
         'awaiting_revision': submissions.filter(
-            status__in=Submission.AUTHOR_ACTION_STATUSES
+            status__in=Submission.AUTHOR_ACTION_STATUSES + [Submission.RETURNED]
         ).count(),
-        'accepted': submissions.filter(
-            status__in=[Submission.ACCEPTED, Submission.IN_PRODUCTION]
+        'in_production': submissions.filter(
+            status__in=Submission.PRODUCTION_STATUSES + [Submission.ACCEPTED]
         ).count(),
         'overdue_reviews': ReviewAssignment.objects.filter(
             status=ReviewAssignment.ACCEPTED, due_date__lt=timezone.now().date(),
@@ -75,6 +83,7 @@ def dashboard(request):
     }
 
     return render(request, 'journal/editor/dashboard.html', journal_context(
+        nav='editor',
         submissions=queryset.annotate(
             review_count=Count('review_assignments', filter=Q(
                 review_assignments__status=ReviewAssignment.SUBMITTED
@@ -95,18 +104,39 @@ def submission(request, pk):
         pk=pk,
     )
 
-    return render(request, 'journal/editor/submission.html', journal_context(
+    return render(
+        request, 'journal/editor/submission.html',
+        _submission_context(submission_row),
+    )
+
+
+def _submission_context(submission_row, decision_form=None):
+    """The editor's view of one manuscript.
+
+    One place, because the decision form re-renders this page when it fails
+    validation and two copies of the context drift apart.
+    """
+    return journal_context(
+        nav='editor',
         submission=submission_row,
         files_by_round=_files_by_round(submission_row),
         assignments=submission_row.review_assignments.all(),
         decisions=submission_row.decisions.select_related('editor'),
         events=submission_row.events.select_related('actor'),
-        decision_form=DecisionForm(submission=submission_row),
+        decision_form=decision_form or DecisionForm(submission=submission_row),
         invite_form=ReviewerInviteForm(submission=submission_row),
         editors=JournalRole.objects.filter(is_active=True).select_related('user'),
-        can_publish=submission_row.status in [Submission.IN_PRODUCTION, Submission.ACCEPTED],
+        screening_reports=submission_row.screening_reports.select_related('screened_by'),
+        needs_screening=submission_row.status == Submission.SUBMITTED,
+        is_screened=submission_row.is_screened,
+        proofs=submission_row.proofs.all(),
+        latest_proof=submission_row.latest_proof,
+        in_production=submission_row.status in Submission.PRODUCTION_STATUSES,
+        can_publish=submission_row.status in (
+            Submission.PRODUCTION_STATUSES + [Submission.ACCEPTED]
+        ),
         article=getattr(submission_row, 'article', None),
-    ))
+    )
 
 
 def _files_by_round(submission_row):
@@ -115,6 +145,118 @@ def _files_by_round(submission_row):
     for file_row in submission_row.files.all():
         grouped.setdefault(file_row.round, []).append(file_row)
     return sorted(grouped.items(), reverse=True)
+
+
+@editor_required
+def screen(request, pk):
+    """Administrative screening: the technical check before an editor sees it.
+
+    Passing sends the manuscript on to editorial screening; failing returns it to
+    the author for correction, which is not a rejection and keeps the same
+    manuscript record.
+    """
+    submission_row = get_object_or_404(Submission, pk=pk)
+    form = ScreeningForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        passed = form.cleaned_data['outcome'] == 'pass'
+        with transaction.atomic():
+            report = form.save(commit=False)
+            report.submission = submission_row
+            report.round = submission_row.current_round
+            report.passed = passed
+            report.screened_by = request.user
+            report.save()
+
+            submission_row.status = (
+                Submission.EDITORIAL_SCREENING if passed else Submission.RETURNED
+            )
+            submission_row.save(update_fields=['status', 'updated_at'])
+            submission_row.log(
+                'Passed administrative screening' if passed
+                else 'Returned to the author for correction',
+                actor=request.user,
+                note=report.notes_to_author if not passed else '',
+            )
+
+        if passed:
+            emails.send_screening_passed(submission_row, request)
+            messages.success(request, 'Screening passed — the manuscript is ready for an editorial decision.')
+        else:
+            emails.send_returned_to_author(submission_row, report, request)
+            messages.success(request, 'Returned to the author with your notes.')
+        return redirect('journal:editor_submission', pk=pk)
+
+    return render(request, 'journal/editor/screen.html', journal_context(
+        submission=submission_row,
+        form=form,
+        files=submission_row.files_for_round(),
+        previous=submission_row.screening_reports.all(),
+    ))
+
+
+@editor_required
+def upload_copyedit(request, pk):
+    """Store the copyedited manuscript against the paper."""
+    submission_row = get_object_or_404(Submission, pk=pk)
+    form = CopyeditForm(request.POST or None, request.FILES or None)
+
+    if request.method == 'POST' and form.is_valid():
+        SubmissionFile.objects.create(
+            submission=submission_row,
+            kind=SubmissionFile.PRODUCTION,
+            file=form.cleaned_data['copyedited_file'],
+            round=submission_row.current_round,
+            uploaded_by=request.user,
+        )
+        submission_row.log(
+            'Copyedited manuscript uploaded',
+            actor=request.user,
+            note=form.cleaned_data.get('note', ''),
+        )
+        messages.success(request, 'Copyedited manuscript saved. You can now send a proof to the author.')
+        return redirect('journal:editor_submission', pk=pk)
+
+    return render(request, 'journal/editor/copyedit.html', journal_context(
+        submission=submission_row, form=form,
+    ))
+
+
+@editor_required
+def send_proof(request, pk):
+    """Send a typeset proof to the author for approval."""
+    submission_row = get_object_or_404(Submission, pk=pk)
+    form = ProofForm(request.POST or None, request.FILES or None)
+
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            # Any earlier proof is superseded — only one is ever live, so an
+            # author cannot approve a version that has been replaced.
+            submission_row.proofs.filter(status=Proof.SENT).update(status=Proof.SUPERSEDED)
+
+            proof = form.save(commit=False)
+            proof.submission = submission_row
+            proof.version = submission_row.proofs.count() + 1
+            proof.sent_by = request.user
+            proof.save()
+
+            submission_row.status = Submission.PROOF_REVIEW
+            submission_row.save(update_fields=['status', 'updated_at'])
+            submission_row.log(f'Proof v{proof.version} sent to the author', actor=request.user)
+
+        ok, error = emails.send_proof_to_author(proof, request)
+        if ok:
+            messages.success(request, 'The proof has been sent to the author for approval.')
+        else:
+            messages.warning(
+                request,
+                f'The proof was saved, but the email failed: {error}. The author has not been told.',
+            )
+        return redirect('journal:editor_submission', pk=pk)
+
+    return render(request, 'journal/editor/proof.html', journal_context(
+        submission=submission_row, form=form, proofs=submission_row.proofs.all(),
+    ))
 
 
 @editor_required
@@ -147,6 +289,18 @@ def assign_editor(request, pk):
 def invite_reviewer(request, pk):
     """Invite a reviewer for the current round."""
     submission_row = get_object_or_404(Submission, pk=pk)
+
+    # The screening gate. Administrative screening is where a manuscript's
+    # anonymity is verified, so inviting a reviewer before it has passed would
+    # put an un-checked paper in front of the person judging it.
+    if not submission_row.is_screened:
+        messages.error(
+            request,
+            'This manuscript has not passed administrative screening for the current round. '
+            'Screen it first — that check is what confirms it is properly anonymised.',
+        )
+        return redirect('journal:editor_submission', pk=pk)
+
     form = ReviewerInviteForm(request.POST or None, submission=submission_row)
 
     if request.method == 'POST' and form.is_valid():
@@ -168,7 +322,9 @@ def invite_reviewer(request, pk):
         )
         # Moving to 'under review' on the first invitation saves the editor a
         # second click and keeps the queue honest about where the paper is.
-        if submission_row.status in [Submission.SUBMITTED, Submission.RESUBMITTED]:
+        if submission_row.status in [
+            Submission.SUBMITTED, Submission.EDITORIAL_SCREENING, Submission.RESUBMITTED,
+        ]:
             submission_row.status = Submission.UNDER_REVIEW
             submission_row.save(update_fields=['status', 'updated_at'])
 
@@ -284,18 +440,10 @@ def record_decision(request, pk):
         return redirect('journal:editor_submission', pk=pk)
 
     messages.error(request, 'Please correct the decision form.')
-    return render(request, 'journal/editor/submission.html', journal_context(
-        submission=submission_row,
-        files_by_round=_files_by_round(submission_row),
-        assignments=submission_row.review_assignments.all(),
-        decisions=submission_row.decisions.select_related('editor'),
-        events=submission_row.events.select_related('actor'),
-        decision_form=form,
-        invite_form=ReviewerInviteForm(submission=submission_row),
-        editors=JournalRole.objects.filter(is_active=True).select_related('user'),
-        can_publish=submission_row.status in [Submission.IN_PRODUCTION, Submission.ACCEPTED],
-        article=getattr(submission_row, 'article', None),
-    ))
+    return render(
+        request, 'journal/editor/submission.html',
+        _submission_context(submission_row, decision_form=form),
+    )
 
 
 @editor_required

@@ -17,7 +17,9 @@ from .models import (
     Issue,
     JournalRole,
     JournalSettings,
+    Proof,
     ReviewAssignment,
+    ScreeningReport,
     Section,
     Submission,
     SubmissionAuthor,
@@ -116,6 +118,26 @@ class EditorialDecisionInline(admin.TabularInline):
         return False
 
 
+class ScreeningReportInline(admin.TabularInline):
+    model = ScreeningReport
+    extra = 0
+    readonly_fields = ('passed', 'screened_by', 'screened_at', 'notes_to_author', 'internal_notes')
+    fields = readonly_fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class ProofInline(admin.TabularInline):
+    model = Proof
+    extra = 0
+    readonly_fields = ('version', 'status', 'sent_by', 'sent_at', 'responded_at', 'corrections')
+    fields = readonly_fields + ('file', 'due_date')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 class SubmissionEventInline(admin.TabularInline):
     model = SubmissionEvent
     extra = 0
@@ -138,8 +160,8 @@ class SubmissionAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('manuscript_id', 'submitted_at', 'updated_at', 'decided_at', 'editor_link')
     inlines = [
-        SubmissionAuthorInline, SubmissionFileInline, ReviewAssignmentInline,
-        EditorialDecisionInline, SubmissionEventInline,
+        SubmissionAuthorInline, SubmissionFileInline, ScreeningReportInline,
+        ReviewAssignmentInline, EditorialDecisionInline, ProofInline, SubmissionEventInline,
     ]
     date_hierarchy = 'submitted_at'
 

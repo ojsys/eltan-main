@@ -1,0 +1,53 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Screening — {{ submission.manuscript_id }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
+    <h2 class="jeltan-h2" style="margin-top:.6rem;">Administrative screening</h2>
+    <p class="jeltan-muted">{{ submission.title }}</p>
+    <div class="jeltan-alert jeltan-alert-warn" style="margin-top:1rem;">
+        This is the technical check, not a judgement on the work. The anonymity check matters most:
+        <strong>open the manuscript and confirm it does not identify its authors</strong> — it is the only
+        thing standing between an author's name and the reviewer judging them.
+    </div>
+</div>
+
+<div class="jeltan-card">
+    <h3 class="jeltan-h2">Files to check</h3>
+    {% for file in files %}
+    <div style="padding:.6rem 0; border-top:1px solid var(--jeltan-line);">
+        <a href="{% url 'journal:submission_file' file.pk %}" class="jeltan-btn-ghost">{{ file.get_kind_display }}</a>
+    </div>
+    {% empty %}
+    <p class="jeltan-muted">No files were uploaded — this alone is grounds to return the manuscript.</p>
+    {% endfor %}
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="jeltan-card">
+        <h3 class="jeltan-h2">Checklist</h3>
+        {% include 'journal/_form.html' with form=form %}
+        <button type="submit" class="jeltan-btn">Record the screening</button>
+        <a href="{% url 'journal:editor_submission' submission.pk %}" class="jeltan-btn-ghost">Cancel</a>
+    </div>
+</form>
+
+{% if previous %}
+<div class="jeltan-card">
+    <h3 class="jeltan-h2">Earlier screenings</h3>
+    {% for report in previous %}
+    <div style="padding:.7rem 0; border-top:1px solid var(--jeltan-line);">
+        {% if report.passed %}<span class="jeltan-badge jeltan-badge-good">Passed</span>
+        {% else %}<span class="jeltan-badge jeltan-badge-warn">Returned</span>{% endif %}
+        <span class="jeltan-muted" style="margin-left:.4rem;">
+            Round {{ report.round }} · {{ report.screened_at|date:"j M Y" }}
+            {% if report.screened_by %} · {{ report.screened_by.get_full_name|default:report.screened_by.email }}{% endif %}
+        </span>
+        {% if report.notes_to_author %}<div class="jeltan-muted" style="margin-top:.3rem;">{{ report.notes_to_author }}</div>{% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

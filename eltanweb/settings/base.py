@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
 
     # Third-party
     'ckeditor',
@@ -95,6 +96,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.site_settings',
                 'core.context_processors.social_links',
+                'journal.context_processors.journal_chrome',
             ],
         },
     },

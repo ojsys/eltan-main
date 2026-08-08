@@ -4,8 +4,10 @@
 
 {% block journal_css %}
 {% comment %}
-Google Scholar and other indexers read these tags to pick the journal up. Without
-them an article is published but effectively invisible to the people looking for it.
+Two metadata vocabularies, because different harvesters read different ones:
+the citation_* tags are what Google Scholar indexes on, and Dublin Core is what
+most repository and library systems expect. Without them an article is published
+but invisible to the people looking for it.
 {% endcomment %}
 <meta name="citation_journal_title" content="{{ journal.name }}">
 <meta name="citation_publisher" content="{{ journal.publisher }}">
@@ -21,59 +23,118 @@ them an article is published but effectively invisible to the people looking for
 {% if journal.issn_online %}<meta name="citation_issn" content="{{ journal.issn_online }}">{% endif %}
 {% if article.doi %}<meta name="citation_doi" content="{{ article.doi }}">{% endif %}
 {% if article.pdf %}<meta name="citation_pdf_url" content="{{ request.scheme }}://{{ request.get_host }}{% url 'journal:article_pdf' article.slug %}">{% endif %}
+
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.title" content="{{ article.title }}">
+{% for author in article.authors.all %}<meta name="DC.creator" content="{{ author.last_name }}, {{ author.first_name }}">
+{% endfor %}
+{% for keyword in article.keyword_list %}<meta name="DC.subject" content="{{ keyword }}">
+{% endfor %}
+<meta name="DC.description" content="{{ article.abstract|striptags }}">
+<meta name="DC.publisher" content="{{ journal.publisher }}">
+{% if article.published_at %}<meta name="DC.date" scheme="DCTERMS.W3CDTF" content="{{ article.published_at|date:'Y-m-d' }}">{% endif %}
+<meta name="DC.type" content="Text.Article">
+<meta name="DC.format" content="application/pdf">
+<meta name="DC.identifier" content="{{ request.scheme }}://{{ request.get_host }}{{ article.get_absolute_url }}">
+{% if article.doi %}<meta name="DC.identifier" scheme="DCTERMS.URI" content="https://doi.org/{{ article.doi }}">{% endif %}
+<meta name="DC.source" content="{{ journal.name }}{% if journal.issn_online %}; {{ journal.issn_online }}{% endif %}">
+<meta name="DC.language" scheme="DCTERMS.RFC1766" content="en">
+<meta name="DC.rights" content="{{ article.licence }}">
 {% endblock %}
 
 {% block journal_content %}
 <div class="jeltan-grid jeltan-grid-sidebar">
-    <div>
-        <div class="jeltan-card">
-            {% if article.section %}<span class="jeltan-badge">{{ article.section.name }}</span>{% endif %}
-            <h1 style="font-size:1.6rem; font-weight:800; color:var(--jeltan-ink); margin:.7rem 0;">{{ article.title }}</h1>
+    <article>
+        <header class="jeltan-article-head">
+            {% if article.section %}<p class="jeltan-eyebrow">{{ article.section.name }}</p>{% endif %}
 
-            <div style="margin-bottom:1rem;">
-                {% for author in article.authors.all %}
-                <div style="font-size:.92rem;">
-                    <strong style="color:var(--jeltan-ink);">{{ author.full_name }}</strong>
-                    {% if author.affiliation %}<span class="jeltan-muted"> — {{ author.affiliation }}{% if author.country %}, {{ author.country }}{% endif %}</span>{% endif %}
-                    {% if author.orcid %}<span class="jeltan-muted"> · ORCID {{ author.orcid }}</span>{% endif %}
-                </div>
+            <h1 class="jeltan-article-title">{{ article.title }}</h1>
+
+            {% for author in article.authors.all %}
+            <div class="jeltan-author-line">
+                <strong>{{ author.full_name }}</strong>{% if author.orcid %}
+                <span class="jeltan-small jeltan-mono"> ORCID {{ author.orcid }}</span>{% endif %}
+                {% if author.affiliation %}
+                <span class="jeltan-affil">{{ author.affiliation }}{% if author.country %}, {{ author.country }}{% endif %}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <p class="jeltan-entry-meta" style="margin-top:1.1rem;">
+                {% if article.issue %}<span>{{ article.issue.label }}</span>{% else %}<span>Online first</span>{% endif %}
+                {% if article.page_range %}<span>pp. {{ article.page_range }}</span>{% endif %}
+                {% if article.published_at %}<span>Published {{ article.published_at|date:"j F Y" }}</span>{% endif %}
+                {% if article.doi %}<span class="jeltan-mono">DOI {{ article.doi }}</span>{% endif %}
+            </p>
+        </header>
+
+        <section aria-labelledby="abstract-heading">
+            <h2 class="jeltan-eyebrow jeltan-eyebrow-muted" id="abstract-heading">Abstract</h2>
+            <div class="jeltan-abstract">{{ article.abstract|linebreaks }}</div>
+
+            {% if article.keyword_list %}
+            <div class="jeltan-keywords">
+                {% for keyword in article.keyword_list %}
+                <a class="jeltan-keyword" href="{% url 'journal:search' %}?q={{ keyword|urlencode }}">{{ keyword }}</a>
                 {% endfor %}
             </div>
+            {% endif %}
+        </section>
 
-            <h3 style="font-size:1rem; font-weight:700; color:var(--jeltan-ink);">Abstract</h3>
-            <div class="jeltan-prose">{{ article.abstract|linebreaks }}</div>
+        <section style="margin-top:2.5rem;" aria-labelledby="cite-heading">
+            <h2 class="jeltan-eyebrow jeltan-eyebrow-muted" id="cite-heading">How to cite this article</h2>
+            <p class="jeltan-citation">{{ article.citation }}</p>
+            <div class="jeltan-btn-row jeltan-no-print" style="margin-top:.8rem;">
+                <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:article_citation' article.slug 'bib' %}">BibTeX</a>
+                <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:article_citation' article.slug 'ris' %}">RIS — EndNote, Zotero</a>
+            </div>
+        </section>
 
-            {% if article.keywords %}
-            <div style="margin-top:1rem;">
-                <strong style="font-size:.86rem; color:var(--jeltan-ink);">Keywords:</strong>
-                <span class="jeltan-muted">{{ article.keywords }}</span>
+        {% if article.issue %}
+        <nav class="jeltan-no-print" style="margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid var(--j-line);">
+            <a class="jeltan-btn-ghost" href="{{ article.issue.get_absolute_url }}">
+                &larr; All articles in {{ article.issue.label }}
+            </a>
+        </nav>
+        {% endif %}
+    </article>
+
+    <aside class="jeltan-no-print">
+        <div class="jeltan-sticky">
+            {% if article.pdf %}
+            <div class="jeltan-card">
+                <a class="jeltan-btn jeltan-btn-block" href="{% url 'journal:article_pdf' article.slug %}">
+                    Download the full text (PDF)
+                </a>
+                <div class="jeltan-metric" style="margin-top:1.25rem; justify-content:center;">
+                    <div><strong>{{ article.view_count }}</strong><span>Views</span></div>
+                    <div><strong>{{ article.download_count }}</strong><span>Downloads</span></div>
+                </div>
             </div>
             {% endif %}
-        </div>
 
-        <div class="jeltan-card">
-            <h3 style="font-size:1rem; font-weight:700; color:var(--jeltan-ink);">How to cite</h3>
-            <p class="jeltan-muted" style="font-family:Georgia,serif; line-height:1.7;">{{ article.citation }}</p>
-        </div>
-    </div>
-
-    <aside>
-        {% if article.pdf %}
-        <div class="jeltan-card">
-            <a href="{% url 'journal:article_pdf' article.slug %}" class="jeltan-btn" style="width:100%; text-align:center;">Download PDF</a>
-            <div class="jeltan-muted" style="margin-top:.7rem; font-size:.82rem;">
-                {{ article.view_count }} view{{ article.view_count|pluralize }} · {{ article.download_count }} download{{ article.download_count|pluralize }}
+            <div class="jeltan-card">
+                <h2 class="jeltan-h3">Article details</h2>
+                <table class="jeltan-deflist">
+                    {% if article.issue %}
+                    <tr><th>Issue</th><td><a href="{{ article.issue.get_absolute_url }}">{{ article.issue.label }}</a></td></tr>
+                    {% endif %}
+                    {% if article.section %}<tr><th>Section</th><td>{{ article.section.name }}</td></tr>{% endif %}
+                    {% if article.page_range %}<tr><th>Pages</th><td>{{ article.page_range }}</td></tr>{% endif %}
+                    {% if article.published_at %}<tr><th>Published</th><td>{{ article.published_at|date:"j M Y" }}</td></tr>{% endif %}
+                    {% if article.doi %}<tr><th>DOI</th><td class="jeltan-mono">{{ article.doi }}</td></tr>{% endif %}
+                    <tr><th>Licence</th><td>{{ article.licence }}</td></tr>
+                    <tr><th>Peer review</th><td>Double-blind</td></tr>
+                </table>
             </div>
-        </div>
-        {% endif %}
-        <div class="jeltan-card">
-            <table class="jeltan-table">
-                {% if article.issue %}<tr><th>Issue</th><td><a href="{{ article.issue.get_absolute_url }}">{{ article.issue.label }}</a></td></tr>{% endif %}
-                {% if article.page_range %}<tr><th>Pages</th><td>{{ article.page_range }}</td></tr>{% endif %}
-                {% if article.published_at %}<tr><th>Published</th><td>{{ article.published_at|date:"j F Y" }}</td></tr>{% endif %}
-                {% if article.doi %}<tr><th>DOI</th><td>{{ article.doi }}</td></tr>{% endif %}
-                <tr><th>Licence</th><td>{{ article.licence }}</td></tr>
-            </table>
+
+            <div class="jeltan-card jeltan-card-quiet">
+                <h2 class="jeltan-h3">Publish in {{ journal.short_name }}</h2>
+                <p class="jeltan-muted" style="margin-bottom:1rem;">
+                    {{ journal.short_name }} welcomes submissions from ELTAN members and the wider public.
+                </p>
+                <a class="jeltan-btn-ghost jeltan-btn-block" href="{% url 'journal:guidelines' %}">Author guidelines</a>
+            </div>
         </div>
     </aside>
 </div>

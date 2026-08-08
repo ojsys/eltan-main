@@ -2,41 +2,68 @@
 {% block journal_title %}Review — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<div class="jeltan-card">
-    <h2 class="jeltan-h2">Review the manuscript</h2>
-    <div class="jeltan-badge">{{ submission.section.name }}</div>
-    <h3 style="font-size:1.15rem; font-weight:700; color:var(--jeltan-ink); margin:.6rem 0;">{{ submission.title }}</h3>
-    <div class="jeltan-muted">Due by {{ assignment.due_date|date:"j F Y" }}{% if assignment.is_overdue %} — <span style="color:#b91c1c; font-weight:600;">overdue</span>{% endif %}</div>
-    <p class="jeltan-muted" style="margin-top:1rem;">{{ submission.abstract }}</p>
-</div>
+<div class="jeltan-grid jeltan-grid-sidebar">
+    <div>
+        <header class="jeltan-article-head">
+            <p class="jeltan-eyebrow">{{ submission.section.name }}</p>
+            <h1 class="jeltan-h1" style="max-width:32ch;">{{ submission.title }}</h1>
+            <p class="jeltan-entry-meta">
+                <span>Review due {{ assignment.due_date|date:"j F Y" }}</span>
+                {% if assignment.is_overdue %}<span style="color:var(--j-bad); font-weight:600;">Overdue</span>{% endif %}
+            </p>
+        </header>
 
-<div class="jeltan-card">
-    <h3 class="jeltan-h2">Files</h3>
-    <p class="jeltan-muted">The manuscript has been anonymised. The title page, which names the authors, is not
-    part of this review.</p>
-    {% for file in files %}
-    <div style="padding:.7rem 0; border-top:1px solid var(--jeltan-line);">
-        <a href="{% url 'journal:review_file' assignment.token file.pk %}" class="jeltan-btn-ghost">
-            {{ file.get_kind_display }}{% if file.round != assignment.round %} (round {{ file.round }}){% endif %}
-        </a>
+        <section>
+            <h2 class="jeltan-eyebrow jeltan-eyebrow-muted">Abstract</h2>
+            <div class="jeltan-abstract">{{ submission.abstract|linebreaks }}</div>
+        </section>
+
+        <form method="post" enctype="multipart/form-data" novalidate style="margin-top:2.5rem;">
+            {% csrf_token %}
+            <h2 class="jeltan-h2">Your report</h2>
+            <div class="jeltan-alert jeltan-alert-warn">
+                <strong>Comments to the author</strong> are passed on word for word, without your name.
+                <strong>Confidential comments</strong> are read by the editors only and are never shown to
+                the author.
+            </div>
+            <div class="jeltan-card">
+                {% include 'journal/_form.html' with form=form %}
+                <button type="submit" class="jeltan-btn">Submit my review</button>
+                <p class="jeltan-small" style="margin:1rem 0 0;">
+                    Once submitted, a review cannot be edited. Contact the editorial office if you need to
+                    change something.
+                </p>
+            </div>
+        </form>
     </div>
-    {% empty %}
-    <p class="jeltan-muted">No files are available. Please contact the editorial office.</p>
-    {% endfor %}
-</div>
 
-<form method="post" enctype="multipart/form-data" novalidate>
-    {% csrf_token %}
-    <div class="jeltan-card">
-        <h3 class="jeltan-h2">Your report</h3>
-        <div class="jeltan-alert jeltan-alert-warn">
-            <strong>Comments to the author</strong> are passed on to the author word for word, without your name.
-            <strong>Confidential comments</strong> are read by the editors only and are never shown to the author.
+    <aside>
+        <div class="jeltan-sticky">
+            <div class="jeltan-card">
+                <h2 class="jeltan-h3">The manuscript</h2>
+                <p class="jeltan-muted" style="margin-bottom:1rem;">
+                    Anonymised for double-blind review. The title page, which names the authors, is not part
+                    of this review.
+                </p>
+                {% for file in files %}
+                <a class="jeltan-btn-ghost jeltan-btn-block jeltan-btn-sm" style="margin-bottom:.5rem;"
+                   href="{% url 'journal:review_file' assignment.token file.pk %}">
+                    {{ file.get_kind_display }}{% if file.round != assignment.round %} (round {{ file.round }}){% endif %}
+                </a>
+                {% empty %}
+                <p class="jeltan-muted">No files are available. Please contact the editorial office.</p>
+                {% endfor %}
+            </div>
+
+            <div class="jeltan-card jeltan-card-quiet">
+                <h2 class="jeltan-h3">Review guidance</h2>
+                <p class="jeltan-muted">
+                    Comment on the originality of the work, the soundness of its method, the clarity of the
+                    writing and its relevance to the field. Be specific and constructive — your comments go
+                    to the author.
+                </p>
+            </div>
         </div>
-        {% include 'journal/_form.html' with form=form %}
-        <button type="submit" class="jeltan-btn">Submit my review</button>
-        <p class="jeltan-muted" style="margin-top:.8rem;">Once submitted, a review cannot be edited. Contact the
-        editorial office if you need to change something.</p>
-    </div>
-</form>
+    </aside>
+</div>
 {% endblock %}

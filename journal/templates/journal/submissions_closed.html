@@ -2,9 +2,12 @@
 {% block journal_title %}Submissions closed — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<div class="jeltan-card" style="text-align:center; padding:3rem 1.5rem;">
-    <h2 class="jeltan-h2">Submissions are closed</h2>
-    <p class="jeltan-muted">{{ journal.closed_message }}</p>
-    <a href="{% url 'journal:home' %}" class="jeltan-btn-ghost" style="margin-top:1rem;">Back to the journal</a>
+<div class="jeltan-card" style="text-align:center; padding:4rem 1.5rem; max-width:640px; margin:0 auto;">
+    <h1 class="jeltan-h1">Submissions are closed</h1>
+    <p class="jeltan-muted" style="max-width:44ch; margin:0 auto 1.75rem;">{{ journal.closed_message }}</p>
+    <div class="jeltan-btn-row" style="justify-content:center;">
+        <a class="jeltan-btn-ghost" href="{% url 'journal:home' %}">Back to the journal</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:guidelines' %}">Author guidelines</a>
+    </div>
 </div>
 {% endblock %}

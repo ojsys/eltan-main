@@ -2,22 +2,35 @@
 {% block journal_title %}Issues — {{ journal.name }}{% endblock %}
 
 {% block journal_content %}
-<h2 class="jeltan-h2">Issue archive</h2>
+<h1 class="jeltan-h1">Issue archive</h1>
+<p class="jeltan-muted" style="max-width:56ch; margin-bottom:2rem;">
+    Every issue of {{ journal.name }}, most recent first. All articles are free to read and download.
+</p>
+
 <div class="jeltan-grid jeltan-grid-3">
     {% for issue in issues %}
-    <div class="jeltan-card">
-        {% if issue.cover_image %}
-        <img src="{{ issue.cover_image.url }}" alt="{{ issue.label }}" style="width:100%; border-radius:10px; margin-bottom:.8rem;">
-        {% endif %}
-        <a href="{{ issue.get_absolute_url }}" class="jeltan-article-title" style="font-size:1.05rem;">{{ issue.label }}</a>
-        {% if issue.title %}<div class="jeltan-muted" style="margin-top:.3rem;">{{ issue.title }}</div>{% endif %}
-        <div class="jeltan-muted" style="margin-top:.5rem; font-size:.82rem;">
-            {{ issue.public_articles.count }} article{{ issue.public_articles.count|pluralize }}
-            {% if issue.published_at %} · {{ issue.published_at|date:"F Y" }}{% endif %}
+    <a class="jeltan-issue-card" href="{{ issue.get_absolute_url }}">
+        <div class="jeltan-issue-cover">
+            {% if issue.cover_image %}
+            <img src="{{ issue.cover_image.url }}" alt="">
+            {% else %}
+            <div class="jeltan-issue-vol">Vol. {{ issue.volume }}<br>No. {{ issue.number }}</div>
+            <div class="jeltan-issue-year">{{ issue.year }}</div>
+            {% endif %}
         </div>
-    </div>
+        <div class="jeltan-issue-body">
+            <div class="jeltan-h3" style="margin-bottom:.25rem;">{{ issue.label }}</div>
+            {% if issue.title %}<p class="jeltan-muted" style="margin:0 0 .4rem;">{{ issue.title }}</p>{% endif %}
+            <p class="jeltan-entry-meta" style="margin:0;">
+                <span>{{ issue.public_articles.count }} article{{ issue.public_articles.count|pluralize }}</span>
+                {% if issue.published_at %}<span>{{ issue.published_at|date:"F Y" }}</span>{% endif %}
+            </p>
+        </div>
+    </a>
     {% empty %}
-    <p class="jeltan-muted">No issues have been published yet.</p>
+    <div class="jeltan-card" style="grid-column:1/-1; text-align:center; padding:3rem;">
+        <p class="jeltan-muted">No issues have been published yet.</p>
+    </div>
     {% endfor %}
 </div>
 {% endblock %}

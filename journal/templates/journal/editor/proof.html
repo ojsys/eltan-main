@@ -1,0 +1,38 @@
+{% extends 'journal/base.html' %}
+{% block journal_title %}Send a proof — {{ submission.manuscript_id }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-card">
+    <span class="jeltan-badge">{{ submission.manuscript_id }}</span>
+    <h2 class="jeltan-h2" style="margin-top:.6rem;">Send a proof to the author</h2>
+    <p class="jeltan-muted">{{ submission.title }}</p>
+    <p class="jeltan-muted">
+        The author is emailed a link to download the proof and either approve it or list corrections.
+        Sending a new proof supersedes any earlier one still awaiting a response.
+    </p>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div class="jeltan-card">
+        {% include 'journal/_form.html' with form=form %}
+        <button type="submit" class="jeltan-btn">Send the proof</button>
+        <a href="{% url 'journal:editor_submission' submission.pk %}" class="jeltan-btn-ghost">Cancel</a>
+    </div>
+</form>
+
+{% if proofs %}
+<div class="jeltan-card">
+    <h3 class="jeltan-h2">Proof history</h3>
+    {% for proof in proofs %}
+    <div style="padding:.7rem 0; border-top:1px solid var(--jeltan-line);">
+        <a href="{% url 'journal:proof_file' proof.pk %}">Version {{ proof.version }}</a>
+        <span class="jeltan-muted"> — {{ proof.get_status_display }}, sent {{ proof.sent_at|date:"j M Y" }}</span>
+        {% if proof.corrections %}
+        <div class="jeltan-muted" style="margin-top:.4rem;">{{ proof.corrections|linebreaks }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

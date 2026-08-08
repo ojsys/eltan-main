@@ -125,6 +125,127 @@ def send_editors_new_submission(submission, request=None):
     )
 
 
+def send_returned_to_author(submission, report, request=None):
+    """A manuscript returned at screening — not a rejection, and it must not read
+    like one."""
+    paragraphs = [
+        'Your manuscript has not been rejected. It has been returned so that you can put '
+        'a few things right before it goes to the editors — please correct the points '
+        'below and resubmit through the link. Your manuscript reference stays the same.',
+    ]
+    if report.failed_checks:
+        paragraphs.append('Points to address:\n' + '\n'.join(
+            f'• {item}' for item in report.failed_checks
+        ))
+    if report.notes_to_author:
+        paragraphs.append(report.notes_to_author)
+
+    return _send(
+        subject=f'Please correct and resubmit — {submission.manuscript_id}',
+        heading='Your submission needs a correction',
+        intro=f'The editorial office has checked {submission.manuscript_id}, "{submission.title}".',
+        to=submission.notification_email,
+        details=_submission_details(submission),
+        body_paragraphs=paragraphs,
+        action_url=_absolute(request, reverse('journal:resubmit', args=[submission.pk])),
+        action_label='Correct and resubmit',
+    )
+
+
+def send_screening_passed(submission, request=None):
+    """Tell the author the paper has cleared the technical check.
+
+    Sent because the alternative is silence during the longest wait in the
+    process — authors read silence as a manuscript that has been lost.
+    """
+    return _send(
+        subject=f'Passed initial checks — {submission.manuscript_id}',
+        heading='Your submission has passed the initial checks',
+        intro=(
+            f'{submission.manuscript_id} has cleared the editorial office and is now with '
+            f'the editors.'
+        ),
+        to=submission.notification_email,
+        details=_submission_details(submission),
+        body_paragraphs=[
+            'An editor will now consider whether the paper fits the scope of the journal and '
+            'should go to peer review. We will write again when there is a decision.',
+        ],
+        action_url=_absolute(request, reverse('journal:submission_detail', args=[submission.pk])),
+        action_label='View my submission',
+    )
+
+
+def send_editors_corrected_submission(submission, request=None):
+    editors = JournalRole.editor_emails()
+    if not editors:
+        return False, 'No editors configured.'
+    return _send(
+        subject=f'Corrected submission received — {submission.manuscript_id}',
+        heading='A returned manuscript has been corrected',
+        intro=f'The author has resubmitted {submission.manuscript_id} after screening.',
+        to=editors,
+        details=_submission_details(submission),
+        action_url=_absolute(request, reverse('journal:editor_submission', args=[submission.pk])),
+        action_label='Screen it again',
+    )
+
+
+def send_proof_to_author(proof, request=None):
+    """The proof, and what approving it means."""
+    submission = proof.submission
+    paragraphs = []
+    if proof.note_to_author:
+        paragraphs.append(proof.note_to_author)
+    paragraphs += [
+        'Please check the proof carefully — author names and affiliations, the abstract, '
+        'tables and figures, and every reference. This is the last point at which an error '
+        'can be corrected.',
+        'Corrections at this stage are limited to errors of fact, typesetting and spelling. '
+        'The text cannot be rewritten.',
+    ]
+    return _send(
+        subject=f'Proof for approval — {submission.manuscript_id}',
+        heading=f'Your proof is ready (version {proof.version})',
+        intro=f'The typeset proof of "{submission.title}" is ready for your approval.',
+        to=submission.notification_email,
+        details=[
+            ('Manuscript ID', submission.manuscript_id),
+            ('Proof version', str(proof.version)),
+            ('Corrections due by', proof.due_date.strftime('%d %B %Y') if proof.due_date else 'As soon as possible'),
+        ],
+        body_paragraphs=paragraphs,
+        action_url=_absolute(request, reverse('journal:proof_response', args=[submission.pk])),
+        action_label='Review and approve the proof',
+    )
+
+
+def send_editors_proof_response(proof, request=None):
+    submission = proof.submission
+    editors = [submission.handling_editor.email] if submission.handling_editor else JournalRole.editor_emails()
+    if not editors:
+        return False, 'No editors configured.'
+
+    approved = proof.status == proof.APPROVED
+    return _send(
+        subject=f'Proof {"approved" if approved else "corrections requested"} — {submission.manuscript_id}',
+        heading=f'The author has {"approved the proof" if approved else "asked for corrections"}',
+        intro=f'Regarding {submission.manuscript_id}, "{submission.title}" (proof v{proof.version}).',
+        to=editors,
+        details=[
+            ('Manuscript ID', submission.manuscript_id),
+            ('Proof version', str(proof.version)),
+            ('Status', proof.get_status_display()),
+        ],
+        body_paragraphs=(
+            ['The article is cleared for publication.'] if approved
+            else ['Corrections requested:', proof.corrections]
+        ),
+        action_url=_absolute(request, reverse('journal:editor_submission', args=[submission.pk])),
+        action_label='Open the manuscript',
+    )
+
+
 def send_decision(submission, decision, reviews=None, request=None):
     """The decision letter — the email that matters most to an author."""
     paragraphs = [decision.letter_to_author]
