@@ -508,27 +508,11 @@ class DecisionForm(BootstrapFormMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['letter_to_author'].required = True
 
-        # Desk decisions and post-review decisions are different moments; offering
-        # all six choices at both invites the wrong one to be clicked.
-        if submission and submission.status == Submission.SUBMITTED:
-            # Before screening, the only thing an editor may do is reject: a
-            # rejected paper never reaches a reviewer, so it cannot leak an
-            # identity, while sending one for review before the anonymity check
-            # is exactly the mistake screening exists to prevent.
-            allowed = [EditorialDecision.DESK_REJECT]
-        elif submission and submission.status == Submission.EDITORIAL_SCREENING:
-            allowed = [EditorialDecision.SEND_FOR_REVIEW, EditorialDecision.DESK_REJECT]
-        else:
-            allowed = [
-                EditorialDecision.ACCEPT,
-                EditorialDecision.MINOR_REVISION,
-                EditorialDecision.MAJOR_REVISION,
-                EditorialDecision.REJECT,
-                EditorialDecision.SEND_FOR_REVIEW,
-            ]
-        self.fields['decision'].choices = [
-            (value, label) for value, label in EditorialDecision.DECISION_CHOICES if value in allowed
-        ]
+        # Desk decisions and post-review decisions are different moments, so the
+        # dropdown offers what this manuscript can actually do next rather than
+        # every decision the journal knows about. The list lives on the model:
+        # the portal shows the same one, and the two must not drift apart.
+        self.fields['decision'].choices = EditorialDecision.choices_for(submission)
 
 
 class IssueForm(BootstrapFormMixin, forms.ModelForm):

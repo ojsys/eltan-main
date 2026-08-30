@@ -492,25 +492,91 @@ class DecisionTests(JournalTestCase):
         self.assertEqual(submission.apc_status, Submission.APC_WAIVED)
         self.assertEqual(submission.status, Submission.IN_PRODUCTION)
 
-    def test_before_screening_the_only_decision_is_to_reject(self):
+    def _choices(self, submission):
         from journal.forms import DecisionForm
 
-        submission = self.make_submission()  # awaiting administrative screening
-        choices = [value for value, _ in DecisionForm(submission=submission).fields['decision'].choices]
+        return [value for value, _ in DecisionForm(submission=submission).fields['decision'].choices]
 
-        # A rejected paper never reaches a reviewer, so rejecting early is safe;
-        # sending for review before the anonymity check is not.
-        self.assertEqual(choices, [EditorialDecision.DESK_REJECT])
+    def test_before_screening_review_is_the_one_thing_that_cannot_happen(self):
+        submission = self.make_submission()  # awaiting administrative screening
+        choices = self._choices(submission)
+
+        # Sending for review before the anonymity check is the mistake screening
+        # exists to prevent. Everything that does not involve a reviewer is open.
+        self.assertNotIn(EditorialDecision.SEND_FOR_REVIEW, choices)
+        self.assertIn(EditorialDecision.DESK_REJECT, choices)
+        self.assertIn(EditorialDecision.RETURN_TO_AUTHOR, choices)
+        self.assertIn(EditorialDecision.WITHDRAW, choices)
 
     def test_after_screening_the_paper_can_be_sent_for_review(self):
-        from journal.forms import DecisionForm
-
         submission = self.make_submission(status=Submission.EDITORIAL_SCREENING)
-        choices = [value for value, _ in DecisionForm(submission=submission).fields['decision'].choices]
+        choices = self._choices(submission)
 
-        self.assertEqual(sorted(choices), sorted([
-            EditorialDecision.SEND_FOR_REVIEW, EditorialDecision.DESK_REJECT,
-        ]))
+        self.assertIn(EditorialDecision.SEND_FOR_REVIEW, choices)
+        self.assertIn(EditorialDecision.DESK_REJECT, choices)
+        # Nothing has been reviewed yet, so there is nothing to accept on.
+        self.assertNotIn(EditorialDecision.ACCEPT, choices)
+
+    def test_a_reviewed_paper_offers_the_full_set_of_outcomes(self):
+        submission = self.make_submission(status=Submission.UNDER_REVIEW)
+        choices = self._choices(submission)
+
+        for decision in [
+            EditorialDecision.ACCEPT, EditorialDecision.ACCEPT_WITH_CHANGES,
+            EditorialDecision.MINOR_REVISION, EditorialDecision.MAJOR_REVISION,
+            EditorialDecision.REJECT_RESUBMIT, EditorialDecision.REJECT,
+        ]:
+            self.assertIn(decision, choices)
+
+    def test_a_revision_can_be_sent_back_for_another_round(self):
+        submission = self.make_submission(status=Submission.RESUBMITTED)
+        self.assertIn(EditorialDecision.ANOTHER_ROUND, self._choices(submission))
+
+    def test_an_editor_reviewed_section_can_be_accepted_without_peer_review(self):
+        """A book review or an editorial never goes to a reviewer.
+
+        Gating acceptance on peer review would leave those sections with no way
+        of ever being published.
+        """
+        editorials = Section.objects.create(name='Editorial', peer_reviewed=False)
+        submission = self.make_submission(section=editorials)
+
+        self.assertIn(EditorialDecision.ACCEPT, self._choices(submission))
+
+    def test_a_closed_manuscript_offers_no_decisions(self):
+        submission = self.make_submission(status=Submission.REJECTED)
+        self.assertEqual(self._choices(submission), [])
+
+    def test_returning_a_paper_to_the_author_is_not_a_rejection(self):
+        submission = self.make_submission(status=Submission.EDITORIAL_SCREENING)
+        self.client.force_login(self.editor_user)
+
+        self.client.post(reverse('journal:record_decision', args=[submission.pk]), {
+            'decision': EditorialDecision.RETURN_TO_AUTHOR,
+            'letter_to_author': 'The anonymised file still names the authors.',
+        })
+
+        submission.refresh_from_db()
+        self.assertEqual(submission.status, Submission.RETURNED)
+        self.assertTrue(submission.is_open)
+
+    def test_withdrawing_stops_the_reviewers(self):
+        submission = self.make_submission(status=Submission.UNDER_REVIEW)
+        assignment = ReviewAssignment.objects.create(
+            submission=submission, reviewer_name='Chidi Eze',
+            reviewer_email='reviewer@example.com', status=ReviewAssignment.ACCEPTED,
+        )
+        self.client.force_login(self.editor_user)
+
+        self.client.post(reverse('journal:record_decision', args=[submission.pk]), {
+            'decision': EditorialDecision.WITHDRAW,
+            'letter_to_author': 'Withdrawn at the corresponding author’s request.',
+        })
+
+        submission.refresh_from_db()
+        assignment.refresh_from_db()
+        self.assertEqual(submission.status, Submission.WITHDRAWN)
+        self.assertEqual(assignment.status, ReviewAssignment.CANCELLED)
 
     def test_only_editors_reach_the_editorial_queue(self):
         self.client.force_login(self.author)
@@ -1373,3 +1439,142 @@ class OaiResumptionTests(DiscoveryTestCase):
         resumed = self._oai(verb='ListRecords', resumptionToken=token)
         self.assertEqual(len(self._find(resumed, 'oai:error')), 0)
         self.assertEqual(len(self._find(resumed, 'oai:ListRecords/oai:record')), 1)
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class PortalTests(JournalTestCase):
+    """The editorial portal: the cross-manuscript view of decisions and work."""
+
+    def url(self, **params):
+        base = reverse('journal:editor_portal')
+        if not params:
+            return base
+        return base + '?' + '&'.join(f'{key}={value}' for key, value in params.items())
+
+    def test_an_author_cannot_reach_the_portal(self):
+        self.client.force_login(self.author)
+        self.assertEqual(self.client.get(self.url()).status_code, 404)
+
+    def test_an_editor_reaches_the_portal(self):
+        self.client.force_login(self.editor_user)
+        self.assertEqual(self.client.get(self.url()).status_code, 200)
+
+    def test_a_site_administrator_reaches_the_portal_without_a_journal_role(self):
+        """Admins hold the journal's records whether or not anyone gave them a role."""
+        admin_user = CustomUser.objects.create_user(
+            email='admin@example.com', password='pw-for-tests-only',
+            first_name='Ngozi', last_name='Adaora',
+        )
+        admin_user.is_staff = True
+        admin_user.save()
+
+        self.assertFalse(JournalRole.objects.filter(user=admin_user).exists())
+        self.client.force_login(admin_user)
+        self.assertEqual(self.client.get(self.url()).status_code, 200)
+
+    def test_the_portal_lists_work_waiting_on_the_editorial_office(self):
+        self.make_submission()  # awaiting screening
+        self.make_submission(status=Submission.EDITORIAL_SCREENING)
+        self.client.force_login(self.editor_user)
+
+        lanes = {lane['key']: lane for lane in self.client.get(self.url()).context['lanes']}
+
+        self.assertEqual(lanes['screening']['count'], 1)
+        self.assertEqual(lanes['decision']['count'], 1)
+
+    def test_a_manuscript_with_the_author_is_not_queued_for_a_decision(self):
+        # Chasing an author is a different job from clearing the office queue,
+        # and mixing them in is how a queue stops meaning anything. Ownership is
+        # the exception: an open paper nobody owns is the office's problem
+        # whoever happens to be holding it.
+        submission = self.make_submission(status=Submission.MAJOR_REVISION)
+        self.client.force_login(self.editor_user)
+
+        lanes = {lane['key']: lane for lane in self.client.get(self.url()).context['lanes']}
+        self.assertEqual(lanes['screening']['count'], 0)
+        self.assertEqual(lanes['decision']['count'], 0)
+        self.assertEqual(lanes['overdue']['count'], 0)
+        self.assertEqual(lanes['unassigned']['count'], 1)
+
+        submission.handling_editor = self.editor_user
+        submission.save(update_fields=['handling_editor'])
+        lanes = {lane['key']: lane for lane in self.client.get(self.url()).context['lanes']}
+        self.assertEqual(sum(lane['count'] for lane in lanes.values()), 0)
+
+    def test_the_decision_log_can_be_filtered(self):
+        first = self.make_submission(status=Submission.UNDER_REVIEW)
+        second = self.make_submission(status=Submission.UNDER_REVIEW)
+        EditorialDecision.objects.create(
+            submission=first, decision=EditorialDecision.ACCEPT, editor=self.editor_user,
+        )
+        EditorialDecision.objects.create(
+            submission=second, decision=EditorialDecision.REJECT, editor=self.editor_user,
+        )
+        self.client.force_login(self.editor_user)
+
+        response = self.client.get(self.url(decision=EditorialDecision.ACCEPT))
+        rows = list(response.context['decisions'])
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].submission_id, first.pk)
+
+    def test_the_acceptance_rate_counts_only_settled_papers(self):
+        accepted = self.make_submission(status=Submission.UNDER_REVIEW)
+        rejected = self.make_submission(status=Submission.UNDER_REVIEW)
+        revising = self.make_submission(status=Submission.UNDER_REVIEW)
+        EditorialDecision.objects.create(submission=accepted, decision=EditorialDecision.ACCEPT)
+        EditorialDecision.objects.create(submission=rejected, decision=EditorialDecision.REJECT)
+        # Still live, so it must not be read as a rejection.
+        EditorialDecision.objects.create(
+            submission=revising, decision=EditorialDecision.MAJOR_REVISION,
+        )
+        self.client.force_login(self.editor_user)
+
+        statistics = self.client.get(self.url()).context['statistics']
+
+        self.assertEqual(statistics['settled'], 2)
+        self.assertEqual(statistics['acceptance_rate'], 50)
+
+    def test_the_portal_survives_an_empty_journal(self):
+        self.client.force_login(self.editor_user)
+        response = self.client.get(self.url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context['statistics']['acceptance_rate'])
+        self.assertIsNone(response.context['statistics']['median_days'])
+
+
+class AdminAccessTests(TestCase):
+    """The Django admin's way into the editorial portal.
+
+    Administrators hold the journal's records and are the people who fix them,
+    so the admin has to point at the workflow rather than quietly duplicating it.
+    """
+
+    def setUp(self):
+        self.admin = CustomUser.objects.create_superuser(
+            email='root@example.com', password='pw-for-tests-only',
+            first_name='Root', last_name='User', gender='female',
+        )
+        self.client.force_login(self.admin)
+
+    def test_the_settings_page_links_to_the_portal(self):
+        settings_row = JournalSettings.load()
+        response = self.client.get(
+            reverse('admin:journal_journalsettings_change', args=[settings_row.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('journal:editor_portal'))
+
+    def test_decisions_are_browsable_but_not_creatable_in_the_admin(self):
+        # Recording a decision here would move no manuscript and send no letter,
+        # so the author would never learn of it.
+        self.assertEqual(
+            self.client.get(reverse('admin:journal_editorialdecision_changelist')).status_code,
+            200,
+        )
+        self.assertEqual(
+            self.client.get(reverse('admin:journal_editorialdecision_add')).status_code,
+            403,
+        )

@@ -745,6 +745,55 @@
     .jeltan-issue-card:hover { transform: none; }
 }
 
+/* ------------------------------------------------------------------ portal */
+
+/* The editorial portal. Two ideas carry the page: lanes of work that is waiting
+   on the office, and one filterable log of every decision. Both are dense on
+   purpose — an editor scanning for what is stuck should not have to scroll. */
+
+.jeltan-portal-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 1.75rem;
+}
+
+.jeltan-lanes {
+    display: grid; gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.jeltan-lane { margin-bottom: 0; }
+.jeltan-lane-head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: .6rem;
+}
+
+/* Rows are separated by a rule rather than spacing: a lane holding a dozen
+   manuscripts has to stay countable at a glance. */
+.jeltan-lane-row { padding: .55rem 0; border-top: 1px solid var(--j-line); }
+.jeltan-lane-row:first-of-type { border-top: 0; }
+.jeltan-lane-title {
+    display: block; color: var(--j-ink); font-weight: 500;
+    font-size: .88rem; text-decoration: none; line-height: 1.35;
+}
+.jeltan-lane-title:hover { color: var(--j-accent-strong); }
+
+.jeltan-filterbar {
+    display: grid; gap: .9rem; align-items: end; margin-bottom: 0;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+/* A bar per outcome. The share is already a percentage of the filtered set, so
+   the bars compare outcomes to each other rather than to an absolute scale. */
+.jeltan-meter { margin-bottom: .7rem; }
+.jeltan-meter-label {
+    display: flex; justify-content: space-between; gap: .6rem;
+    font-size: .8rem; color: var(--j-ink-2); margin-bottom: .28rem;
+}
+.jeltan-meter-label strong { color: var(--j-ink); font-variant-numeric: tabular-nums; }
+.jeltan-meter-track {
+    height: 6px; border-radius: 3px; background: var(--j-surface-2); overflow: hidden;
+}
+.jeltan-meter-fill { height: 100%; background: var(--j-accent); border-radius: 3px; }
+
 /* ------------------------------------------------------------------- print */
 
 /* Journals get printed. The article page should come out as a clean document:

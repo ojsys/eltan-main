@@ -7,6 +7,7 @@ a read-mostly view of manuscripts for when someone needs to look at the record.
 """
 
 from django.contrib import admin
+from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import (
@@ -54,6 +55,27 @@ class JournalSettingsAdmin(admin.ModelAdmin):
             'fields': ('is_accepting_submissions', 'closed_message', 'contact_email'),
         }),
     )
+
+    readonly_fields = ('portal_link',)
+
+    def get_fieldsets(self, request, obj=None):
+        return (
+            ('Editorial portal', {
+                'fields': ('portal_link',),
+                'description': (
+                    'Decisions, the editorial queue and the record of what this '
+                    'journal has published are worked in the portal, not here — '
+                    'that is where the workflow rules and the author emails live.'
+                ),
+            }),
+        ) + self.fieldsets
+
+    def portal_link(self, obj=None):
+        return format_html(
+            '<a class="button" href="{}" target="_blank">Open the editorial portal</a>',
+            reverse('journal:editor_portal'),
+        )
+    portal_link.short_description = 'Portal'
 
     def has_add_permission(self, request):
         # A second settings row would silently take effect or be ignored
@@ -196,6 +218,33 @@ class SubmissionAdmin(admin.ModelAdmin):
             obj.pk,
         )
     editor_link.short_description = 'Workflow'
+
+
+@admin.register(EditorialDecision)
+class EditorialDecisionAdmin(admin.ModelAdmin):
+    """The decision record, for searching and for corrections.
+
+    Read-only on purpose: recording a decision here would move nothing and send
+    no letter, so the author would never learn of it. Decisions are made in the
+    portal.
+    """
+
+    list_display = ('submission', 'decision', 'round', 'editor', 'decided_at', 'portal_link')
+    list_filter = ('decision', 'decided_at', 'submission__section')
+    search_fields = ('submission__manuscript_id', 'submission__title', 'letter_to_author')
+    readonly_fields = ('submission', 'decision', 'round', 'editor', 'letter_to_author',
+                       'share_reviews_with_author', 'decided_at')
+    date_hierarchy = 'decided_at'
+
+    def has_add_permission(self, request):
+        return False
+
+    def portal_link(self, obj):
+        return format_html(
+            '<a href="{}" target="_blank">Open the manuscript</a>',
+            reverse('journal:editor_submission', args=[obj.submission_id]),
+        )
+    portal_link.short_description = 'Workflow'
 
 
 @admin.register(ReviewAssignment)

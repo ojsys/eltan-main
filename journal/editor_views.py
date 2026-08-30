@@ -5,6 +5,7 @@ from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import Http404
@@ -31,7 +32,9 @@ from .models import (
     JournalSettings,
     Proof,
     ReviewAssignment,
+    Section,
     Submission,
+    SubmissionEvent,
     SubmissionFile,
 )
 from .views import journal_context
@@ -425,15 +428,26 @@ def record_decision(request, pk):
                 # Acceptance raises the article processing charge, or clears it
                 # straight to production when the journal has waived the fee.
                 submission_row.start_apc()
+            elif decision.decision == EditorialDecision.WITHDRAW:
+                # Reviewers must not keep working on a paper that has been pulled.
+                for assignment in submission_row.review_assignments.filter(
+                    status__in=[ReviewAssignment.INVITED, ReviewAssignment.ACCEPTED]
+                ):
+                    assignment.cancel()
 
         reviews = list(
             submission_row.review_assignments.filter(
                 round=decision.round, status=ReviewAssignment.SUBMITTED,
             )
         )
+        # Sending a paper for review is an internal move — the author is told
+        # when the outcome arrives, not every time it changes desk.
+        internal_only = [
+            EditorialDecision.SEND_FOR_REVIEW, EditorialDecision.ANOTHER_ROUND,
+        ]
         if decision.decision == EditorialDecision.ACCEPT and submission_row.apc_is_due:
             emails.send_acceptance_with_apc(submission_row, request)
-        elif decision.decision != EditorialDecision.SEND_FOR_REVIEW:
+        elif decision.decision not in internal_only:
             emails.send_decision(submission_row, decision, reviews, request)
 
         messages.success(request, f'Decision recorded: {decision.get_decision_display()}.')
@@ -564,4 +578,199 @@ def issue_edit(request, pk):
         return redirect('journal:editor_issues')
     return render(request, 'journal/editor/issue_form.html', journal_context(
         form=form, issue=issue, articles=issue.articles.all(),
+    ))
+
+
+# ------------------------------------------------------------------ portal
+
+def _median(values):
+    """Median of a list of numbers, or None when there is nothing to average.
+
+    The mean is the wrong summary for editorial turnaround: one manuscript that
+    sat for two years drags it somewhere no paper actually went.
+    """
+    ordered = sorted(values)
+    if not ordered:
+        return None
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / 2
+
+
+def _action_lanes(submissions):
+    """What the editorial office owes someone, in the order it should be cleared.
+
+    Each lane is work that stops if nobody picks it up. Things waiting on an
+    author or a reviewer are not lanes — chasing those is a different job, and
+    mixing them in is how a queue stops meaning anything.
+    """
+    today = timezone.now().date()
+
+    overdue_review_ids = list(
+        ReviewAssignment.objects.filter(
+            status=ReviewAssignment.ACCEPTED, due_date__lt=today,
+        ).values_list('submission_id', flat=True)
+    )
+
+    lanes = [
+        {
+            'key': 'screening',
+            'title': 'Awaiting administrative screening',
+            'blurb': 'Nothing may go to a reviewer until anonymity has been checked.',
+            'tone': 'warn',
+            'rows': submissions.filter(status=Submission.SUBMITTED),
+        },
+        {
+            'key': 'decision',
+            'title': 'Awaiting an editorial decision',
+            'blurb': 'Screened or revised, and now waiting on an editor.',
+            'tone': 'warn',
+            'rows': submissions.filter(
+                status__in=[Submission.EDITORIAL_SCREENING, Submission.RESUBMITTED]
+            ),
+        },
+        {
+            'key': 'unassigned',
+            'title': 'No handling editor',
+            'blurb': 'Open manuscripts nobody owns.',
+            'tone': 'alert',
+            'rows': submissions.in_progress().filter(handling_editor__isnull=True),
+        },
+        {
+            'key': 'overdue',
+            'title': 'Overdue reviews',
+            'blurb': 'A reviewer accepted and the date has passed.',
+            'tone': 'alert',
+            'rows': submissions.filter(pk__in=overdue_review_ids),
+        },
+        {
+            'key': 'apc',
+            'title': 'Awaiting the article processing charge',
+            'blurb': 'Accepted, but the charge is unpaid and production has not started.',
+            'tone': 'info',
+            'rows': submissions.filter(
+                status=Submission.ACCEPTED, apc_status=Submission.APC_PENDING,
+            ),
+        },
+        {
+            'key': 'production',
+            'title': 'In production',
+            'blurb': 'Copyediting, proofs and papers ready to be published.',
+            'tone': 'info',
+            'rows': submissions.filter(status__in=Submission.PRODUCTION_STATUSES),
+        },
+    ]
+
+    for lane in lanes:
+        rows = list(lane['rows'][:25])
+        lane['rows'] = rows
+        lane['count'] = len(rows)
+    return lanes
+
+
+def _decision_statistics(decisions):
+    """Headline numbers for the filtered decision log."""
+    by_decision = []
+    labels = dict(EditorialDecision.DECISION_CHOICES)
+    counts = dict(
+        decisions.values_list('decision').annotate(total=Count('id'))
+    )
+    total = sum(counts.values())
+    for value, label in EditorialDecision.DECISION_CHOICES:
+        if counts.get(value):
+            by_decision.append({
+                'label': label,
+                'count': counts[value],
+                'share': round(counts[value] * 100 / total) if total else 0,
+            })
+
+    # Acceptance rate is counted over decisions that settled a paper, so a
+    # revision request is not read as a rejection while the paper is still live.
+    accepted = counts.get(EditorialDecision.ACCEPT, 0)
+    settled = accepted + sum(
+        counts.get(value, 0) for value in EditorialDecision.CLOSING_DECISIONS
+        if value != EditorialDecision.WITHDRAW
+    )
+
+    turnarounds = [
+        (decision.decided_at.date() - decision.submission.submitted_at.date()).days
+        for decision in decisions.select_related('submission')[:500]
+        if decision.submission.submitted_at
+    ]
+
+    return {
+        'total': total,
+        'by_decision': by_decision,
+        'labels': labels,
+        'accepted': accepted,
+        'settled': settled,
+        'acceptance_rate': round(accepted * 100 / settled) if settled else None,
+        'median_days': _median(turnarounds),
+    }
+
+
+@editor_required
+def portal(request):
+    """The editorial portal: every decision, and everything still owed one.
+
+    The dashboard answers 'what is in the pipeline'. This answers the questions
+    that span manuscripts — what has this journal decided, how fast, by whom,
+    and what is stuck — which is what an editor-in-chief or an administrator is
+    actually looking for, and what no per-manuscript page can show.
+    """
+    submissions = Submission.objects.select_related('section', 'handling_editor')
+
+    decisions = EditorialDecision.objects.select_related(
+        'submission', 'submission__section', 'editor',
+    )
+
+    filters = {
+        'decision': request.GET.get('decision', ''),
+        'section': request.GET.get('section', ''),
+        'editor': request.GET.get('editor', ''),
+        'q': request.GET.get('q', '').strip(),
+    }
+    if filters['decision']:
+        decisions = decisions.filter(decision=filters['decision'])
+    if filters['section']:
+        decisions = decisions.filter(submission__section__slug=filters['section'])
+    if filters['editor']:
+        decisions = decisions.filter(editor_id=filters['editor'])
+    if filters['q']:
+        decisions = decisions.filter(
+            Q(submission__manuscript_id__icontains=filters['q'])
+            | Q(submission__title__icontains=filters['q'])
+        )
+
+    statistics = _decision_statistics(decisions)
+    page = Paginator(decisions, 25).get_page(request.GET.get('page'))
+
+    # The querystring minus `page`, so paging does not drop the filters.
+    query = request.GET.copy()
+    query.pop('page', None)
+
+    return render(request, 'journal/editor/portal.html', journal_context(
+        nav='portal',
+        lanes=_action_lanes(submissions),
+        decisions=page,
+        page_obj=page,
+        querystring=query.urlencode(),
+        filters=filters,
+        decision_choices=EditorialDecision.DECISION_CHOICES,
+        sections=Section.objects.all(),
+        editors=JournalRole.objects.filter(is_active=True).select_related('user'),
+        statistics=statistics,
+        events=SubmissionEvent.objects.select_related('submission', 'actor')
+                                      .order_by('-created_at')[:30],
+        issues=Issue.objects.all()[:8],
+        my_role=JournalRole.describe(request.user),
+        is_site_admin=JournalRole.is_site_admin(request.user),
+        is_chief=JournalRole.is_chief(request.user),
+        totals={
+            'submissions': submissions.count(),
+            'open': submissions.in_progress().count(),
+            'published': Article.objects.filter(is_published=True).count(),
+            'sections': Section.objects.filter(is_active=True).count(),
+        },
     ))

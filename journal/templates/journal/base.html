@@ -73,6 +73,7 @@ choose between.
             {% endif %}
             {% if is_journal_editor %}
             <a href="{% url 'journal:editor_dashboard' %}" {% if nav == 'editor' %}aria-current="page"{% endif %}>Editorial Office</a>
+            <a href="{% url 'journal:editor_portal' %}" {% if nav == 'portal' %}aria-current="page"{% endif %}>Portal</a>
             {% endif %}
             <a class="jeltan-nav-cta" href="{% url 'journal:submit' %}">Submit a paper</a>
         </nav>

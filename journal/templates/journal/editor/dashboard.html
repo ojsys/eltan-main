@@ -7,7 +7,10 @@
         <h1 class="jeltan-h1" style="margin-bottom:.25rem;">Editorial office</h1>
         <p class="jeltan-muted" style="margin:0;">Everything in the pipeline, and who it is waiting on.</p>
     </div>
-    <a class="jeltan-btn-ghost" href="{% url 'journal:editor_issues' %}">Manage issues</a>
+    <div class="jeltan-btn-row">
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_issues' %}">Manage issues</a>
+        <a class="jeltan-btn" href="{% url 'journal:editor_portal' %}">Editorial portal</a>
+    </div>
 </div>
 
 <div class="jeltan-statrow">

@@ -1,0 +1,267 @@
+{% extends 'journal/base.html' %}
+
+{% comment %}
+The editorial portal: decisions and oversight across every manuscript.
+
+The dashboard answers "what is in the pipeline". This page answers the questions
+that span manuscripts — what has this journal decided, how quickly, by whom, and
+what is stuck waiting on the editorial office — which is what an editor-in-chief
+or a site administrator comes here for.
+
+Three bands, in the order the questions get asked: what is owed work, the record
+of every decision, and the numbers that read off that record.
+{% endcomment %}
+
+{% block journal_title %}Editorial portal — {{ journal.name }}{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-portal-head">
+    <div>
+        <p class="jeltan-eyebrow">Editorial portal</p>
+        <h1 class="jeltan-h1" style="margin-bottom:.25rem;">{{ journal.short_name|default:journal.name }}</h1>
+        <p class="jeltan-muted" style="margin:0;">
+            Every decision this journal has taken, and everything still waiting on one.
+            {% if my_role %}<span class="jeltan-badge jeltan-badge-info" style="margin-left:.4rem;">{{ my_role }}</span>{% endif %}
+        </p>
+    </div>
+    <div class="jeltan-btn-row">
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_dashboard' %}">Manuscript queue</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_issues' %}">Issues</a>
+        {% if is_site_admin %}
+        <a class="jeltan-btn" href="/admin/journal/">Journal admin</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="jeltan-statrow">
+    <div class="jeltan-stat"><strong>{{ totals.submissions }}</strong><span>Manuscripts received</span></div>
+    <div class="jeltan-stat {% if totals.open %}jeltan-stat-act{% endif %}"><strong>{{ totals.open }}</strong><span>Still in the pipeline</span></div>
+    <div class="jeltan-stat"><strong>{{ statistics.total }}</strong><span>Decisions recorded</span></div>
+    <div class="jeltan-stat"><strong>{% if statistics.acceptance_rate is not None %}{{ statistics.acceptance_rate }}%{% else %}&mdash;{% endif %}</strong><span>Acceptance rate</span></div>
+    <div class="jeltan-stat"><strong>{% if statistics.median_days is not None %}{{ statistics.median_days }}{% else %}&mdash;{% endif %}</strong><span>Median days to decision</span></div>
+    <div class="jeltan-stat"><strong>{{ totals.published }}</strong><span>Articles published</span></div>
+</div>
+
+{# ---------------------------------------------------- what is owed a decision #}
+<h2 class="jeltan-h2" id="waiting" style="margin-top:2.5rem;">Waiting on the editorial office</h2>
+<p class="jeltan-muted" style="margin:-.4rem 0 1.25rem;">
+    Work that stops until somebody here picks it up. Manuscripts sitting with an
+    author or a reviewer are not listed — chasing those is a different job.
+</p>
+
+<div class="jeltan-lanes">
+    {% for lane in lanes %}
+    <section class="jeltan-card jeltan-lane" aria-labelledby="lane-{{ lane.key }}">
+        <div class="jeltan-lane-head">
+            <h3 class="jeltan-h3" id="lane-{{ lane.key }}" style="margin:0;">{{ lane.title }}</h3>
+            <span class="jeltan-badge {% if lane.count %}jeltan-badge-{{ lane.tone }}{% endif %}">{{ lane.count }}</span>
+        </div>
+        <p class="jeltan-muted jeltan-small" style="margin:.35rem 0 .8rem;">{{ lane.blurb }}</p>
+
+        {% for submission in lane.rows %}
+        <div class="jeltan-lane-row">
+            <a class="jeltan-mono jeltan-small" href="{% url 'journal:editor_submission' submission.pk %}">{{ submission.manuscript_id }}</a>
+            <a class="jeltan-lane-title" href="{% url 'journal:editor_submission' submission.pk %}">{{ submission.title|truncatewords:10 }}</a>
+            <div class="jeltan-event-time">
+                {{ submission.section.name }} · round {{ submission.current_round }} ·
+                {% if submission.handling_editor %}{{ submission.handling_editor.get_full_name|default:submission.handling_editor.email }}{% else %}no editor{% endif %}
+                · {{ submission.submitted_at|date:"j M Y" }}
+            </div>
+        </div>
+        {% empty %}
+        <p class="jeltan-muted jeltan-small" style="margin:0;">Nothing here.</p>
+        {% endfor %}
+    </section>
+    {% endfor %}
+</div>
+
+{# ------------------------------------------------------------- decision log #}
+<h2 class="jeltan-h2" id="decisions" style="margin-top:2.75rem;">Decision log</h2>
+<p class="jeltan-muted" style="margin:-.4rem 0 1.25rem;">
+    Every decision recorded, with the letter the author was sent. This is the
+    record a journal has to be able to produce years later.
+</p>
+
+<form method="get" action="" class="jeltan-card jeltan-filterbar" role="search" aria-label="Filter decisions">
+    <div class="jeltan-field" style="margin:0;">
+        <label for="q">Manuscript</label>
+        <input type="text" id="q" name="q" value="{{ filters.q }}" placeholder="ID or title">
+    </div>
+    <div class="jeltan-field" style="margin:0;">
+        <label for="decision">Decision</label>
+        <select id="decision" name="decision">
+            <option value="">All decisions</option>
+            {% for value, label in decision_choices %}
+            <option value="{{ value }}" {% if filters.decision == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="jeltan-field" style="margin:0;">
+        <label for="section">Section</label>
+        <select id="section" name="section">
+            <option value="">All sections</option>
+            {% for section in sections %}
+            <option value="{{ section.slug }}" {% if filters.section == section.slug %}selected{% endif %}>{{ section.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="jeltan-field" style="margin:0;">
+        <label for="editor">Editor</label>
+        <select id="editor" name="editor">
+            <option value="">All editors</option>
+            {% for role in editors %}
+            <option value="{{ role.user.pk }}" {% if filters.editor == role.user.pk|stringformat:"s" %}selected{% endif %}>
+                {{ role.user.get_full_name|default:role.user.email }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="jeltan-btn-row">
+        <button type="submit" class="jeltan-btn">Filter</button>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_portal' %}#decisions">Clear</a>
+    </div>
+</form>
+
+<div class="jeltan-card jeltan-card-flush" style="margin-top:1.25rem;">
+    <div class="jeltan-table-wrap">
+        <table class="jeltan-table">
+            <thead>
+                <tr>
+                    <th style="padding-left:1.25rem;">Manuscript</th>
+                    <th>Decision</th><th>Round</th><th>Section</th><th>Editor</th>
+                    <th style="padding-right:1.25rem;">Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for decision in decisions %}
+                <tr>
+                    <td style="padding-left:1.25rem; max-width:400px;">
+                        <a class="jeltan-mono jeltan-small" style="white-space:nowrap;"
+                           href="{% url 'journal:editor_submission' decision.submission.pk %}">{{ decision.submission.manuscript_id }}</a>
+                        <div class="jeltan-event-time">{{ decision.submission.title|truncatewords:10 }}</div>
+                    </td>
+                    <td>
+                        <span class="jeltan-badge {% if decision.is_closing %}jeltan-badge-bad{% elif decision.needs_author_action %}jeltan-badge-warn{% else %}jeltan-badge-good{% endif %}">
+                            {{ decision.get_decision_display }}
+                        </span>
+                    </td>
+                    <td>{{ decision.round }}</td>
+                    <td class="jeltan-small">{{ decision.submission.section.name|default:"&mdash;" }}</td>
+                    <td class="jeltan-small">{% if decision.editor %}{{ decision.editor.get_full_name|default:decision.editor.email }}{% else %}&mdash;{% endif %}</td>
+                    <td class="jeltan-small" style="padding-right:1.25rem; white-space:nowrap;">{{ decision.decided_at|date:"j M Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" style="text-align:center; padding:3rem;">
+                    <span class="jeltan-muted">No decisions match these filters.</span>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav class="jeltan-filters" aria-label="Decision log pages" style="margin-top:1rem;">
+    {% if page_obj.has_previous %}
+    <a href="?{{ querystring }}&amp;page={{ page_obj.previous_page_number }}#decisions">&larr; Newer</a>
+    {% endif %}
+    <span class="jeltan-muted jeltan-small" style="padding:.45rem .2rem;">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    {% if page_obj.has_next %}
+    <a href="?{{ querystring }}&amp;page={{ page_obj.next_page_number }}#decisions">Older &rarr;</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{# ------------------------------------------ what the record adds up to #}
+<div class="jeltan-grid jeltan-grid-3" style="margin-top:1.75rem;">
+    <section class="jeltan-card" aria-labelledby="outcomes">
+        <h3 class="jeltan-h3" id="outcomes">Decisions by outcome</h3>
+        <p class="jeltan-muted jeltan-small" style="margin:.2rem 0 .9rem;">
+            {{ statistics.total }} decision{{ statistics.total|pluralize }} in the current filter.
+        </p>
+        {% for row in statistics.by_decision %}
+        <div class="jeltan-meter">
+            <div class="jeltan-meter-label">
+                <span>{{ row.label }}</span><strong>{{ row.count }}</strong>
+            </div>
+            <div class="jeltan-meter-track"><div class="jeltan-meter-fill" style="width:{{ row.share }}%;"></div></div>
+        </div>
+        {% empty %}
+        <p class="jeltan-muted jeltan-small" style="margin:0;">Nothing recorded yet.</p>
+        {% endfor %}
+
+        {% if statistics.acceptance_rate is not None %}
+        <table class="jeltan-deflist" style="margin-top:1rem;">
+            <tr><th>Accepted</th><td>{{ statistics.accepted }} of {{ statistics.settled }} settled</td></tr>
+            <tr><th>Acceptance rate</th><td>{{ statistics.acceptance_rate }}%</td></tr>
+            {% if statistics.median_days is not None %}
+            <tr><th>Median turnaround</th><td>{{ statistics.median_days }} days from submission</td></tr>
+            {% endif %}
+        </table>
+        {% endif %}
+    </section>
+
+    <section class="jeltan-card" aria-labelledby="activity">
+        <h3 class="jeltan-h3" id="activity">Recent activity</h3>
+        <div class="jeltan-timeline" style="margin-top:.8rem;">
+            {% for event in events %}
+            <div class="jeltan-event">
+                <div class="jeltan-event-title">
+                    <a href="{% url 'journal:editor_submission' event.submission.pk %}">{{ event.submission.manuscript_id }}</a>
+                    — {{ event.event }}
+                </div>
+                <div class="jeltan-event-time">
+                    {{ event.created_at|date:"j M Y, H:i" }}
+                    {% if event.actor %} · {{ event.actor.get_full_name|default:event.actor.email }}{% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="jeltan-muted jeltan-small" style="margin:0;">Nothing has happened yet.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div>
+        <section class="jeltan-card" aria-labelledby="issues">
+            <h3 class="jeltan-h3" id="issues">Issues</h3>
+            {% for issue in issues %}
+            <div class="jeltan-lane-row">
+                <a class="jeltan-lane-title" href="{% url 'journal:issue_edit' issue.pk %}">{{ issue.label }}</a>
+                <div class="jeltan-event-time">{% if issue.is_published %}Published{% else %}Draft{% endif %}</div>
+            </div>
+            {% empty %}
+            <p class="jeltan-muted jeltan-small" style="margin:0;">No issues yet.</p>
+            {% endfor %}
+            <div class="jeltan-btn-row" style="margin-top:.9rem;">
+                <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:issue_create' %}">New issue</a>
+                <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:editor_issues' %}">All issues</a>
+            </div>
+        </section>
+
+        {% if is_site_admin %}
+        <section class="jeltan-card jeltan-card-quiet" aria-labelledby="administration">
+            <h3 class="jeltan-h3" id="administration">Journal administration</h3>
+            <p class="jeltan-muted jeltan-small" style="margin:.2rem 0 .8rem;">
+                The records behind the workflow. Changes here apply to the whole journal.
+            </p>
+            <table class="jeltan-deflist">
+                <tr><th><a href="/admin/journal/journalsettings/">Journal settings</a></th>
+                    <td class="jeltan-small">Aims, policies, ISSN, APC, reviews required</td></tr>
+                <tr><th><a href="/admin/journal/section/">Sections</a></th>
+                    <td class="jeltan-small">{{ totals.sections }} active — and which are peer reviewed</td></tr>
+                <tr><th><a href="/admin/journal/journalrole/">Editors</a></th>
+                    <td class="jeltan-small">Who may work this portal</td></tr>
+                <tr><th><a href="/admin/journal/editorialboardmember/">Editorial board</a></th>
+                    <td class="jeltan-small">The board as readers see it</td></tr>
+                <tr><th><a href="/admin/journal/submission/">Submissions</a></th>
+                    <td class="jeltan-small">Raw records, for corrections</td></tr>
+                <tr><th><a href="/admin/journal/editorialdecision/">Decisions</a></th>
+                    <td class="jeltan-small">The full decision record, searchable</td></tr>
+            </table>
+        </section>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

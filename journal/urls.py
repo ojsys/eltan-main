@@ -52,6 +52,7 @@ urlpatterns += [
 
     # Editorial office
     path('editor/', editor_views.dashboard, name='editor_dashboard'),
+    path('editor/portal/', editor_views.portal, name='editor_portal'),
     path('editor/submissions/<int:pk>/', editor_views.submission, name='editor_submission'),
     path('editor/submissions/<int:pk>/screen/', editor_views.screen, name='screen'),
     path('editor/submissions/<int:pk>/copyedit/', editor_views.upload_copyedit, name='upload_copyedit'),

@@ -168,11 +168,22 @@ class JournalRole(models.Model):
         return f"{self.user.get_full_name() or self.user.email} — {self.get_role_display()}"
 
     @staticmethod
+    def is_site_admin(user):
+        """Site administrators, who reach the journal through the Django admin.
+
+        They hold the journal's records whether or not anyone remembered to give
+        them a JournalRole row, so they get in on the strength of that alone.
+        """
+        return bool(
+            user and user.is_authenticated and (user.is_superuser or user.is_staff)
+        )
+
+    @staticmethod
     def is_editor(user):
         """True for anyone who may work the editorial queue."""
         if not user or not user.is_authenticated:
             return False
-        if user.is_superuser:
+        if JournalRole.is_site_admin(user):
             return True
         return JournalRole.objects.filter(user=user, is_active=True).exists()
 
@@ -181,13 +192,27 @@ class JournalRole(models.Model):
         """Editors-in-chief and managing editors — they may publish and assign."""
         if not user or not user.is_authenticated:
             return False
-        if user.is_superuser:
+        if JournalRole.is_site_admin(user):
             return True
         return JournalRole.objects.filter(
             user=user,
             is_active=True,
             role__in=[JournalRole.EDITOR_IN_CHIEF, JournalRole.MANAGING_EDITOR],
         ).exists()
+
+    @staticmethod
+    def describe(user):
+        """How this person should be labelled in the editorial portal."""
+        roles = list(
+            JournalRole.objects.filter(user=user, is_active=True)
+            .values_list('role', flat=True)
+        ) if user and user.is_authenticated else []
+        if roles:
+            labels = dict(JournalRole.ROLE_CHOICES)
+            return ', '.join(labels[role] for role in roles if role in labels)
+        if JournalRole.is_site_admin(user):
+            return 'Site administrator'
+        return ''
 
     @staticmethod
     def editor_emails():
@@ -866,30 +891,107 @@ class EditorialDecision(models.Model):
 
     DESK_REJECT = 'desk_reject'
     SEND_FOR_REVIEW = 'send_for_review'
+    ANOTHER_ROUND = 'another_round'
     ACCEPT = 'accept'
+    ACCEPT_WITH_CHANGES = 'accept_with_changes'
     MINOR_REVISION = 'minor_revision'
     MAJOR_REVISION = 'major_revision'
+    RETURN_TO_AUTHOR = 'return_to_author'
+    REJECT_RESUBMIT = 'reject_resubmit'
     REJECT = 'reject'
+    WITHDRAW = 'withdraw'
 
     DECISION_CHOICES = [
         (SEND_FOR_REVIEW, 'Send for peer review'),
+        (ANOTHER_ROUND, 'Send the revision back for another review round'),
+        (RETURN_TO_AUTHOR, 'Return to the author for correction (not a rejection)'),
         (DESK_REJECT, 'Desk reject (out of scope / below threshold)'),
         (MINOR_REVISION, 'Minor revisions required'),
         (MAJOR_REVISION, 'Major revisions required'),
+        (ACCEPT_WITH_CHANGES, 'Accept subject to the changes listed in the letter'),
         (ACCEPT, 'Accept'),
+        (REJECT_RESUBMIT, 'Reject, but a resubmission would be welcome'),
         (REJECT, 'Reject'),
+        (WITHDRAW, 'Withdraw the manuscript'),
     ]
 
     # What each decision does to the manuscript. A decision that does not move
     # the paper is not a decision, so every choice appears here.
     RESULTING_STATUS = {
         SEND_FOR_REVIEW: Submission.UNDER_REVIEW,
+        ANOTHER_ROUND: Submission.UNDER_REVIEW,
+        RETURN_TO_AUTHOR: Submission.RETURNED,
         DESK_REJECT: Submission.DESK_REJECTED,
         MINOR_REVISION: Submission.MINOR_REVISION,
         MAJOR_REVISION: Submission.MAJOR_REVISION,
+        ACCEPT_WITH_CHANGES: Submission.MINOR_REVISION,
         ACCEPT: Submission.ACCEPTED,
+        REJECT_RESUBMIT: Submission.REJECTED,
         REJECT: Submission.REJECTED,
+        WITHDRAW: Submission.WITHDRAWN,
     }
+
+    # Decisions that end the manuscript's life in the journal. Grouped because
+    # the portal reports on them and the letter wording differs.
+    CLOSING_DECISIONS = [DESK_REJECT, REJECT_RESUBMIT, REJECT, WITHDRAW]
+    # Decisions that hand the paper back to the author and expect it to return.
+    AUTHOR_ACTION_DECISIONS = [
+        MINOR_REVISION, MAJOR_REVISION, ACCEPT_WITH_CHANGES, RETURN_TO_AUTHOR,
+    ]
+
+    # Available at every open stage: a paper can always be returned, rejected
+    # outright or withdrawn, whatever point it has reached.
+    ALWAYS_AVAILABLE = [RETURN_TO_AUTHOR, DESK_REJECT, WITHDRAW]
+    # Once reviewers have reported, or on a paper the editor is judging alone.
+    JUDGEMENT_DECISIONS = [
+        ACCEPT, ACCEPT_WITH_CHANGES, MINOR_REVISION, MAJOR_REVISION,
+        REJECT_RESUBMIT, REJECT,
+    ]
+
+    @classmethod
+    def choices_for(cls, submission=None):
+        """The decisions an editor may record on this manuscript right now.
+
+        One list, used by the form and by the portal, so what the dropdown
+        offers and what the workflow accepts cannot drift apart.
+        """
+        if submission is None:
+            return list(cls.DECISION_CHOICES)
+        if not submission.is_open:
+            return []
+
+        # A section that is not peer reviewed — book reviews, editorials — is
+        # judged by the editor alone, so its decisions are open from the start.
+        # Without this an editorial can be sent for review or rejected, and
+        # never accepted.
+        editor_reviewed = bool(submission.section) and not submission.section.peer_reviewed
+
+        if submission.status in (Submission.SUBMITTED, Submission.RETURNED):
+            # Peer review may not start before administrative screening: that is
+            # where anonymity is actually verified, and sending an un-screened
+            # paper to a reviewer is how an author's name reaches the person
+            # judging them. Everything that does not involve a reviewer is fine.
+            allowed = list(cls.ALWAYS_AVAILABLE)
+            if editor_reviewed:
+                allowed = cls.JUDGEMENT_DECISIONS + allowed
+        elif submission.status == Submission.EDITORIAL_SCREENING:
+            allowed = [cls.SEND_FOR_REVIEW] + cls.ALWAYS_AVAILABLE
+            if editor_reviewed:
+                allowed = cls.JUDGEMENT_DECISIONS + allowed
+        elif submission.status == Submission.UNDER_REVIEW:
+            allowed = cls.JUDGEMENT_DECISIONS + [cls.SEND_FOR_REVIEW] + cls.ALWAYS_AVAILABLE
+        elif submission.status in (
+            Submission.RESUBMITTED, Submission.MINOR_REVISION, Submission.MAJOR_REVISION,
+        ):
+            allowed = cls.JUDGEMENT_DECISIONS + [cls.ANOTHER_ROUND] + cls.ALWAYS_AVAILABLE
+        else:
+            # Accepted and in production. The paper is past judgement, but it can
+            # still be pulled or sent back if something surfaces at proof stage.
+            allowed = [cls.RETURN_TO_AUTHOR, cls.WITHDRAW, cls.REJECT]
+
+        return [
+            (value, label) for value, label in cls.DECISION_CHOICES if value in allowed
+        ]
 
     submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name='decisions')
     round = models.PositiveIntegerField(default=1)
@@ -912,6 +1014,15 @@ class EditorialDecision(models.Model):
 
     def __str__(self):
         return f"{self.submission.manuscript_id} — {self.get_decision_display()}"
+
+    @property
+    def is_closing(self):
+        """Whether this decision ended the manuscript's life in the journal."""
+        return self.decision in self.CLOSING_DECISIONS
+
+    @property
+    def needs_author_action(self):
+        return self.decision in self.AUTHOR_ACTION_DECISIONS
 
 
 class SubmissionEvent(models.Model):

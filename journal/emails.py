@@ -257,9 +257,7 @@ def send_decision(submission, decision, reviews=None, request=None):
                 paragraphs.append(f'Recommendation: {review.get_recommendation_display()}')
             paragraphs.append(review.comments_to_author)
 
-    needs_action = decision.decision in [
-        decision.MINOR_REVISION, decision.MAJOR_REVISION,
-    ]
+    needs_action = decision.needs_author_action
     return _send(
         subject=f'Editorial decision — {submission.manuscript_id}',
         heading=f'Decision: {decision.get_decision_display()}',
