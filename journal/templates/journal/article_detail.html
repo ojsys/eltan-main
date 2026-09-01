@@ -50,15 +50,23 @@ but invisible to the people looking for it.
 
             <h1 class="jeltan-article-title">{{ article.title }}</h1>
 
-            {% for author in article.authors.all %}
-            <div class="jeltan-author-line">
-                <strong>{{ author.full_name }}</strong>{% if author.orcid %}
-                <span class="jeltan-small jeltan-mono"> ORCID {{ author.orcid }}</span>{% endif %}
-                {% if author.affiliation %}
-                <span class="jeltan-affil">{{ author.affiliation }}{% if author.country %}, {{ author.country }}{% endif %}</span>
-                {% endif %}
-            </div>
-            {% endfor %}
+            {% comment %}
+            The byline reads as one line of names with numbered markers, and the
+            affiliations are keyed underneath — the way a journal sets it, and
+            far easier to scan than a name-and-address block per author when a
+            paper has five of them. These names come from the article record;
+            the PDF prints the manuscript's own byline instead.
+            {% endcomment %}
+            <p class="jeltan-byline">
+                {% for author in article.authors.all %}<span class="jeltan-byline-name">{{ author.full_name }}{% if author.affiliation %}<sup>{{ forloop.counter }}</sup>{% endif %}{% if author.orcid %}<a class="jeltan-orcid" href="https://orcid.org/{{ author.orcid }}" rel="noopener" title="ORCID {{ author.orcid }}">iD</a>{% endif %}</span>{% if not forloop.last %}<span class="jeltan-byline-sep">·</span>{% endif %}{% endfor %}
+            </p>
+            {% if article.authors.all %}
+            <ol class="jeltan-affils">
+                {% for author in article.authors.all %}{% if author.affiliation %}
+                <li value="{{ forloop.counter }}">{{ author.affiliation }}{% if author.country %}, {{ author.country }}{% endif %}</li>
+                {% endif %}{% endfor %}
+            </ol>
+            {% endif %}
 
             <p class="jeltan-entry-meta" style="margin-top:1.1rem;">
                 {% if article.issue %}<span>{{ article.issue.label }}</span>{% else %}<span>Online first</span>{% endif %}
@@ -88,8 +96,23 @@ but invisible to the people looking for it.
         never from anything an author supplied as markup — which is what makes
         it safe to print here unescaped.
         {% endcomment %}
-        <section class="jeltan-fulltext" style="margin-top:2.5rem;" aria-labelledby="fulltext-heading">
+        <section class="jeltan-fulltext" style="margin-top:2.75rem;" aria-labelledby="fulltext-heading">
             <h2 class="jeltan-eyebrow jeltan-eyebrow-muted" id="fulltext-heading">Full text</h2>
+
+            {% if outline %}
+            <nav class="jeltan-contents jeltan-no-print" aria-labelledby="contents-heading">
+                <p class="jeltan-contents-title" id="contents-heading">Contents</p>
+                <ol>
+                    {% for heading in outline %}
+                    <li class="jeltan-contents-{{ heading.level }}">
+                        {% if heading.anchor %}<a href="#{{ heading.anchor }}">{{ heading.text }}</a>
+                        {% else %}{{ heading.text }}{% endif %}
+                    </li>
+                    {% endfor %}
+                </ol>
+            </nav>
+            {% endif %}
+
             <div class="jeltan-prose jeltan-body-text">{{ article.body_html|safe }}</div>
         </section>
         {% endif %}

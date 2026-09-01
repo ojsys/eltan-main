@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from . import emails
+from . import emails, typeset
 from .citations import to_bibtex, to_ris
 from .forms import (
     CorrectedSubmissionForm,
@@ -113,7 +113,15 @@ def article_detail(request, slug):
     # Counted with an UPDATE rather than a save() so two readers at once cannot
     # each write back the same stale number.
     Article.objects.filter(pk=article.pk).update(view_count=article.view_count + 1)
-    return render(request, 'journal/article_detail.html', journal_context(nav='issues', article=article))
+    return render(request, 'journal/article_detail.html', journal_context(
+        nav='issues',
+        article=article,
+        # The sections of the full text, for the contents list. Reading a paper
+        # on the page rather than downloading it usually means wanting one part
+        # of it, and a paper is the one kind of document where the reader knows
+        # the section names before they arrive.
+        outline=typeset.outline_of(article.body_html),
+    ))
 
 
 def article_pdf(request, slug):

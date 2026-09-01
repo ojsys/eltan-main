@@ -29,6 +29,7 @@ from django.core.files.storage import default_storage
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import escape
+from django.utils.text import slugify
 from pypdf import PdfReader, PdfWriter
 from xhtml2pdf import pisa
 
@@ -112,52 +113,109 @@ def _normalise(text):
     return re.sub(r'[^a-z0-9]+', ' ', (text or '').lower()).strip()
 
 
+def _block_text(block):
+    return getattr(block, 'text', '') or ''.join(
+        part for part, _, _ in getattr(block, 'runs', [])
+    )
+
+
+# How far into the document the manuscript's own title page can reach. Names,
+# affiliations, emails and a funding note all sit in there; twenty-five blocks
+# is generous for that and nowhere near the body of any real paper.
+FRONT_MATTER_BLOCKS = 25
+
+FRONT_MATTER_LABEL = re.compile(r'^\s*(abstract|keywords?|key\s*words?)\b', re.IGNORECASE)
+
+
 def strip_repeated_front_matter(blocks, article):
-    """Drop the title page the manuscript carries at the top of its own text.
+    """Drop what the galley sets itself, and only that.
 
-    Almost every manuscript opens with its title, byline, abstract and keywords,
-    and the galley template sets all four itself. Left alone they appear twice
-    on the first page. Only a contiguous run at the very start is removed, so a
-    phrase that happens to match further down is safe.
+    A manuscript opens with its own title page — title, byline, affiliations,
+    abstract, keywords — and the galley prints the title, the abstract and the
+    keywords. Left alone, a reader gets the abstract twice: once in the box and
+    once again in the body, running onto the next page.
+
+    The byline is the deliberate exception. The galley prints none of its own:
+    the authors as the manuscript gives them — their order, their affiliations,
+    their emails, their titles — are better than anything reconstructed from the
+    article record, and matching the two closely enough to de-duplicate is
+    guesswork. So names stay where the author put them, and the article record
+    supplies the byline on the web page instead.
+
+    Which rules out cutting a prefix. Real manuscripts put the byline after the
+    keywords, before them, or between the abstract and the title, and any scan
+    that stops at the first line it does not recognise stops on a name. So this
+    looks at the whole opening instead and removes only the three things the
+    galley is about to print again.
     """
-    known = {_normalise(article.title), 'abstract', 'keywords', 'key words'}
-    known |= {_normalise(author.full_name) for author in article.authors.all()}
-    known |= {_normalise(article.abstract)} if article.abstract else set()
-    known.discard('')
+    title = _normalise(article.title)
+    abstract = _normalise(article.abstract)
+    names = {_normalise(author.full_name) for author in article.authors.all()}
+    names.discard('')
 
-    index = 0
+    kept = []
+    in_byline = False
     for index, block in enumerate(blocks):
-        text = getattr(block, 'text', '') or ''.join(
-            part for part, _, _ in getattr(block, 'runs', [])
-        )
-        value = _normalise(text)
-        if not value:
+        opening = index < FRONT_MATTER_BLOCKS
+        if opening and _is_reprinted(block, title, abstract):
             continue
-        if value in known:
-            continue
-        if value.startswith('keywords') or value.startswith('key words'):
-            continue
-        # The author's affiliation line sits in the same block, and is printed
-        # from the author records rather than from the manuscript.
-        if any(value in name or name in value for name in known if len(name) > 8):
-            continue
-        break
-    else:
-        index = len(blocks)
-    return blocks[index:]
+
+        # Mark the manuscript's own byline — the names, and the affiliations and
+        # addresses that run on from them — rather than dropping it. The galley
+        # prints it, because it is the authors' own; the web article hides it,
+        # because the same names are already set properly at the top of the page
+        # from the article record. One pass, two presentations.
+        if opening:
+            value = _normalise(_block_text(block))
+            if value and any(name in value or value in name for name in names):
+                in_byline = True
+            elif in_byline and block.kind == 'heading':
+                in_byline = False
+            if in_byline and block.kind != 'heading':
+                block.is_byline = True
+
+        kept.append(block)
+    return kept
+
+
+def _is_reprinted(block, title, abstract):
+    """Whether the galley is going to print this block's content anyway."""
+    text = _block_text(block)
+    value = _normalise(text)
+    if not value:
+        return False
+
+    if title and value == title:
+        return True
+    # "Abstract" on its own, and the "Keywords: a; b; c" line whole.
+    if FRONT_MATTER_LABEL.match(text):
+        return True
+    # The abstract itself, whether the manuscript sets it as one paragraph or
+    # several. A block has to account for a real share of the abstract to count
+    # as part of it: papers do sometimes repeat one sentence of the abstract in
+    # the introduction, and that sentence is the author's to keep.
+    if abstract and (value in abstract or abstract in value):
+        if len(value) >= max(40, len(abstract) // 4):
+            return True
+    return False
 
 
 def blocks_to_html(blocks, figure_urls=None):
     """The article body as HTML, from the blocks read out of the manuscript."""
     figure_urls = figure_urls or {}
     html = []
+    used_anchors = set()
     in_references = False
 
     for block in blocks:
         if block.kind == 'heading':
             level = min(max(block.level, 1), 3) + 1     # h1 is the article title
             text = escape(block.text)
-            html.append(f'<h{level}>{text}</h{level}>')
+            # An id per heading, so the web article can offer a contents list
+            # that jumps to a section — the reason for reading a paper online
+            # rather than downloading it is usually to find one part of it.
+            anchor = _anchor(block.text, used_anchors)
+            html.append(f'<h{level} id="{anchor}">{text}</h{level}>')
             in_references = bool(ingest.REFERENCES_HEADING.match(block.text))
 
         elif block.kind == 'paragraph':
@@ -165,7 +223,12 @@ def blocks_to_html(blocks, figure_urls=None):
             if body:
                 # A reference list is a hanging indent, not prose, and reads as
                 # a wall of text without it.
-                css = ' class="reference"' if in_references else ''
+                classes = []
+                if in_references:
+                    classes.append('reference')
+                if getattr(block, 'is_byline', False):
+                    classes.append('manuscript-byline')
+                css = f' class="{" ".join(classes)}"' if classes else ''
                 html.append(f'<p{css}>{body}</p>')
             for name in getattr(block, 'images', []) or []:
                 html.append(_figure_html(name, figure_urls))
@@ -189,7 +252,21 @@ def blocks_to_html(blocks, figure_urls=None):
     return '\n'.join(html)
 
 
-HEADING_TAG = re.compile(r'<h([234])>(.*?)</h\1>', re.DOTALL)
+HEADING_TAG = re.compile(
+    r'<h([234])(?:\s+id="([^"]*)")?>(.*?)</h\1>', re.DOTALL,
+)
+
+
+def _anchor(text, used):
+    """A stable, unique id for a heading, readable in a URL bar."""
+    base = slugify(text)[:60] or 'section'
+    anchor = base
+    suffix = 2
+    while anchor in used:
+        anchor = f'{base}-{suffix}'
+        suffix += 1
+    used.add(anchor)
+    return anchor
 
 
 def outline_of(body_html):
@@ -202,9 +279,16 @@ def outline_of(body_html):
     """
     outline = []
     for match in HEADING_TAG.finditer(body_html or ''):
-        text = re.sub(r'<[^>]+>', '', match.group(2)).strip()
+        text = re.sub(r'<[^>]+>', '', match.group(3)).strip()
         if text:
-            outline.append({'level': int(match.group(1)) - 1, 'text': text})
+            outline.append({
+                'level': int(match.group(1)) - 1,
+                'text': text,
+                # Articles typeset before headings carried ids have none; the
+                # contents list shows those as plain text rather than as links
+                # that would go nowhere.
+                'anchor': match.group(2) or '',
+            })
     return outline
 
 

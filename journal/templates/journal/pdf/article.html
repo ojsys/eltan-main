@@ -207,12 +207,12 @@ deliberately conservative for that reason.
 {% if article.section %}<p class="section-label">{{ article.section.name }}</p>{% endif %}
 <h1 class="title">{{ article.title }}</h1>
 
-{% for author in authors %}
-<p class="byline">{{ author.full_name }}{% if author.orcid %} <span class="affiliation">ORCID {{ author.orcid }}</span>{% endif %}</p>
-{% if author.affiliation %}
-<p class="affiliation">{{ author.affiliation }}{% if author.country %}, {{ author.country }}{% endif %}</p>
-{% endif %}
-{% endfor %}
+{% comment %}
+No byline here. The manuscript carries its own — with the affiliations, order
+and footnote markers the authors chose — and it is kept in the body text rather
+than reconstructed from the article record. Printing both put the names on the
+page twice. The record's version of the byline is what the web article shows.
+{% endcomment %}
 
 {% if article.abstract %}
 <table class="boxed"><tr><td class="abstract-cell">

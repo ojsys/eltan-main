@@ -847,6 +847,63 @@
 .jeltan-steps { margin: .5rem 0 0; padding-left: 1.1rem; }
 .jeltan-steps li { font-size: .85rem; color: var(--j-ink-2); margin-bottom: .45rem; line-height: 1.5; }
 
+/* ----------------------------------------------------------------- byline */
+
+/* Names on one line with numbered markers, affiliations keyed beneath. A paper
+   with five authors and five addresses stacked in pairs is a wall; this is how
+   a journal sets it, and it stays readable at any number of authors. */
+.jeltan-byline {
+    font-family: var(--j-sans);
+    font-size: 1rem; line-height: 1.6; color: var(--j-ink);
+    margin: 0 0 .6rem; max-width: var(--j-measure);
+}
+.jeltan-byline-name { white-space: nowrap; font-weight: 500; }
+.jeltan-byline-name sup { font-weight: 400; color: var(--j-muted); font-size: .7em; padding-left: .1em; }
+.jeltan-byline-sep { color: var(--j-line-2); padding: 0 .45rem; }
+
+.jeltan-orcid {
+    display: inline-block; margin-left: .28rem; padding: 0 .3rem;
+    font-size: .62rem; font-weight: 700; letter-spacing: .03em;
+    color: #fff; background: #a6ce39; border-radius: 3px;
+    text-decoration: none; vertical-align: .12em;
+}
+.jeltan-orcid:hover { background: #8fb42f; }
+
+.jeltan-affils {
+    margin: 0 0 .2rem; padding: 0; list-style: none;
+    font-size: .82rem; color: var(--j-muted); line-height: 1.5;
+}
+.jeltan-affils li { counter-increment: none; }
+.jeltan-affils li::before {
+    content: attr(value); font-size: .7em; vertical-align: .35em;
+    color: var(--j-faint); padding-right: .3rem;
+}
+
+/* --------------------------------------------------------------- contents */
+
+/* The sections of the paper, before the paper. Someone reading an article in a
+   browser rather than downloading it is usually looking for one part of it —
+   the method, the results, a table — and this is the shortest way there. */
+.jeltan-contents {
+    border: 1px solid var(--j-line); border-radius: var(--j-radius);
+    background: var(--j-surface); padding: 1rem 1.2rem;
+    margin: 0 0 2rem; max-width: var(--j-measure);
+}
+.jeltan-contents-title {
+    font-family: var(--j-sans); font-size: .7rem; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--j-muted);
+    margin: 0 0 .6rem;
+}
+.jeltan-contents ol { margin: 0; padding: 0; list-style: none; }
+.jeltan-contents li {
+    font-family: var(--j-sans); font-size: .87rem; line-height: 1.45; padding: .2rem 0;
+}
+.jeltan-contents a { color: var(--j-ink-2); text-decoration: none; }
+.jeltan-contents a:hover { color: var(--j-accent-strong); text-decoration: underline; }
+.jeltan-contents-1 { font-weight: 500; }
+.jeltan-contents-2 { padding-left: 1.1rem; font-size: .84rem; }
+.jeltan-contents-3 { padding-left: 2.2rem; font-size: .82rem; }
+
 /* -------------------------------------------------------------- full text */
 
 /* The article body, typeset from the author's manuscript. It reuses the reading
@@ -867,12 +924,38 @@
     font-size: .95rem; font-style: italic; font-weight: 500;
     margin: 1.2rem 0 .4rem;
 }
-.jeltan-body-text p { margin: 0 0 .85rem; }
+.jeltan-body-text p { margin: 0 0 .95rem; }
+
+/* The byline the manuscript carries in its own text. The galley prints it —
+   there it is the only byline. Here the same authors are already set at the top
+   of the page from the article record, with their affiliations keyed and their
+   ORCIDs linked, so repeating the author's raw line adds nothing. Delete this
+   rule to show it. */
+.jeltan-body-text p.manuscript-byline { display: none; }
+
+/* A heading arrived at from the contents list should not sit against the top
+   of the window, and should be findable once it has. */
+.jeltan-body-text h2,
+.jeltan-body-text h3,
+.jeltan-body-text h4 { scroll-margin-top: 1.5rem; }
+.jeltan-body-text h2:target,
+.jeltan-body-text h3:target { animation: jeltan-target 2.4s ease-out; }
+@keyframes jeltan-target {
+    0%, 40% { background: var(--j-accent-wash); box-shadow: -.5rem 0 0 var(--j-accent-wash); }
+    100%    { background: transparent; box-shadow: none; }
+}
+
+/* The opening paragraph of a section carries the weight of it. */
+.jeltan-body-text h2 + p,
+.jeltan-body-text h3 + p { margin-top: 0; }
 .jeltan-body-text blockquote {
     margin: 1rem 0 1rem 1.2rem; padding-left: .9rem;
     border-left: 2px solid var(--j-line-2); color: var(--j-ink-2);
 }
-.jeltan-body-text figure { margin: 1.4rem 0; text-align: center; }
+.jeltan-body-text figure {
+    margin: 1.6rem 0; text-align: center;
+    padding: 1rem; background: var(--j-surface); border-radius: var(--j-radius);
+}
 .jeltan-body-text img { max-width: 100%; height: auto; border-radius: var(--j-radius-sm); }
 
 .jeltan-body-text table {

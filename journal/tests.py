@@ -2395,10 +2395,10 @@ class TypesettingTests(JournalTestCase):
         typeset.typeset(article)
 
         article.refresh_from_db()
-        self.assertIn('<h2>Introduction</h2>', article.body_html)
+        self.assertIn('<h2 id="introduction">Introduction</h2>', article.body_html)
         # A bold one-line paragraph is a heading in nearly every manuscript that
         # never learned to use Word's heading styles.
-        self.assertIn('<h2>Method</h2>', article.body_html)
+        self.assertIn('<h2 id="method">Method</h2>', article.body_html)
         self.assertIn('<p>Fluency has long been treated', article.body_html)
 
     def test_a_reference_list_is_marked_as_one(self):
@@ -2410,16 +2410,54 @@ class TypesettingTests(JournalTestCase):
         article.refresh_from_db()
         self.assertIn('<p class="reference">Bygate, M.', article.body_html)
 
-    def test_the_manuscripts_own_title_page_is_not_printed_twice(self):
+    def test_the_title_and_abstract_are_not_printed_twice(self):
         from journal import typeset
 
         article = self.make_article(self.a_manuscript())
         typeset.typeset(article)
 
         article.refresh_from_db()
-        # The template sets the title, byline and abstract itself.
+        # The galley sets the title and abstract itself, so the manuscript's own
+        # copies of them go.
         self.assertNotIn('Task repetition and oral fluency', article.body_html)
-        self.assertNotIn('Ada Obi, Chidi Eze', article.body_html)
+        self.assertNotIn('This study examines whether', article.body_html)
+
+    def test_the_manuscripts_own_byline_is_kept(self):
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript())
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        # The galley prints no byline of its own. The authors as the manuscript
+        # gives them — their order, their affiliations — are what it shows, and
+        # the article record supplies the names on the web page instead.
+        self.assertIn('Ada Obi, Chidi Eze', article.body_html)
+
+    def test_the_galley_prints_no_byline_above_the_abstract(self):
+        import io
+
+        from pypdf import PdfReader
+
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript())
+        typeset.typeset(article)
+
+        article.pdf.open('rb')
+        try:
+            content = io.BytesIO(article.pdf.read())
+        finally:
+            article.pdf.close()
+        printed = PdfReader(content).pages[0].extract_text()
+
+        # Everything above the abstract is the galley's own front matter. The
+        # names belong to the manuscript, which sets them in the body below.
+        front_matter = printed.split('Abstract')[0]
+        self.assertNotIn('Ada Obi', front_matter)
+        self.assertIn('Task repetition', front_matter)     # the title still is
+        # Named again further down is right: the citation has to credit them.
+        self.assertIn('Ada Obi', printed)
 
     def test_markup_in_a_manuscript_cannot_reach_the_page(self):
         from journal import typeset
@@ -2561,6 +2599,48 @@ class TypesettingTests(JournalTestCase):
         self.assertEqual(response.status_code, 404)
 
 
+    def test_the_manuscript_byline_is_marked_for_the_web_to_hide(self):
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript())
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        # Kept, so the galley can print it; classed, so the web article — which
+        # already sets the same names properly at the top — does not repeat it.
+        self.assertIn('class="manuscript-byline"', article.body_html)
+        self.assertIn('Ada Obi, Chidi Eze', article.body_html)
+
+    def test_the_abstract_is_not_reprinted_when_the_byline_sits_before_it(self):
+        """The layout that broke the old front-matter scan.
+
+        Real manuscripts put the byline, affiliations and email addresses
+        between the keywords and the abstract. A scan that stopped at the first
+        line it did not recognise stopped on a name, and everything after it —
+        the abstract included — was printed a second time.
+        """
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript([
+            ('Task repetition and oral fluency in Nigerian secondary schools', 'Title', False),
+            ('Keywords: task repetition; oral fluency', None, False),
+            ('Ada Obi, PhD', None, False),
+            ('Department of English, University of Lagos', None, False),
+            ('ada.obi@example.com', None, False),
+            ('Abstract', None, True),
+            ('This study examines whether repeating a speaking task improves oral fluency.', None, False),
+            ('Introduction', 'Heading1', False),
+            ('Fluency has long been treated as a by-product of practice.', None, False),
+        ]))
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        self.assertNotIn('This study examines whether', article.body_html)
+        self.assertNotIn('Keywords:', article.body_html)
+        # The authors' own details are theirs, and stay.
+        self.assertIn('Department of English', article.body_html)
+        self.assertIn('ada.obi@example.com', article.body_html)
+
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class GenerateFromDocumentTests(JournalTestCase):
     """One document in, one whole article out, checked before it goes public."""
@@ -2601,8 +2681,8 @@ class GenerateFromDocumentTests(JournalTestCase):
 
         self.assertTrue(article.is_typeset)
         self.assertTrue(article.has_full_text)
-        self.assertIn('<h2>Introduction</h2>', article.body_html)
-        self.assertIn('<h2>Method</h2>', article.body_html)
+        self.assertIn('<h2 id="introduction">Introduction</h2>', article.body_html)
+        self.assertIn('<h2 id="method">Method</h2>', article.body_html)
 
     def test_nothing_is_public_until_it_has_been_checked(self):
         self.upload()
