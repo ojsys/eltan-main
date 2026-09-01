@@ -13,6 +13,20 @@ deliberately conservative for that reason.
 <meta charset="utf-8">
 <title>{{ article.title }}</title>
 <style>
+    {% comment %}
+    The galley's own fonts, embedded rather than assumed. PDF's built-in Times
+    and Helvetica stop at Latin-1, which cannot spell a Yoruba or Igbo name —
+    those come out as black boxes. See FONT_FACES in journal/typeset.py.
+    {% endcomment %}
+    {% for face in font_faces %}
+    @font-face {
+        font-family: "{{ face.family }}";
+        src: url("{{ face.path }}");
+        font-weight: {{ face.weight }};
+        font-style: {{ face.style }};
+    }
+    {% endfor %}
+
     @page {
         size: a4 portrait;
         margin: 2.4cm 2.1cm 2.2cm 2.1cm;
@@ -24,7 +38,7 @@ deliberately conservative for that reason.
     }
 
     body {
-        font-family: "Times-Roman", serif;
+        font-family: "{{ body_font }}", "Times-Roman", serif;
         font-size: 10.5pt;
         line-height: 1.45;
         color: #10202f;
@@ -44,22 +58,22 @@ deliberately conservative for that reason.
     table.rule-thin td { background-color: #cfd8e0; font-size: 1pt; line-height: 1pt; }
     .masthead { margin-bottom: 0; }
     .journal-name {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 13pt; font-weight: bold; letter-spacing: .4pt; margin: 0;
     }
     .imprint {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 7.5pt; color: #64788a; margin: 2pt 0 0;
     }
     .locator {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 7.5pt; color: #64788a;
         padding-bottom: 6pt; margin: 0;
     }
 
     /* --- title block ------------------------------------------------- */
     .section-label {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 7.5pt; font-weight: bold; letter-spacing: 1pt;
         text-transform: uppercase; color: #B45309; margin: 0 0 6pt;
     }
@@ -83,23 +97,23 @@ deliberately conservative for that reason.
         padding: 9pt 11pt;
     }
     .abstract-heading {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 8pt; font-weight: bold; letter-spacing: 1pt;
         text-transform: uppercase; color: #64788a;
         margin: 0; padding: 0 0 2pt;
     }
     .abstract-cell p { margin: 0; padding: 0 0 4pt; font-size: 9.5pt; line-height: 1.35; text-align: justify; }
     .keywords { font-size: 8.5pt; color: #35485c; margin: 0; padding: 3pt 0 0; }
-    .keywords strong { font-family: "Helvetica", sans-serif; font-size: 8pt; }
+    .keywords strong { font-family: "{{ ui_font }}", "Helvetica", sans-serif; font-size: 8pt; }
 
     /* --- article body ------------------------------------------------ */
     .body h2 {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 11pt; font-weight: bold; color: #10202f;
         margin: 16pt 0 6pt;
     }
     .body h3 {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 9.5pt; font-weight: bold; color: #35485c;
         margin: 13pt 0 5pt;
     }
@@ -116,7 +130,7 @@ deliberately conservative for that reason.
         border-top: 1pt solid #10202f; border-bottom: 1pt solid #10202f;
     }
     .body th {
-        font-family: "Helvetica", sans-serif; font-size: 8.5pt; text-align: left;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif; font-size: 8.5pt; text-align: left;
         padding: 5pt 4pt; border-bottom: .5pt solid #10202f;
     }
     .body td { padding: 4pt; vertical-align: top; }
@@ -131,7 +145,7 @@ deliberately conservative for that reason.
 
     /* --- front-matter panels ----------------------------------------- */
     .panel-heading {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 8pt; font-weight: bold; letter-spacing: 1pt;
         text-transform: uppercase; color: #64788a;
         margin: 0; padding: 0 0 3pt;
@@ -142,18 +156,18 @@ deliberately conservative for that reason.
     .meta-table { width: 100%; font-size: 8.5pt; }
     .meta-table td { padding: 2pt 0; vertical-align: top; }
     .meta-label {
-        font-family: "Helvetica", sans-serif; font-size: 7.5pt;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif; font-size: 7.5pt;
         color: #64788a; width: 4.2cm;
     }
 
     .continues {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 8pt; color: #64788a; text-align: center;
         margin-top: 20pt; padding-top: 8pt; border-top: .5pt solid #cfd8e0;
     }
 
     #page-footer {
-        font-family: "Helvetica", sans-serif;
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
         font-size: 7.5pt; color: #8c9cab;
         border-top: .5pt solid #e4e9ee; padding-top: 4pt;
     }

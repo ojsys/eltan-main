@@ -38,6 +38,52 @@ logger = logging.getLogger(__name__)
 
 FIGURE_DIRECTORY = 'journal/figures'
 
+# The galley's fonts, shipped with the project rather than taken from whatever
+# the server happens to have installed.
+#
+# PDF's built-in fonts — Times, Helvetica — carry WinAnsiEncoding, which stops
+# at Latin-1. Every character past it comes out as a black box, and this is a
+# Nigerian journal: Igbo and Yoruba are written with dot-below vowels (ụ ị ọ ẹ
+# ṣ ṅ) that live in Latin Extended Additional, and a reference list will reach
+# further still. A galley that prints "Igboan■s■" for Igboanụsị is not a galley.
+#
+# Charis SIL is drawn by SIL for exactly these languages and reads as a
+# scholarly serif; Noto Sans covers the same ground for the interface type.
+# Both are under the SIL Open Font License, and the licences ship beside them.
+FONT_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'journal', 'fonts')
+
+BODY_FONT = 'CharisSIL'
+UI_FONT = 'NotoSans'
+
+FONT_FACES = [
+    (BODY_FONT, 'Charis-Regular.ttf', 'normal', 'normal'),
+    (BODY_FONT, 'Charis-Bold.ttf', 'bold', 'normal'),
+    (BODY_FONT, 'Charis-Italic.ttf', 'normal', 'italic'),
+    (BODY_FONT, 'Charis-BoldItalic.ttf', 'bold', 'italic'),
+    (UI_FONT, 'NotoSans-Regular.ttf', 'normal', 'normal'),
+    (UI_FONT, 'NotoSans-Bold.ttf', 'bold', 'normal'),
+]
+
+
+def font_faces():
+    """The @font-face rules for the galley stylesheet.
+
+    Built here rather than written into the template so the paths are absolute
+    and correct wherever the project is checked out, and so a missing file is
+    noticed once, here, instead of silently falling back to a font that cannot
+    spell half the journal's authors.
+    """
+    faces = []
+    for family, filename, weight, style in FONT_FACES:
+        path = os.path.join(FONT_DIRECTORY, filename)
+        if not os.path.isfile(path):
+            logger.error('Galley font missing: %s', path)
+            continue
+        faces.append({
+            'family': family, 'path': path, 'weight': weight, 'style': style,
+        })
+    return faces
+
 
 class TypesetError(Exception):
     """Raised when a galley could not be produced from the source."""
@@ -249,6 +295,9 @@ def render_context(article, body_html='', full_text=True):
         'body_html': body_html,
         'full_text': full_text,
         'generated_at': timezone.now(),
+        'font_faces': font_faces(),
+        'body_font': BODY_FONT,
+        'ui_font': UI_FONT,
     }
 
 

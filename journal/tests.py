@@ -2820,3 +2820,107 @@ class TypesetStorageTests(JournalTestCase):
         response = self.client.get(reverse('journal:article_generated', args=[article.pk]))
 
         self.assertContains(response, 'full text could not be stored')
+
+
+# Polish, Igbo, Yorùbá and Hausa — every one of them outside Latin-1, and all of
+# them ordinary in this journal's reference lists.
+EXTENDED_LATIN = [
+    ('Deconstructing colonial pedagogy and indigenous knowledge', 'Title', False),
+    ('Introduction', 'Heading1', False),
+    ('The epistemology of the formerly colonised nations (Jabłoński, 2021) is read '
+     'here alongside Igbo and Yorùbá scholarship, with attention to Ndịigbo usage.', None, False),
+    ('Yorùbá: ẹ ọ ṣ Ẹ Ọ Ṣ. Igbo: ị ọ ụ ṅ Ị Ọ Ụ Ṅ. Hausa: ɓ ɗ ƙ.', None, False),
+    ('References', 'Heading1', False),
+    ('Igboanụsị, H. S. (2002). A dictionary of Nigerian English usage. Enicrownfit.', None, False),
+    ('Ụbahakwe, E. (ed.) (1979). The teaching of English studies.', None, False),
+]
+
+
+class GalleyGlyphTests(JournalTestCase):
+    """Every character in the manuscript has to reach the page.
+
+    PDF's built-in fonts carry WinAnsiEncoding, which stops at Latin-1, and
+    reportlab draws a filled black box for anything it cannot set. A galley
+    printing "Igboan■s■" for Igboanụsị misspells the author of a cited work, in
+    the permanent record, in a journal published in Nigeria. The fix is the
+    embedded fonts in journal/typeset.py; these keep them there.
+    """
+
+    def galley_text(self, article):
+        import io
+
+        from pypdf import PdfReader
+
+        article.pdf.open('rb')
+        try:
+            content = io.BytesIO(article.pdf.read())
+        finally:
+            article.pdf.close()
+        reader = PdfReader(content)
+        return '\n'.join((page.extract_text() or '') for page in reader.pages), reader
+
+    def make_article(self):
+        article = Article.objects.create(
+            title='Deconstructing colonial pedagogy: Ndịigbo and Jabłoński',
+            abstract='A study of ìmọ̀ ìbílẹ̀ — indigenous knowledge — citing Igboanụsị.',
+            keywords='ìmọ̀ ìbílẹ̀, Ndịigbo',
+            section=self.section, licence='CC BY 4.0',
+            source_file=SimpleUploadedFile(
+                'paper.docx', a_structured_docx(EXTENDED_LATIN),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ),
+        )
+        ArticleAuthor.objects.create(
+            article=article, first_name='Adéọlá', last_name='Ọbáfẹ́mi',
+            affiliation='Yunifásítì ti Ìbàdàn', order=0,
+        )
+        return article
+
+    def test_no_character_is_replaced_by_a_black_box(self):
+        from journal import typeset
+
+        article = self.make_article()
+        self.assertTrue(typeset.typeset(article))
+
+        text, _reader = self.galley_text(article)
+        self.assertNotIn('■', text)
+
+    def test_the_names_survive_into_the_galley(self):
+        from journal import typeset
+
+        article = self.make_article()
+        typeset.typeset(article)
+        text, _reader = self.galley_text(article)
+
+        for name in ('Jabłoński', 'Igboanụsị', 'Ụbahakwe', 'Ọbáfẹ́mi', 'Ndịigbo'):
+            self.assertIn(name, text, f'{name} did not reach the galley')
+
+    def test_the_fonts_are_embedded_rather_than_assumed(self):
+        from journal import typeset
+
+        article = self.make_article()
+        typeset.typeset(article)
+        _text, reader = self.galley_text(article)
+
+        embedded = set()
+        for page in reader.pages:
+            for _name, font in (page.get('/Resources', {}).get('/Font') or {}).items():
+                embedded.add(str(font.get_object().get('/BaseFont')))
+
+        # A reader on another machine has no copy of these, so the file has to
+        # carry them.
+        self.assertTrue(
+            any('Charis' in name for name in embedded),
+            f'no Charis face embedded, only {embedded}',
+        )
+        self.assertTrue(
+            any('NotoSans' in name for name in embedded),
+            f'no Noto Sans face embedded, only {embedded}',
+        )
+
+    def test_every_font_file_the_galley_asks_for_is_present(self):
+        from journal import typeset
+
+        # A missing file falls back silently to a font that cannot spell half
+        # this journal's authors, so it is worth failing loudly here instead.
+        self.assertEqual(len(typeset.font_faces()), len(typeset.FONT_FACES))
