@@ -277,9 +277,10 @@ def prepend_cover(cover_pdf, source_pdf):
 def typeset(article, save=True):
     """Produce the galley readers download, and the full text if there is one.
 
-    Never raises: a manuscript that cannot be typeset must still be publishable,
-    so the source file is used as the galley and the reason is recorded on the
-    article for an editor to read.
+    Never raises, and that has to hold for the database too, not only for the
+    parsing: a manuscript that cannot be typeset must still be publishable, so
+    the source file is used as the galley and the reason is recorded on the
+    article for an editor to read. Returns whether a JELTAN galley was produced.
     """
     source = article.source_file or article.pdf
     if not source:
@@ -308,10 +309,40 @@ def typeset(article, save=True):
     article.typeset_at = timezone.now()
     article.typeset_note = note
     if save:
-        article.save(update_fields=[
-            'pdf', 'body_html', 'typeset_at', 'typeset_note', 'updated_at',
-        ])
+        return _save_result(article)
     return True
+
+
+RESULT_FIELDS = ['pdf', 'body_html', 'typeset_at', 'typeset_note', 'updated_at']
+
+
+def _save_result(article):
+    """Write the result, giving up the body text rather than the whole galley.
+
+    The galley is already on disk by this point; the body text is the one part
+    that still has to survive a round trip to the database. When it cannot —
+    a column that will not store the characters in it, a value too long — then
+    keeping the PDF and recording why the full text is missing beats losing
+    both to an exception halfway through.
+    """
+    try:
+        article.save(update_fields=RESULT_FIELDS)
+        return True
+    except Exception as exc:                             # noqa: BLE001
+        logger.exception('Could not store the typeset body for article %s', article.pk)
+        article.body_html = ''
+        article.typeset_at = None
+        article.typeset_note = (
+            f'The galley was generated, but the full text could not be stored: {exc}'
+        )[:300]
+
+    try:
+        article.save(update_fields=RESULT_FIELDS)
+    except Exception:                                    # noqa: BLE001
+        # Nothing more to try. The caller is told it failed and the article keeps
+        # whatever it had, rather than the request dying on the way out.
+        logger.exception('Could not record the typesetting result for %s', article.pk)
+    return False
 
 
 def _typeset_from_manuscript(article, source):

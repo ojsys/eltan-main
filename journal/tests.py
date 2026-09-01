@@ -2746,3 +2746,77 @@ class GenerateFromDocumentTests(JournalTestCase):
         self.assertEqual(
             self.client.get(reverse('journal:article_from_document')).status_code, 404,
         )
+
+
+class TypesetStorageTests(JournalTestCase):
+    """What happens when the database will not take what was generated.
+
+    The live database was built with latin1 as its default charset, which cannot
+    store a curly apostrophe or a name spelled with a character English does not
+    use. journal/migrations/0007_utf8mb4.py fixes that; these cover the case
+    where a write fails anyway, because a 500 halfway through publishing is the
+    worst of the outcomes available.
+    """
+
+    def make_article(self):
+        article = Article.objects.create(
+            title='Task repetition and oral fluency',
+            abstract='An abstract.', section=self.section, licence='CC BY 4.0',
+            source_file=SimpleUploadedFile(
+                'paper.docx', a_structured_docx(MANUSCRIPT),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ),
+        )
+        ArticleAuthor.objects.create(article=article, first_name='Ada', last_name='Obi', order=0)
+        return article
+
+    def failing_save(self, times=1):
+        """Patch Article.save so the first `times` calls fail as MySQL would."""
+        from django.db import DataError
+
+        real_save = Article.save
+        calls = []
+
+        def save(instance, *args, **kwargs):
+            calls.append(1)
+            if len(calls) <= times:
+                raise DataError('(1366, "Incorrect string value: \'\\\\xC5\\\\x82\'")')
+            return real_save(instance, *args, **kwargs)
+
+        return save
+
+    def test_a_body_the_database_refuses_does_not_lose_the_galley(self):
+        from journal import typeset
+
+        article = self.make_article()
+        with patch.object(Article, 'save', self.failing_save(times=1)):
+            result = typeset.typeset(article)
+
+        article.refresh_from_db()
+        self.assertFalse(result)
+        # The PDF was written to storage before the database was touched, and it
+        # is still what readers download.
+        self.assertTrue(article.pdf)
+        self.assertEqual(article.body_html, '')
+        self.assertIn('full text could not be stored', article.typeset_note)
+
+    def test_a_database_that_refuses_everything_does_not_raise(self):
+        from journal import typeset
+
+        article = self.make_article()
+        with patch.object(Article, 'save', self.failing_save(times=99)):
+            # A request must not die on the way out. The caller is told it
+            # failed and decides what to say about it.
+            self.assertFalse(typeset.typeset(article))
+
+    def test_the_check_page_says_why_the_full_text_is_missing(self):
+        from journal import typeset
+
+        article = self.make_article()
+        with patch.object(Article, 'save', self.failing_save(times=1)):
+            typeset.typeset(article)
+
+        self.client.force_login(self.editor_user)
+        response = self.client.get(reverse('journal:article_generated', args=[article.pk]))
+
+        self.assertContains(response, 'full text could not be stored')
