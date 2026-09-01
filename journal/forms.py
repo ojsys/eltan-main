@@ -787,9 +787,18 @@ class ImportedArticleForm(BootstrapFormMixin, forms.ModelForm):
         if self.instance.pk and 'authors' not in self.initial:
             self.initial['authors'] = self.instance.author_list
 
+    def is_publishing(self, cleaned):
+        """Whether this row is being published, however the page asked.
+
+        The import screen asks with a tickbox per row; the single-article page
+        asks with a button. Both end up here, because what may not be published
+        without a byline is the same either way.
+        """
+        return bool(cleaned.get('publish'))
+
     def clean(self):
         cleaned = super().clean()
-        if cleaned.get('publish'):
+        if self.is_publishing(cleaned):
             if not cleaned.get('title'):
                 self.add_error('title', 'A title is needed before this can be published.')
             if not (cleaned.get('authors') or '').strip():
@@ -799,6 +808,24 @@ class ImportedArticleForm(BootstrapFormMixin, forms.ModelForm):
                     'is worse in the record than one still waiting.',
                 )
         return cleaned
+
+
+class GeneratedArticleForm(ImportedArticleForm):
+    """Checking one generated article before it goes public.
+
+    The same fields, but publishing is a button rather than a tickbox. On a page
+    about a single article the question is "what do I do with this one?", and
+    two labelled actions answer it where a tickbox somewhere above a Save button
+    does not — especially on a long paper, where the two end up far apart.
+    """
+
+    def __init__(self, *args, publishing=False, **kwargs):
+        self.publishing = publishing
+        super().__init__(*args, **kwargs)
+        self.fields.pop('publish', None)
+
+    def is_publishing(self, cleaned):
+        return self.publishing
 
 
 ImportedArticleFormSet = forms.modelformset_factory(

@@ -976,6 +976,34 @@
     font-size: .93rem; line-height: 1.55;
 }
 
+/* ------------------------------------------------------------- action bar */
+
+/* The decision follows the reader down the page. A paper runs to thousands of
+   pixels, and a Save button in a sidebar is somewhere near the top of all of
+   them — which is the same as not being there. */
+.jeltan-actionbar {
+    position: sticky; bottom: 0; z-index: 20;
+    margin: 1.5rem 0 0;
+    background: var(--j-bg);
+    border-top: 1px solid var(--j-line);
+    box-shadow: 0 -6px 20px rgba(16, 32, 47, .06);
+}
+.jeltan-actionbar-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; padding: .9rem .2rem;
+}
+.jeltan-actionbar-note {
+    margin: 0; font-size: .85rem; color: var(--j-muted);
+}
+.jeltan-actionbar .jeltan-btn-row { margin: 0; }
+
+@media (max-width: 620px) {
+    .jeltan-actionbar-inner { justify-content: stretch; }
+    .jeltan-actionbar .jeltan-btn-row { width: 100%; }
+    .jeltan-actionbar .jeltan-btn,
+    .jeltan-actionbar .jeltan-btn-ghost { flex: 1; text-align: center; }
+}
+
 /* ------------------------------------------------- generated article check */
 
 /* The detected outline. Indented by level so the shape of the paper is visible

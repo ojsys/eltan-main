@@ -79,6 +79,8 @@ urlpatterns += [
     path('editor/articles/<int:pk>/edit/', editor_views.article_edit, name='article_edit'),
     path('editor/articles/<int:pk>/retypeset/', editor_views.article_retypeset,
          name='article_retypeset'),
+    path('editor/articles/<int:pk>/galley/', editor_views.article_galley,
+         name='article_galley'),
     path('editor/issues/', editor_views.issue_list, name='editor_issues'),
     path('editor/issues/new/', editor_views.issue_create, name='issue_create'),
     path('editor/issues/<int:pk>/', editor_views.issue_edit, name='issue_edit'),

@@ -28,7 +28,7 @@ there to confirm it.
         <a class="jeltan-btn-ghost" href="{% url 'journal:article_from_document' %}">Another document</a>
         <a class="jeltan-btn-ghost" href="{% url 'journal:article_edit' article.pk %}">Full edit</a>
         {% if article.pdf %}
-        <a class="jeltan-btn-ghost" href="{% url 'journal:article_pdf' article.slug %}">The galley (PDF)</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_galley' article.pk %}">The galley (PDF)</a>
         {% endif %}
     </div>
 </div>
@@ -122,13 +122,11 @@ there to confirm it.
                 </p>
             </div>
 
-            <div class="jeltan-card jeltan-sticky-actions">
-                <div class="jeltan-btn-row">
-                    <button type="submit" class="jeltan-btn">Save</button>
-                </div>
-                <p class="jeltan-muted jeltan-small" style="margin:.7rem 0 .9rem;">
-                    Tick <strong>Publish</strong> above to make it public. Until then it
-                    stays staged and this page keeps its link.
+            <div class="jeltan-card jeltan-card-quiet">
+                <h3 class="jeltan-h3">If it is not right</h3>
+                <p class="jeltan-muted jeltan-small" style="margin:.2rem 0 .9rem;">
+                    Saving keeps it staged, so you can come back to this page from
+                    <a href="{% url 'journal:editor_articles' %}">Articles</a> and finish later.
                 </p>
                 <button type="submit" name="discard" value="1" class="jeltan-btn-ghost jeltan-btn-danger jeltan-btn-sm"
                         onclick="return confirm('Delete this article and its uploaded file?');">
@@ -136,6 +134,24 @@ there to confirm it.
                 </button>
             </div>
         </aside>
+    </div>
+
+    <div class="jeltan-actionbar jeltan-no-print">
+        <div class="jeltan-actionbar-inner">
+            <p class="jeltan-actionbar-note">
+                {% if article.is_published %}
+                This article is public. Saving updates it and its galley.
+                {% else %}
+                Not public yet. <strong>Save as draft</strong> keeps it staged for later.
+                {% endif %}
+            </p>
+            <div class="jeltan-btn-row">
+                <button type="submit" class="jeltan-btn-ghost">Save as draft</button>
+                <button type="submit" name="publish" value="1" class="jeltan-btn">
+                    {% if article.is_published %}Save and keep it public{% else %}Publish this article{% endif %}
+                </button>
+            </div>
+        </div>
     </div>
 </form>
 {% endblock %}

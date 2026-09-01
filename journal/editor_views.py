@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import Http404
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
 from django.urls import reverse
@@ -25,7 +25,7 @@ from .forms import (
     DecisionForm,
     DirectArticleForm,
     DocumentUploadForm,
-    ImportedArticleForm,
+    GeneratedArticleForm,
     ImportedArticleFormSet,
     IssueForm,
     ProofForm,
@@ -1230,7 +1230,12 @@ def article_generated(request, pk):
     article = get_object_or_404(
         Article.objects.select_related('section', 'issue').prefetch_related('authors'), pk=pk,
     )
-    form = ImportedArticleForm(request.POST or None, instance=article)
+    # Which button was pressed. Publishing is an action here, not a field, so
+    # that the choice sits next to the thing that carries it out.
+    publishing = 'publish' in request.POST
+    form = GeneratedArticleForm(
+        request.POST or None, instance=article, publishing=publishing,
+    )
 
     # Before validation, not after: a document whose title could not be read is
     # exactly the one an editor wants to throw away, and refusing to discard it
@@ -1246,7 +1251,7 @@ def article_generated(request, pk):
     if request.method == 'POST' and form.is_valid():
         with transaction.atomic():
             saved = form.save(commit=False)
-            if form.cleaned_data.get('publish'):
+            if publishing:
                 saved.is_published = True
             saved.save()
             _apply_byline(saved, ingest.names_to_pairs(form.cleaned_data.get('authors', '')))
@@ -1266,3 +1271,24 @@ def article_generated(request, pk):
         form=form,
         outline=typeset.outline_of(article.body_html),
     ))
+
+
+@chief_required
+def article_galley(request, pk):
+    """Serve an article's galley to an editor, published or not.
+
+    The public view refuses anything unpublished, which is right for readers and
+    useless for the person deciding whether to publish it: checking the galley
+    is the last thing you do before saying yes. This is the same file, without
+    that gate, behind the editor check.
+    """
+    article = get_object_or_404(Article, pk=pk)
+    if not article.pdf:
+        messages.error(request, 'This article has no galley yet.')
+        return redirect('journal:article_edit', pk=pk)
+
+    return FileResponse(
+        article.pdf.open('rb'),
+        content_type='application/pdf' if article.galley_is_pdf else None,
+        filename=f'{article.slug}{article.galley_extension or ".pdf"}',
+    )

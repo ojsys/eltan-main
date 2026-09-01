@@ -29,7 +29,10 @@ because that is the one thing the article page itself cannot show.
 <div class="jeltan-statrow">
     <div class="jeltan-stat"><strong>{{ counts.all }}</strong><span>Articles in total</span></div>
     <div class="jeltan-stat"><strong>{{ counts.published }}</strong><span>Public</span></div>
-    <div class="jeltan-stat {% if counts.draft %}jeltan-stat-act{% endif %}"><strong>{{ counts.draft }}</strong><span>Staged, not public</span></div>
+    <div class="jeltan-stat {% if counts.draft %}jeltan-stat-act{% endif %}">
+        <strong>{% if counts.draft %}<a href="?show=draft" style="color:inherit;">{{ counts.draft }}</a>{% else %}0{% endif %}</strong>
+        <span>Staged, not public</span>
+    </div>
     <div class="jeltan-stat"><strong>{{ counts.direct }}</strong><span>Loaded by hand</span></div>
 </div>
 
@@ -99,9 +102,20 @@ because that is the one thing the article page itself cannot show.
                         {% endif %}
                     </td>
                     <td style="padding-right:1.25rem; white-space:nowrap;">
+                        {% comment %}
+                        A staged article generated from a document goes back to
+                        the page it came from, where the sections and the full
+                        text are shown and it can be published. Finishing one
+                        later is the normal case, not the exception.
+                        {% endcomment %}
+                        {% if not article.is_published and article.source_file %}
+                        <a class="jeltan-btn-sm jeltan-btn" href="{% url 'journal:article_generated' article.pk %}">Check &amp; publish</a>
+                        {% endif %}
                         <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:article_edit' article.pk %}">Edit</a>
                         {% if article.is_published %}
                         <a class="jeltan-btn-ghost jeltan-btn-sm" href="{{ article.get_absolute_url }}">View</a>
+                        {% else %}
+                        <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:article_galley' article.pk %}">Galley</a>
                         {% endif %}
                     </td>
                 </tr>

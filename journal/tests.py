@@ -2828,6 +2828,130 @@ class GenerateFromDocumentTests(JournalTestCase):
         )
 
 
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class StagedArticleTests(JournalTestCase):
+    """Finishing an article that was generated but not published on the spot.
+
+    Everything here is about the gap between "the system made an article" and
+    "a person decided to publish it" — a gap that can be days long, and that the
+    first version of these pages did not really allow for.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.editor_user)
+        self.client.post(reverse('journal:article_from_document'), {
+            'section': self.section.pk, 'licence': 'CC BY 4.0',
+            'document': SimpleUploadedFile(
+                'paper.docx', a_structured_docx(MANUSCRIPT),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ),
+        })
+        self.article = Article.objects.get()
+
+    def payload(self, **overrides):
+        fields = {
+            'title': self.article.title,
+            'authors': 'Ada Obi, Chidi Eze',
+            'abstract': self.article.abstract or 'An abstract.',
+            'keywords': self.article.keywords,
+            'section': self.section.pk,
+            'issue': '',
+            'first_page': '', 'last_page': '', 'doi': '',
+        }
+        fields.update(overrides)
+        return {k: v for k, v in fields.items() if v is not None}
+
+    def test_the_check_page_offers_a_way_to_publish(self):
+        response = self.client.get(
+            reverse('journal:article_generated', args=[self.article.pk])
+        )
+
+        # The control has to be on the page, and it has to say what it does.
+        self.assertContains(response, 'name="publish"')
+        self.assertContains(response, 'Publish this article')
+        self.assertContains(response, 'Save as draft')
+
+    def test_publishing_is_the_button_not_a_tickbox(self):
+        response = self.client.post(
+            reverse('journal:article_generated', args=[self.article.pk]),
+            self.payload(publish='1'),
+        )
+
+        self.article.refresh_from_db()
+        self.assertTrue(self.article.is_published)
+        self.assertEqual(response.status_code, 302)
+
+    def test_saving_as_a_draft_leaves_it_staged(self):
+        self.client.post(
+            reverse('journal:article_generated', args=[self.article.pk]),
+            self.payload(title='A corrected title'),
+        )
+
+        self.article.refresh_from_db()
+        self.assertEqual(self.article.title, 'A corrected title')
+        self.assertFalse(self.article.is_published)
+
+    def test_a_staged_article_can_be_returned_to_and_published_later(self):
+        # Saved today, published on Thursday. The page has to be findable in
+        # between, without the link from the upload that created it.
+        self.client.post(
+            reverse('journal:article_generated', args=[self.article.pk]),
+            self.payload(),
+        )
+
+        listing = self.client.get(reverse('journal:editor_articles') + '?show=draft')
+        self.assertContains(
+            listing, reverse('journal:article_generated', args=[self.article.pk]),
+        )
+
+        self.client.post(
+            reverse('journal:article_generated', args=[self.article.pk]),
+            self.payload(publish='1'),
+        )
+        self.article.refresh_from_db()
+        self.assertTrue(self.article.is_published)
+
+    def test_an_editor_can_read_the_galley_of_an_unpublished_article(self):
+        # Checking the galley is the last thing done before publishing, so the
+        # public view's "published only" rule makes it useless here.
+        response = self.client.get(
+            reverse('journal:article_galley', args=[self.article.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.article.is_published)
+
+    def test_the_check_page_links_to_the_galley_an_editor_can_actually_open(self):
+        response = self.client.get(
+            reverse('journal:article_generated', args=[self.article.pk])
+        )
+
+        self.assertContains(response, reverse('journal:article_galley', args=[self.article.pk]))
+        # The public link 404s until the article is published, which is what
+        # sent an editor to a Not Found page from a button labelled "galley".
+        self.assertNotContains(
+            response, reverse('journal:article_pdf', args=[self.article.slug]),
+        )
+
+    def test_the_public_galley_still_refuses_an_unpublished_article(self):
+        self.client.logout()
+        response = self.client.get(
+            reverse('journal:article_pdf', args=[self.article.slug])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_an_author_cannot_read_a_staged_galley(self):
+        self.client.force_login(self.author)
+        response = self.client.get(
+            reverse('journal:article_galley', args=[self.article.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+
+
 class TypesetStorageTests(JournalTestCase):
     """What happens when the database will not take what was generated.
 

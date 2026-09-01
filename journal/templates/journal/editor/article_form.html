@@ -25,7 +25,12 @@ warn about, which is why the notice at the top is conditional and the form is no
             {% endif %}
         </p>
     </div>
-    <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">All articles</a>
+    <div class="jeltan-btn-row">
+        {% if article and article.source_file and not article.is_published %}
+        <a class="jeltan-btn" href="{% url 'journal:article_generated' article.pk %}">Check &amp; publish</a>
+        {% endif %}
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">All articles</a>
+    </div>
 </div>
 
 {% if not article %}
@@ -133,7 +138,7 @@ warn about, which is why the notice at the top is conditional and the form is no
         <div class="jeltan-btn-row">
             <button type="submit" class="jeltan-btn-ghost">Generate the galley again</button>
             {% if article.pdf %}
-            <a class="jeltan-btn-ghost" href="{% url 'journal:article_pdf' article.slug %}">See the current galley</a>
+            <a class="jeltan-btn-ghost" href="{% url 'journal:article_galley' article.pk %}">See the current galley</a>
             {% endif %}
         </div>
     </div>
