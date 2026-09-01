@@ -893,6 +893,28 @@
     font-size: .93rem; line-height: 1.55;
 }
 
+/* ------------------------------------------------- generated article check */
+
+/* The detected outline. Indented by level so the shape of the paper is visible
+   at a glance — a flat list of twelve headings and a nested one say different
+   things about how well the document was read. */
+.jeltan-outline { margin: 0; padding: 0; list-style: none; counter-reset: outline; }
+.jeltan-outline li {
+    font-size: .85rem; color: var(--j-ink-2); line-height: 1.4;
+    padding: .3rem 0; border-top: 1px solid var(--j-line);
+}
+.jeltan-outline li:first-child { border-top: 0; }
+.jeltan-outline-1 { font-weight: 600; color: var(--j-ink); }
+.jeltan-outline-2 { padding-left: 1rem; }
+.jeltan-outline-3 { padding-left: 2rem; font-size: .8rem; }
+
+/* The generated body, previewed inside an editor card: capped so a long paper
+   does not push the controls off the end of the page. */
+.jeltan-generated-body {
+    max-height: 30rem; overflow-y: auto;
+    padding-right: .8rem; border-left: 2px solid var(--j-line); padding-left: 1.1rem;
+}
+
 /* ------------------------------------------------------------------- print */
 
 /* Journals get printed. The article page should come out as a clean document:

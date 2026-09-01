@@ -2559,3 +2559,190 @@ class TypesettingTests(JournalTestCase):
 
         response = self.client.post(reverse('journal:article_retypeset', args=[article.pk]))
         self.assertEqual(response.status_code, 404)
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class GenerateFromDocumentTests(JournalTestCase):
+    """One document in, one whole article out, checked before it goes public."""
+
+    def setUp(self):
+        super().setUp()
+        self.issue = Issue.objects.create(volume=4, number=1, year=2026)
+
+    def upload(self, paragraphs=None, name='paper.docx', **overrides):
+        data = {
+            'section': self.section.pk,
+            'issue': self.issue.pk,
+            'licence': 'CC BY 4.0',
+            'document': SimpleUploadedFile(
+                name, a_structured_docx(paragraphs or MANUSCRIPT),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ),
+        }
+        data.update(overrides)
+        self.client.force_login(self.editor_user)
+        return self.client.post(reverse('journal:article_from_document'), data)
+
+    def test_a_document_becomes_a_whole_article(self):
+        response = self.upload()
+
+        article = Article.objects.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(article.title, MANUSCRIPT[0][0])
+        self.assertIn('repeating a speaking task', article.abstract)
+        self.assertEqual(article.author_list, 'Ada Obi, Chidi Eze')
+        self.assertEqual(article.section, self.section)
+        self.assertEqual(article.issue, self.issue)
+        self.assertEqual(article.added_by, self.editor_user)
+
+    def test_the_sections_come_through_and_are_typeset(self):
+        self.upload()
+        article = Article.objects.get()
+
+        self.assertTrue(article.is_typeset)
+        self.assertTrue(article.has_full_text)
+        self.assertIn('<h2>Introduction</h2>', article.body_html)
+        self.assertIn('<h2>Method</h2>', article.body_html)
+
+    def test_nothing_is_public_until_it_has_been_checked(self):
+        self.upload()
+        article = Article.objects.get()
+
+        self.assertFalse(article.is_published)
+        self.client.logout()
+        self.assertEqual(
+            self.client.get(reverse('journal:article_detail', args=[article.slug])).status_code,
+            404,
+        )
+
+    def test_the_check_page_lists_the_sections_that_were_found(self):
+        self.upload()
+        article = Article.objects.get()
+
+        response = self.client.get(reverse('journal:article_generated', args=[article.pk]))
+
+        outline = [heading['text'] for heading in response.context['outline']]
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Introduction', outline)
+        self.assertIn('Method', outline)
+        self.assertIn('References', outline)
+
+    def test_a_document_with_no_headings_says_so_rather_than_inventing_them(self):
+        self.upload([
+            ('A study of classroom talk in three schools', 'Title', False),
+            ('Ada Obi', None, False),
+            ('This paper runs on without a single heading in it, as some do, and the '
+             'reader of the check page needs to be told that rather than shown an '
+             'outline that was guessed at.', None, False),
+        ])
+        article = Article.objects.get()
+
+        response = self.client.get(reverse('journal:article_generated', args=[article.pk]))
+
+        self.assertEqual(response.context['outline'], [])
+        self.assertContains(response, 'No headings were detected')
+
+    def test_corrections_reach_both_the_record_and_the_galley(self):
+        import io
+
+        from pypdf import PdfReader
+
+        self.upload()
+        article = Article.objects.get()
+
+        self.client.post(reverse('journal:article_generated', args=[article.pk]), {
+            'title': 'The title as it should have been read',
+            'authors': 'Ngozi Adaora',
+            'abstract': article.abstract,
+            'keywords': article.keywords,
+            'section': self.section.pk,
+            'issue': self.issue.pk,
+            'first_page': '5', 'last_page': '19', 'doi': '10.1234/jeltan.4.1',
+            'publish': 'on',
+        })
+
+        article.refresh_from_db()
+        self.assertEqual(article.title, 'The title as it should have been read')
+        self.assertEqual(article.author_list, 'Ngozi Adaora')
+        self.assertTrue(article.is_published)
+
+        article.pdf.open('rb')
+        try:
+            content = io.BytesIO(article.pdf.read())
+        finally:
+            article.pdf.close()
+        printed = PdfReader(content).pages[0].extract_text()
+        self.assertIn('The title as it should have been read', printed)
+        self.assertIn('Ngozi Adaora', printed)
+
+    def test_publishing_needs_a_byline(self):
+        self.upload([
+            ('A paper with no byline anywhere in it', 'Title', False),
+            ('Introduction', 'Heading1', False),
+            ('The opening paragraph of a paper that never names its authors.', None, False),
+        ])
+        article = Article.objects.get()
+
+        response = self.client.post(reverse('journal:article_generated', args=[article.pk]), {
+            'title': article.title, 'authors': '', 'abstract': 'An abstract.',
+            'keywords': '', 'section': self.section.pk, 'issue': '',
+            'first_page': '', 'last_page': '', 'doi': '', 'publish': 'on',
+        })
+
+        article.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(article.is_published)
+
+    def test_a_generated_article_can_be_discarded_with_its_file(self):
+        # Posted with a blank title on purpose: a document whose details could
+        # not be read is exactly the one an editor wants to throw away, and
+        # having to type a title in first would be a trap.
+        self.upload()
+        article = Article.objects.get()
+
+        self.client.post(reverse('journal:article_generated', args=[article.pk]), {
+            'title': '', 'authors': '', 'abstract': '', 'keywords': '',
+            'section': self.section.pk, 'issue': '',
+            'first_page': '', 'last_page': '', 'doi': '', 'discard': '1',
+        })
+
+        self.assertFalse(Article.objects.exists())
+
+    def test_a_pdf_gives_front_matter_but_no_invented_sections(self):
+        self.client.force_login(self.editor_user)
+        self.client.post(reverse('journal:article_from_document'), {
+            'section': self.section.pk, 'licence': 'CC BY 4.0',
+            'document': SimpleUploadedFile(
+                'paper.pdf', a_real_pdf(['A paper someone else typeset']),
+                content_type='application/pdf',
+            ),
+        })
+
+        article = Article.objects.get()
+        response = self.client.get(reverse('journal:article_generated', args=[article.pk]))
+
+        self.assertFalse(article.has_full_text)
+        self.assertContains(response, 'No full text was read')
+        self.assertContains(response, 'own pages are kept as they are')
+
+    def test_a_file_the_journal_cannot_open_is_refused(self):
+        self.client.force_login(self.editor_user)
+        response = self.client.post(reverse('journal:article_from_document'), {
+            'section': self.section.pk, 'licence': 'CC BY 4.0',
+            'document': SimpleUploadedFile('notes.txt', b'plain text'),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Article.objects.exists())
+
+    def test_a_section_editor_cannot_generate_articles(self):
+        editor = CustomUser.objects.create_user(
+            email='section4@example.com', password='pw-for-tests-only',
+            first_name='Tunde', last_name='Adeyemi',
+        )
+        JournalRole.objects.create(user=editor, role=JournalRole.EDITOR)
+        self.client.force_login(editor)
+
+        self.assertEqual(
+            self.client.get(reverse('journal:article_from_document')).status_code, 404,
+        )

@@ -143,6 +143,25 @@ def blocks_to_html(blocks, figure_urls=None):
     return '\n'.join(html)
 
 
+HEADING_TAG = re.compile(r'<h([234])>(.*?)</h\1>', re.DOTALL)
+
+
+def outline_of(body_html):
+    """The article's sections, as read out of the manuscript.
+
+    Shown back to whoever uploaded the file: an outline that reads Introduction,
+    Method, Results, Discussion says the document was understood, and one that
+    reads like stray sentences says it was not. That judgement is quicker to
+    make from a list of headings than by reading the whole body.
+    """
+    outline = []
+    for match in HEADING_TAG.finditer(body_html or ''):
+        text = re.sub(r'<[^>]+>', '', match.group(2)).strip()
+        if text:
+            outline.append({'level': int(match.group(1)) - 1, 'text': text})
+    return outline
+
+
 def _figure_html(name, figure_urls):
     url = figure_urls.get(name)
     if not url:

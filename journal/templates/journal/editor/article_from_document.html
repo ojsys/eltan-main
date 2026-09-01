@@ -1,0 +1,75 @@
+{% extends 'journal/base.html' %}
+
+{% comment %}
+Hand over one manuscript and get the whole article out of it. The form is short
+on purpose: everything else is in the file, and the next screen is where what
+was read gets checked.
+{% endcomment %}
+
+{% block journal_title %}Generate an article from a document — editorial{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-portal-head">
+    <div>
+        <p class="jeltan-eyebrow">Editorial</p>
+        <h1 class="jeltan-h1" style="margin-bottom:.25rem;">Generate from a document</h1>
+        <p class="jeltan-muted" style="margin:0;">
+            Give it the manuscript. The title, authors, abstract, keywords and every
+            section are read out of the file and set in the JELTAN template.
+        </p>
+    </div>
+    <div class="jeltan-btn-row">
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_import' %}">Import a batch</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">All articles</a>
+    </div>
+</div>
+
+<div class="jeltan-alert jeltan-alert-warn">
+    <strong>This bypasses peer review.</strong>
+    The article goes into the published record with your name against it. Nothing
+    becomes public in this step — you read the generated article back first.
+    A paper still to be reviewed belongs in
+    <a href="{% url 'journal:editor_dashboard' %}">the manuscript queue</a>.
+</div>
+
+<div class="jeltan-grid jeltan-grid-sidebar">
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <div class="jeltan-card">
+            <h2 class="jeltan-h2">The document</h2>
+            {% include 'journal/_form.html' with form=form %}
+        </div>
+        <div class="jeltan-card">
+            <div class="jeltan-btn-row">
+                <button type="submit" class="jeltan-btn">Generate the article</button>
+                <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">Cancel</a>
+            </div>
+        </div>
+    </form>
+
+    <aside>
+        <div class="jeltan-card jeltan-card-quiet">
+            <h3 class="jeltan-h3">What is read out of a Word file</h3>
+            <table class="jeltan-deflist">
+                <tr><th>Title</th><td class="jeltan-small">From the document's title style or its first line</td></tr>
+                <tr><th>Authors</th><td class="jeltan-small">From the byline under the title, when it is one</td></tr>
+                <tr><th>Abstract</th><td class="jeltan-small">From the Abstract heading to Keywords or the introduction</td></tr>
+                <tr><th>Keywords</th><td class="jeltan-small">From the keywords line</td></tr>
+                <tr><th>Sections</th><td class="jeltan-small">Headings, paragraphs, lists, tables, quotes and figures</td></tr>
+                <tr><th>References</th><td class="jeltan-small">Set as a hanging-indent list</td></tr>
+            </table>
+        </div>
+
+        <div class="jeltan-card jeltan-card-quiet">
+            <h3 class="jeltan-h3">Where it needs your eye</h3>
+            <p class="jeltan-muted jeltan-small" style="margin:.2rem 0 0;">
+                A manuscript is laid out for a human reader, not for a parser. Headings
+                written in Word's heading styles, in bold, or numbered are all found;
+                one that is none of those is read as an ordinary paragraph. The next
+                screen lists every section that was detected, which is the quickest
+                way to see whether the document was understood.
+            </p>
+        </div>
+    </aside>
+</div>
+{% endblock %}

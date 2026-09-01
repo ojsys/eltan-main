@@ -1,0 +1,141 @@
+{% extends 'journal/base.html' %}
+
+{% comment %}
+The article that came out of the document, read back before anything is public.
+
+The outline comes first and the body second: a list of section headings is the
+fastest way to tell whether the document was understood, and the full text is
+there to confirm it.
+{% endcomment %}
+
+{% block journal_title %}Check the generated article — editorial{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-portal-head">
+    <div>
+        <p class="jeltan-eyebrow">Editorial · generated</p>
+        <h1 class="jeltan-h1" style="margin-bottom:.25rem;">Check before publishing</h1>
+        <p class="jeltan-muted" style="margin:0;">
+            Read out of <span class="jeltan-mono jeltan-small">{{ article.source_filename }}</span>.
+            {% if article.is_published %}
+            <span class="jeltan-badge jeltan-badge-good">Public</span>
+            {% else %}
+            <span class="jeltan-badge jeltan-badge-warn">Staged — not public</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="jeltan-btn-row">
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_from_document' %}">Another document</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_edit' article.pk %}">Full edit</a>
+        {% if article.pdf %}
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_pdf' article.slug %}">The galley (PDF)</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if article.typeset_note %}
+<div class="jeltan-alert {% if article.is_typeset %}jeltan-alert-info{% else %}jeltan-alert-bad{% endif %}">
+    {{ article.typeset_note }}
+</div>
+{% endif %}
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="jeltan-grid jeltan-grid-sidebar">
+        <div>
+            <div class="jeltan-card">
+                <h2 class="jeltan-h2">What was read out of the document</h2>
+                <p class="jeltan-muted jeltan-small" style="margin:-.4rem 0 1rem;">
+                    Correct anything the file got wrong. Saving sets the galley again,
+                    so what you write here is what gets printed on it.
+                </p>
+                {% include 'journal/_form.html' with form=form %}
+            </div>
+
+            {% if article.has_full_text %}
+            <div class="jeltan-card">
+                <h2 class="jeltan-h2">The article as it will read</h2>
+                <p class="jeltan-muted jeltan-small" style="margin:-.4rem 0 1.2rem;">
+                    Typeset from the manuscript. This is the full text readers see on the
+                    article page, and what the PDF galley prints.
+                </p>
+                <div class="jeltan-prose jeltan-body-text jeltan-generated-body">
+                    {{ article.body_html|safe }}
+                </div>
+            </div>
+            {% else %}
+            <div class="jeltan-card">
+                <h2 class="jeltan-h2">No full text was read</h2>
+                <p class="jeltan-muted" style="margin:0;">
+                    {% if article.source_extension == '.pdf' %}
+                    This is a PDF, so its own pages are kept as they are and a JELTAN
+                    cover page goes in front of them. Only a Word manuscript can be
+                    typeset into the template in full.
+                    {% else %}
+                    The document's text could not be read. The galley falls back to the
+                    file as supplied, and the details above need typing in.
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <aside>
+            <div class="jeltan-card jeltan-sticky">
+                <h3 class="jeltan-h3">Sections found</h3>
+                {% if outline %}
+                <p class="jeltan-muted jeltan-small" style="margin:.2rem 0 .8rem;">
+                    {{ outline|length }} heading{{ outline|length|pluralize }} detected. If a section
+                    is missing here, it was written without a heading style, bold or a number.
+                </p>
+                <ol class="jeltan-outline">
+                    {% for heading in outline %}
+                    <li class="jeltan-outline-{{ heading.level }}">{{ heading.text }}</li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <p class="jeltan-muted jeltan-small" style="margin:.2rem 0 0;">
+                    No headings were detected. The text is all there, but it will read as
+                    one run of paragraphs — worth checking against the document.
+                </p>
+                {% endif %}
+            </div>
+
+            <div class="jeltan-card">
+                <h3 class="jeltan-h3">Byline</h3>
+                {% for author in article.authors.all %}
+                <div class="jeltan-lane-row">
+                    <strong style="font-size:.9rem;">{{ author.full_name }}</strong>
+                    {% if author.affiliation %}
+                    <div class="jeltan-event-time">{{ author.affiliation }}</div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="jeltan-muted jeltan-small" style="margin:0;">
+                    No byline was found in the document. Add it in the Authors field —
+                    an article cannot be published without one.
+                </p>
+                {% endfor %}
+                <p class="jeltan-muted jeltan-small" style="margin:.8rem 0 0;">
+                    Affiliations and ORCIDs are added on the
+                    <a href="{% url 'journal:article_edit' article.pk %}">full edit</a> page.
+                </p>
+            </div>
+
+            <div class="jeltan-card jeltan-sticky-actions">
+                <div class="jeltan-btn-row">
+                    <button type="submit" class="jeltan-btn">Save</button>
+                </div>
+                <p class="jeltan-muted jeltan-small" style="margin:.7rem 0 .9rem;">
+                    Tick <strong>Publish</strong> above to make it public. Until then it
+                    stays staged and this page keeps its link.
+                </p>
+                <button type="submit" name="discard" value="1" class="jeltan-btn-ghost jeltan-btn-danger jeltan-btn-sm"
+                        onclick="return confirm('Delete this article and its uploaded file?');">
+                    Discard it and its file
+                </button>
+            </div>
+        </aside>
+    </div>
+</form>
+{% endblock %}

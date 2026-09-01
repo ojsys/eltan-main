@@ -20,8 +20,9 @@ because that is the one thing the article page itself cannot show.
     <div class="jeltan-btn-row">
         <a class="jeltan-btn-ghost" href="{% url 'journal:editor_portal' %}">Portal</a>
         <a class="jeltan-btn-ghost" href="{% url 'journal:editor_issues' %}">Issues</a>
-        <a class="jeltan-btn-ghost" href="{% url 'journal:article_create' %}">Add one article</a>
-        <a class="jeltan-btn" href="{% url 'journal:article_import' %}">Import a batch</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_create' %}">Enter one by hand</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_import' %}">Import a batch</a>
+        <a class="jeltan-btn" href="{% url 'journal:article_from_document' %}">Generate from a document</a>
     </div>
 </div>
 

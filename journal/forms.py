@@ -715,6 +715,42 @@ class ArticleImportForm(BootstrapFormMixin, forms.Form):
         return uploaded
 
 
+class DocumentUploadForm(BootstrapFormMixin, forms.Form):
+    """One manuscript, from which the whole article is generated.
+
+    Deliberately short. Everything else about the article — its title, byline,
+    abstract, keywords and sections — is read out of the document itself and
+    shown for checking on the next screen, so asking for any of it here would
+    be asking twice.
+    """
+
+    document = forms.FileField(
+        label='The manuscript',
+        help_text=(
+            'A Word file (.docx) is read in full — title, authors, abstract, keywords '
+            'and every section. A PDF gives its front matter only, and keeps its own pages.'
+        ),
+    )
+    section = forms.ModelChoiceField(
+        queryset=Section.objects.none(), empty_label='Select a section',
+    )
+    issue = forms.ModelChoiceField(
+        queryset=Issue.objects.none(), required=False,
+        empty_label='Online first — no issue yet',
+    )
+    licence = forms.CharField(max_length=120, initial='CC BY 4.0')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['section'].queryset = Section.objects.filter(is_active=True)
+        self.fields['issue'].queryset = Issue.objects.all()
+
+    def clean_document(self):
+        return validate_upload(
+            self.cleaned_data.get('document'), SUPPORTED_EXTENSIONS, 'The manuscript',
+        )
+
+
 class ImportedArticleForm(BootstrapFormMixin, forms.ModelForm):
     """One row on the import review screen.
 

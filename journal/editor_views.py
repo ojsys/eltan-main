@@ -24,6 +24,8 @@ from .forms import (
     CopyeditForm,
     DecisionForm,
     DirectArticleForm,
+    DocumentUploadForm,
+    ImportedArticleForm,
     ImportedArticleFormSet,
     IssueForm,
     ProofForm,
@@ -1171,3 +1173,96 @@ def article_retypeset_batch(request, batch):
         f'{done} of {len(articles)} galley{pluralize(len(articles))} generated again.',
     )
     return redirect('journal:article_import_review', batch=batch)
+
+
+# ------------------------------------------- one document, whole article
+
+@chief_required
+def article_from_document(request):
+    """Generate an article from a single manuscript.
+
+    The other two doors into the record ask for different things: the manual
+    form asks an editor to type metadata that is already in the file, and the
+    bulk importer is built for a run of twenty and never shows what it read.
+    This is the one-file case — hand over the document, and read back the
+    article that came out of it before anything is published.
+    """
+    form = DocumentUploadForm(request.POST or None, request.FILES or None)
+
+    if request.method == 'POST' and form.is_valid():
+        uploaded = form.cleaned_data['document']
+        metadata = ingest.extract(uploaded)
+
+        with transaction.atomic():
+            article = Article.objects.create(
+                section=form.cleaned_data['section'],
+                issue=form.cleaned_data.get('issue'),
+                licence=form.cleaned_data['licence'],
+                title=metadata.title or ingest.title_from_filename(uploaded.name),
+                abstract=metadata.abstract,
+                keywords=metadata.keywords,
+                source_file=uploaded,
+                is_published=False,
+                added_by=request.user,
+            )
+            _apply_byline(article, metadata.authors)
+
+        # Typeset now, unlike a bulk import: the whole point of this page is to
+        # show what came out, and what came out is the typeset article.
+        typeset.typeset(article)
+
+        if metadata.error:
+            messages.warning(request, metadata.error)
+        messages.success(
+            request,
+            'The article has been generated. Nothing is public yet — check it below.',
+        )
+        return redirect('journal:article_generated', pk=article.pk)
+
+    return render(request, 'journal/editor/article_from_document.html', journal_context(
+        nav='editor', form=form,
+    ))
+
+
+@chief_required
+def article_generated(request, pk):
+    """Read back the article that came out of the document, then publish it."""
+    article = get_object_or_404(
+        Article.objects.select_related('section', 'issue').prefetch_related('authors'), pk=pk,
+    )
+    form = ImportedArticleForm(request.POST or None, instance=article)
+
+    # Before validation, not after: a document whose title could not be read is
+    # exactly the one an editor wants to throw away, and refusing to discard it
+    # until they have typed a title in would be a trap.
+    if request.method == 'POST' and 'discard' in request.POST:
+        article.source_file.delete(save=False)
+        article.pdf.delete(save=False)
+        typeset.clear_figures(article)
+        article.delete()
+        messages.success(request, 'Discarded, along with its files.')
+        return redirect('journal:editor_articles')
+
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            saved = form.save(commit=False)
+            if form.cleaned_data.get('publish'):
+                saved.is_published = True
+            saved.save()
+            _apply_byline(saved, ingest.names_to_pairs(form.cleaned_data.get('authors', '')))
+
+        # The galley prints the title and byline that were just corrected.
+        typeset.typeset(saved)
+
+        if saved.is_published:
+            messages.success(request, 'Published.')
+            return redirect('journal:article_detail', slug=saved.slug)
+        messages.success(request, 'Saved. It stays out of public view until you publish it.')
+        return redirect('journal:article_generated', pk=pk)
+
+    return render(request, 'journal/editor/article_generated.html', journal_context(
+        nav='editor',
+        article=article,
+        form=form,
+        outline=typeset.outline_of(article.body_html),
+    ))
