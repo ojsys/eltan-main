@@ -26,6 +26,7 @@ of every decision, and the numbers that read off that record.
     </div>
     <div class="jeltan-btn-row">
         <a class="jeltan-btn-ghost" href="{% url 'journal:editor_dashboard' %}">Manuscript queue</a>
+        {% if is_journal_chief %}<a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">Articles</a>{% endif %}
         <a class="jeltan-btn-ghost" href="{% url 'journal:editor_issues' %}">Issues</a>
         {% if is_site_admin %}
         <a class="jeltan-btn" href="/admin/journal/">Journal admin</a>
@@ -239,6 +240,22 @@ of every decision, and the numbers that read off that record.
                 <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:editor_issues' %}">All issues</a>
             </div>
         </section>
+
+        {% if is_journal_chief %}
+        <section class="jeltan-card" aria-labelledby="direct">
+            <h3 class="jeltan-h3" id="direct">Already reviewed?</h3>
+            <p class="jeltan-muted jeltan-small" style="margin:.2rem 0 .9rem;">
+                A paper reviewed elsewhere, an invited piece or a back issue goes
+                straight into the published record — no screening, no reviewers,
+                no decision. Your name is recorded against it.
+            </p>
+            <div class="jeltan-btn-row">
+                <a class="jeltan-btn" href="{% url 'journal:article_import' %}">Import a batch</a>
+                <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:article_create' %}">Add one</a>
+                <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:editor_articles' %}">All articles</a>
+            </div>
+        </section>
+        {% endif %}
 
         {% if is_site_admin %}
         <section class="jeltan-card jeltan-card-quiet" aria-labelledby="administration">

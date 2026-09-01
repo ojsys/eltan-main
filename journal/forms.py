@@ -1,9 +1,12 @@
 """Forms for the JELTAN editorial workflow."""
 
+from datetime import datetime, time
+
 from django import forms
 from django.forms import inlineformset_factory
 from django.utils import timezone
 
+from .ingest import SUPPORTED_EXTENSIONS
 from .models import (
     Article,
     ArticleAuthor,
@@ -546,6 +549,231 @@ class PublishArticleForm(BootstrapFormMixin, forms.ModelForm):
         return cleaned
 
 
+class DirectArticleForm(BootstrapFormMixin, forms.ModelForm):
+    """Load an article that never went through this system's review.
+
+    Two cases, one form: the back catalogue, and papers reviewed elsewhere or
+    on paper that are ready to publish as they stand. Both need the publication
+    date to be set by hand — an article from 2019 must not be dated today — and
+    both need a section, because that is what drives the OAI sets that indexers
+    harvest.
+    """
+
+    publication_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        label='Publication date',
+        help_text='The date this article was published. Leave blank to use today.',
+    )
+    notify_authors = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Email the authors that it is live',
+        help_text='Untick when loading a back issue — the authors were told years ago.',
+    )
+
+    class Meta:
+        model = Article
+        fields = [
+            'section', 'issue', 'title', 'abstract', 'keywords', 'source_file',
+            'first_page', 'last_page', 'doi', 'licence', 'is_published',
+        ]
+        widgets = {'abstract': forms.Textarea(attrs={'rows': 6})}
+        labels = {
+            'source_file': 'Article file (Word or PDF)',
+            'is_published': 'Publish now (visible to the public)',
+        }
+        help_texts = {
+            'issue': 'Leave blank to publish online first, ahead of an issue.',
+            'keywords': 'Comma separated.',
+            'source_file': (
+                'A Word manuscript is typeset into the JELTAN template, full text and all. '
+                'A PDF keeps its own pages, with a JELTAN cover page in front of them.'
+            ),
+        }
+
+    # The three publication controls read as one decision — when it came out,
+    # whether it goes public, and who hears about it — so they sit together and
+    # in that order, rather than wherever the model happened to declare them.
+    field_order = [
+        'section', 'issue', 'title', 'abstract', 'keywords', 'source_file',
+        'first_page', 'last_page', 'doi', 'licence',
+        'publication_date', 'is_published', 'notify_authors',
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['section'].queryset = Section.objects.filter(is_active=True)
+        self.fields['section'].empty_label = 'Select a section'
+        # The section is optional on the model so old rows survive, but a new
+        # article without one is invisible to a harvester and unlabelled on the
+        # page, so it is required here.
+        self.fields['section'].required = True
+        self.fields['issue'].empty_label = 'Online first — no issue yet'
+
+        if self.instance.pk and self.instance.published_at:
+            self.fields['publication_date'].initial = self.instance.published_at.date()
+
+    def clean_source_file(self):
+        return validate_upload(
+            self.cleaned_data.get('source_file'), SUPPORTED_EXTENSIONS, 'The article file',
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        has_file = cleaned.get('source_file') or self.instance.source_file or self.instance.pdf
+        if cleaned.get('is_published') and not has_file:
+            raise forms.ValidationError('Upload the article file before publishing it.')
+        return cleaned
+
+    def save(self, commit=True):
+        article = super().save(commit=False)
+
+        # A date, not a datetime, is what an editor knows. Midnight in the
+        # project's timezone is the honest reading of it, and storing it aware
+        # keeps it from shifting a day when it is rendered.
+        date = self.cleaned_data.get('publication_date')
+        if date:
+            article.published_at = timezone.make_aware(
+                datetime.combine(date, time.min), timezone.get_current_timezone(),
+            )
+        elif not article.is_published:
+            # Unpublishing should not leave a publication date behind, or the
+            # article claims a date it never had.
+            article.published_at = None
+
+        if commit:
+            article.save()
+        return article
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """A file input that accepts a whole folder's worth at once.
+
+    Django's own FileField cleans a single upload; the documented way to take
+    several is to widen both the widget and the cleaning, which is all this is.
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('widget', MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        clean_one = super().clean
+        if isinstance(data, (list, tuple)):
+            return [clean_one(item, initial) for item in data]
+        return [clean_one(data, initial)]
+
+
+class ArticleImportForm(BootstrapFormMixin, forms.Form):
+    """Step one of a bulk import: the files, and what they have in common.
+
+    Section, issue and licence are asked once rather than per article because a
+    batch is nearly always one issue of one journal, and asking twenty times is
+    how a wrong value gets clicked through.
+    """
+
+    MAX_FILES = 40
+
+    files = MultipleFileField(
+        label='Article files',
+        help_text=f'PDF or Word (.docx), up to {MAX_FILES} at a time. Select them all at once.',
+    )
+    section = forms.ModelChoiceField(
+        queryset=Section.objects.none(), empty_label='Select a section',
+        help_text='Applied to every article in this batch. It can be changed per article on the next screen.',
+    )
+    issue = forms.ModelChoiceField(
+        queryset=Issue.objects.none(), required=False,
+        empty_label='Online first — no issue yet',
+    )
+    licence = forms.CharField(max_length=120, initial='CC BY 4.0')
+    publication_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text='The date these articles were published. Leave blank to use today.',
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['section'].queryset = Section.objects.filter(is_active=True)
+        self.fields['issue'].queryset = Issue.objects.all()
+
+    def clean_files(self):
+        uploaded = self.cleaned_data['files']
+        if len(uploaded) > self.MAX_FILES:
+            raise forms.ValidationError(
+                f'{len(uploaded)} files — {self.MAX_FILES} is the most in one batch. '
+                'Split the upload and run it twice.'
+            )
+        for item in uploaded:
+            validate_upload(item, SUPPORTED_EXTENSIONS, f'"{item.name}"')
+        return uploaded
+
+
+class ImportedArticleForm(BootstrapFormMixin, forms.ModelForm):
+    """One row on the import review screen.
+
+    The byline is one text field rather than a nested formset: twenty articles
+    of six author sub-forms each is a screen nobody can work. Affiliations and
+    ORCIDs belong on the article's own page, and there is a link to it.
+    """
+
+    authors = forms.CharField(
+        required=False,
+        label='Authors',
+        help_text='Comma separated, in credit order — "Ada Obi, Chidi Eze".',
+    )
+    publish = forms.BooleanField(required=False, label='Publish')
+
+    class Meta:
+        model = Article
+        fields = ['section', 'issue', 'title', 'authors', 'abstract', 'keywords',
+                  'first_page', 'last_page', 'doi']
+        widgets = {'abstract': forms.Textarea(attrs={'rows': 4})}
+
+    field_order = ['title', 'authors', 'abstract', 'keywords', 'section', 'issue',
+                   'first_page', 'last_page', 'doi', 'publish']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['section'].queryset = Section.objects.filter(is_active=True)
+        self.fields['issue'].queryset = Issue.objects.all()
+        self.fields['issue'].empty_label = 'Online first'
+        # Both were explained once when the batch was set up; repeating the help
+        # text on every row only pushes the short fields out of alignment.
+        self.fields['issue'].help_text = ''
+        self.fields['section'].help_text = ''
+        if self.instance.pk and 'authors' not in self.initial:
+            self.initial['authors'] = self.instance.author_list
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('publish'):
+            if not cleaned.get('title'):
+                self.add_error('title', 'A title is needed before this can be published.')
+            if not (cleaned.get('authors') or '').strip():
+                self.add_error(
+                    'authors',
+                    'Add the byline before publishing — an article with no credited author '
+                    'is worse in the record than one still waiting.',
+                )
+        return cleaned
+
+
+ImportedArticleFormSet = forms.modelformset_factory(
+    Article, form=ImportedArticleForm, extra=0,
+    # Discarding a row is the formset's own delete, which is what makes Django
+    # skip validating it: complaining that a file being thrown away has no
+    # title would leave an editor unable to throw it away.
+    can_delete=True,
+)
+
+
 class ArticleAuthorForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = ArticleAuthor
@@ -553,5 +781,8 @@ class ArticleAuthorForm(BootstrapFormMixin, forms.ModelForm):
 
 
 ArticleAuthorFormSet = inlineformset_factory(
-    Article, ArticleAuthor, form=ArticleAuthorForm, extra=1, min_num=1, validate_min=True, can_delete=True,
+    Article, ArticleAuthor, form=ArticleAuthorForm, extra=1, min_num=1, validate_min=True,
+    # Saved authors can be removed; an empty slot has nothing to delete, and
+    # offering it there only invites the question of what it would do.
+    can_delete=True, can_delete_extra=False,
 )

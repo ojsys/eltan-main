@@ -1,0 +1,70 @@
+{% extends 'journal/base.html' %}
+
+{% comment %}
+Step one of a bulk import. Everything a batch has in common is asked once here;
+everything that differs per article is asked on the review screen that follows.
+{% endcomment %}
+
+{% block journal_title %}Import articles — editorial{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-portal-head">
+    <div>
+        <p class="jeltan-eyebrow">Editorial</p>
+        <h1 class="jeltan-h1" style="margin-bottom:.25rem;">Import articles</h1>
+        <p class="jeltan-muted" style="margin:0;">
+            A folder of ready-to-publish papers, in one go.
+        </p>
+    </div>
+    <div class="jeltan-btn-row">
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_create' %}">Add one article</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">All articles</a>
+    </div>
+</div>
+
+<div class="jeltan-alert jeltan-alert-warn">
+    <strong>This bypasses peer review.</strong>
+    Every file becomes an article in the published record, with your name against it.
+    Nothing goes public in this step — you check each one on the next screen first.
+</div>
+
+<div class="jeltan-grid jeltan-grid-sidebar">
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <div class="jeltan-card">
+            <h2 class="jeltan-h2">The batch</h2>
+            {% include 'journal/_form.html' with form=form %}
+        </div>
+        <div class="jeltan-card">
+            <div class="jeltan-btn-row">
+                <button type="submit" class="jeltan-btn">Upload and read the files</button>
+                <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">Cancel</a>
+            </div>
+        </div>
+    </form>
+
+    <aside>
+        <div class="jeltan-card jeltan-card-quiet">
+            <h3 class="jeltan-h3">What happens next</h3>
+            <ol class="jeltan-steps">
+                <li>Each file is read for its title, byline, abstract and keywords.</li>
+                <li>One <strong>staged</strong> article is created per file — none of them public.</li>
+                <li>You get a screen listing all of them, with what was found in each,
+                    to correct where the reading went wrong.</li>
+                <li>Tick the ones to publish. Anything you leave unticked stays staged
+                    until you come back to it.</li>
+            </ol>
+        </div>
+
+        <div class="jeltan-card jeltan-card-quiet">
+            <h3 class="jeltan-h3">On reading the files</h3>
+            <p class="jeltan-muted jeltan-small" style="margin:.2rem 0 0;">
+                A paper is laid out for a human eye, so what comes back is a good
+                guess and no more — a scanned PDF with no text layer yields nothing
+                but its filename. Nothing here is published on the strength of that
+                guess: an article with no byline cannot be ticked to publish at all.
+            </p>
+        </div>
+    </aside>
+</div>
+{% endblock %}

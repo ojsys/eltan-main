@@ -1,0 +1,117 @@
+{% extends 'journal/base.html' %}
+
+{% comment %}
+Step two: what was read out of each file, laid out to be corrected quickly.
+
+One row per article, each a card rather than a table row — the fields are too
+many and too long for columns, and an editor works down one paper at a time.
+{% endcomment %}
+
+{% block journal_title %}Check the imported articles — editorial{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-portal-head">
+    <div>
+        <p class="jeltan-eyebrow">Editorial · import</p>
+        <h1 class="jeltan-h1" style="margin-bottom:.25rem;">Check before publishing</h1>
+        <p class="jeltan-muted" style="margin:0;">
+            {{ rows|length }} article{{ rows|length|pluralize }} in this batch —
+            {{ staged }} staged, {{ live }} already public. What is shown was read
+            out of the files, so read it back before you tick anything.
+        </p>
+    </div>
+    <div class="jeltan-btn-row">
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_import' %}">Import another batch</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">All articles</a>
+    </div>
+</div>
+
+<div class="jeltan-alert jeltan-alert-info">
+    Saving generates each article's galley in the JELTAN template — so make the
+    titles and bylines right first, because that is what gets printed on them.
+    Word manuscripts are typeset in full, and their text is shown on the article
+    page; a supplied PDF keeps its own pages behind a JELTAN cover.
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+    <div class="jeltan-alert jeltan-alert-bad">
+        {% for error in formset.non_form_errors %}<div>{{ error }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% for row, article in rows %}
+    <section class="jeltan-card jeltan-import-row" aria-labelledby="row-{{ article.pk }}">
+        {% for hidden in row.hidden_fields %}{{ hidden }}{% endfor %}
+
+        <div class="jeltan-import-head">
+            <div>
+                <h2 class="jeltan-h3" id="row-{{ article.pk }}" style="margin:0;">
+                    {{ forloop.counter }}. {{ article.source_filename|default:article.galley_filename|truncatechars:70 }}
+                </h2>
+                <div class="jeltan-event-time">
+                    {% if article.source_extension == '.docx' %}Word manuscript — typeset in full
+                    {% else %}PDF — cover page only{% endif %}
+                    {% if article.is_published %} · <span class="jeltan-badge jeltan-badge-good">Public</span>
+                    {% else %} · <span class="jeltan-badge jeltan-badge-warn">Staged</span>{% endif %}
+                </div>
+            </div>
+            <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:article_edit' article.pk %}">
+                Edit in full
+            </a>
+        </div>
+
+        {% if row.non_field_errors %}
+        <div class="jeltan-alert jeltan-alert-bad">
+            {% for error in row.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="jeltan-import-fields">
+            {% for field in row.visible_fields %}
+            {% if field.name == 'publish' or field.name == 'DELETE' %}
+            {% else %}
+            <div class="jeltan-field jeltan-import-{{ field.name }}">
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }}{% if field.field.required %} <span class="jeltan-req" title="Required">*</span>{% endif %}
+                </label>
+                {{ field }}
+                {% if field.help_text %}<small>{{ field.help_text|safe }}</small>{% endif %}
+                {{ field.errors }}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="jeltan-import-actions">
+            <div class="jeltan-checkbox">
+                {{ row.publish }}
+                <div><label for="{{ row.publish.id_for_label }}">Publish this article</label></div>
+            </div>
+            <div class="jeltan-checkbox">
+                {{ row.DELETE }}
+                <div>
+                    <label for="{{ row.DELETE.id_for_label }}">Discard — delete it and its file</label>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% empty %}
+    <div class="jeltan-card">
+        <p class="jeltan-muted" style="margin:0;">This batch is empty.</p>
+    </div>
+    {% endfor %}
+
+    <div class="jeltan-card jeltan-sticky-actions">
+        <div class="jeltan-btn-row">
+            <button type="submit" class="jeltan-btn">Save this batch</button>
+            <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">Leave it staged for now</a>
+        </div>
+        <p class="jeltan-muted jeltan-small" style="margin:.7rem 0 0;">
+            Only the articles you ticked go public. The rest stay staged and keep this page's link.
+        </p>
+    </div>
+</form>
+{% endblock %}

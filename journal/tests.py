@@ -1578,3 +1578,984 @@ class AdminAccessTests(TestCase):
             self.client.get(reverse('admin:journal_editorialdecision_add')).status_code,
             403,
         )
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class DirectPublicationTests(JournalTestCase):
+    """Loading an article that was already reviewed, without a manuscript."""
+
+    def setUp(self):
+        super().setUp()
+        self.section_editor = CustomUser.objects.create_user(
+            email='section@example.com', password='pw-for-tests-only',
+            first_name='Tunde', last_name='Adeyemi',
+        )
+        JournalRole.objects.create(user=self.section_editor, role=JournalRole.EDITOR)
+
+    def payload(self, **overrides):
+        fields = {
+            'section': self.section.pk,
+            'title': 'Task repetition and oral fluency in Nigerian secondary schools',
+            'abstract': 'An abstract of the already-reviewed paper.',
+            'keywords': 'fluency, task repetition',
+            'source_file': SimpleUploadedFile(
+                'article.docx', a_docx(PAPER_LINES),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ),
+            'first_page': '44',
+            'last_page': '61',
+            'doi': '10.1234/jeltan.2024.7',
+            'licence': 'CC BY 4.0',
+            'is_published': 'on',
+            'notify_authors': 'on',
+            'authors-TOTAL_FORMS': '1',
+            'authors-INITIAL_FORMS': '0',
+            'authors-MIN_NUM_FORMS': '1',
+            'authors-MAX_NUM_FORMS': '1000',
+            'authors-0-first_name': 'Ada',
+            'authors-0-last_name': 'Obi',
+            'authors-0-affiliation': 'University of Lagos',
+            'authors-0-email': 'author@example.com',
+        }
+        fields.update(overrides)
+        return {key: value for key, value in fields.items() if value is not None}
+
+    def test_an_article_can_be_published_without_a_manuscript(self):
+        self.client.force_login(self.editor_user)
+
+        response = self.client.post(reverse('journal:article_create'), self.payload())
+
+        self.assertEqual(response.status_code, 302)
+        article = Article.objects.get(doi='10.1234/jeltan.2024.7')
+        self.assertTrue(article.is_published)
+        self.assertIsNone(article.submission)
+        self.assertFalse(article.was_reviewed_here)
+        self.assertEqual(article.authors.count(), 1)
+        self.assertEqual(article.page_range, '44–61')
+
+    def test_the_person_who_loaded_it_is_recorded(self):
+        # Nothing else in the record can show who vouched for an article that
+        # skipped review.
+        self.client.force_login(self.editor_user)
+        self.client.post(reverse('journal:article_create'), self.payload())
+
+        self.assertEqual(Article.objects.get().added_by, self.editor_user)
+
+    def test_a_directly_published_article_is_publicly_readable(self):
+        self.client.force_login(self.editor_user)
+        self.client.post(reverse('journal:article_create'), self.payload())
+        article = Article.objects.get()
+
+        self.client.logout()
+        response = self.client.get(reverse('journal:article_detail', args=[article.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Task repetition')
+
+    def test_a_back_issue_keeps_the_date_it_was_actually_published(self):
+        # An article from 2019 dated today would misstate the record and sort
+        # to the top of every list of recent work.
+        self.client.force_login(self.editor_user)
+        self.client.post(reverse('journal:article_create'), self.payload(
+            publication_date='2019-06-14', notify_authors=None,
+        ))
+
+        article = Article.objects.get()
+        self.assertEqual(article.published_at.date().isoformat(), '2019-06-14')
+
+    def test_a_back_issue_does_not_email_authors_years_later(self):
+        self.client.force_login(self.editor_user)
+        self.client.post(reverse('journal:article_create'), self.payload(
+            publication_date='2019-06-14', notify_authors=None,
+        ))
+
+        self.assertEqual(mail.outbox, [])
+
+    def test_publishing_now_tells_the_authors(self):
+        self.client.force_login(self.editor_user)
+        self.client.post(reverse('journal:article_create'), self.payload())
+
+        self.assertTrue(any('Published' in m.subject for m in mail.outbox))
+        self.assertIn('author@example.com', mail.outbox[0].to)
+
+    def test_an_article_can_be_staged_without_going_public(self):
+        self.client.force_login(self.editor_user)
+        self.client.post(reverse('journal:article_create'), self.payload(is_published=None))
+
+        article = Article.objects.get()
+        self.assertFalse(article.is_published)
+        self.assertIsNone(article.published_at)
+        self.assertEqual(mail.outbox, [])
+
+    def test_a_section_is_required_so_the_article_is_harvestable(self):
+        self.client.force_login(self.editor_user)
+        response = self.client.post(reverse('journal:article_create'), self.payload(section=None))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Article.objects.exists())
+
+    def test_an_article_cannot_go_public_without_a_file(self):
+        self.client.force_login(self.editor_user)
+        response = self.client.post(reverse('journal:article_create'), self.payload(source_file=None))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Article.objects.exists())
+
+    def test_save_and_add_another_carries_the_issue_over(self):
+        # Loading an issue is loading a run of articles.
+        issue = Issue.objects.create(volume=2, number=1, year=2026)
+        self.client.force_login(self.editor_user)
+
+        response = self.client.post(
+            reverse('journal:article_create'),
+            self.payload(issue=issue.pk, save_and_add='1'),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(f'issue={issue.pk}', response.url)
+        self.assertIn(f'section={self.section.pk}', response.url)
+
+    def test_a_section_editor_cannot_publish_without_review(self):
+        # Skipping peer review is not a section editor's call.
+        self.client.force_login(self.section_editor)
+
+        self.assertEqual(self.client.get(reverse('journal:article_create')).status_code, 404)
+        self.assertEqual(self.client.post(reverse('journal:article_create'), self.payload()).status_code, 404)
+        self.assertFalse(Article.objects.exists())
+
+    def test_an_author_cannot_reach_the_article_pages(self):
+        self.client.force_login(self.author)
+
+        self.assertEqual(self.client.get(reverse('journal:editor_articles')).status_code, 404)
+        self.assertEqual(self.client.get(reverse('journal:article_create')).status_code, 404)
+
+    def test_a_site_administrator_can_publish_without_a_journal_role(self):
+        admin_user = CustomUser.objects.create_user(
+            email='admin2@example.com', password='pw-for-tests-only',
+            first_name='Ngozi', last_name='Adaora',
+        )
+        admin_user.is_staff = True
+        admin_user.save()
+        self.client.force_login(admin_user)
+
+        self.client.post(reverse('journal:article_create'), self.payload())
+
+        self.assertEqual(Article.objects.get().added_by, admin_user)
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class ArticleEditingTests(JournalTestCase):
+    """Correcting the published record after the fact."""
+
+    def edit_payload(self, article, **overrides):
+        fields = {
+            'section': article.section_id,
+            'title': article.title,
+            'abstract': article.abstract,
+            'keywords': article.keywords,
+            'licence': article.licence,
+            'is_published': 'on' if article.is_published else None,
+            # A human editing in the browser sees this ticked, so the tests post
+            # it ticked: what stops a second email must be the transition guard,
+            # not an editor remembering to untick a box.
+            'notify_authors': 'on',
+            'first_page': article.first_page or '',
+            'last_page': article.last_page or '',
+            'doi': article.doi,
+            'authors-TOTAL_FORMS': '1',
+            'authors-INITIAL_FORMS': '0',
+            'authors-MIN_NUM_FORMS': '1',
+            'authors-MAX_NUM_FORMS': '1000',
+            'authors-0-first_name': 'Ada',
+            'authors-0-last_name': 'Obi',
+            'authors-0-email': 'author@example.com',
+        }
+        fields.update(overrides)
+        return {key: value for key, value in fields.items() if value is not None}
+
+    def make_article(self, **overrides):
+        fields = {
+            'title': 'Talk in the classroom', 'abstract': 'An abstract.',
+            'section': self.section, 'is_published': True, 'licence': 'CC BY 4.0',
+            'pdf': SimpleUploadedFile('a.pdf', b'%PDF-1.4', content_type='application/pdf'),
+        }
+        fields.update(overrides)
+        return Article.objects.create(**fields)
+
+    def test_metadata_can_be_corrected_without_re_emailing_the_authors(self):
+        article = self.make_article()
+        self.client.force_login(self.editor_user)
+        mail.outbox = []
+
+        self.client.post(
+            reverse('journal:article_edit', args=[article.pk]),
+            self.edit_payload(article, first_page='7', last_page='24'),
+        )
+
+        article.refresh_from_db()
+        self.assertEqual(article.page_range, '7–24')
+        # The authors were told when it went live; a page-number fix is not news.
+        self.assertEqual(mail.outbox, [])
+
+    def test_taking_a_staged_article_live_closes_its_manuscript(self):
+        submission = self.make_submission(status=Submission.IN_PRODUCTION)
+        article = self.make_article(is_published=False, submission=submission)
+        self.client.force_login(self.editor_user)
+
+        self.client.post(
+            reverse('journal:article_edit', args=[article.pk]),
+            self.edit_payload(article, is_published='on'),
+        )
+
+        article.refresh_from_db()
+        submission.refresh_from_db()
+        self.assertTrue(article.is_published)
+        # Otherwise the author's own page still says "in production".
+        self.assertEqual(submission.status, Submission.PUBLISHED)
+        self.assertTrue(any('Published' in m.subject for m in mail.outbox))
+
+    def test_the_article_list_separates_the_two_routes_in(self):
+        submission = self.make_submission(status=Submission.PUBLISHED)
+        self.make_article(submission=submission)
+        self.make_article(title='Loaded by hand', added_by=self.editor_user)
+        self.client.force_login(self.editor_user)
+
+        response = self.client.get(reverse('journal:editor_articles') + '?show=direct')
+
+        self.assertEqual(len(response.context['articles']), 1)
+        self.assertEqual(response.context['counts']['direct'], 1)
+
+    def test_editing_one_author_does_not_scramble_the_byline(self):
+        """The byline is the article's credit — a page-number fix must not reorder it."""
+        article = self.make_article()
+        first = ArticleAuthor.objects.create(
+            article=article, first_name='Ada', last_name='Obi', order=0,
+        )
+        second = ArticleAuthor.objects.create(
+            article=article, first_name='Chidi', last_name='Eze', order=1,
+        )
+        self.client.force_login(self.editor_user)
+
+        self.client.post(reverse('journal:article_edit', args=[article.pk]), self.edit_payload(
+            article,
+            **{
+                'authors-TOTAL_FORMS': '2',
+                'authors-INITIAL_FORMS': '2',
+                # Author one is posted back exactly as it stands, so the
+                # formset reports only author two as changed — which is the case
+                # that used to renumber the changed author to position one.
+                'authors-0-id': first.pk,
+                'authors-0-article': article.pk,
+                'authors-0-first_name': 'Ada',
+                'authors-0-last_name': 'Obi',
+                'authors-0-email': '',
+                'authors-1-id': second.pk,
+                'authors-1-article': article.pk,
+                'authors-1-first_name': 'Chidi',
+                'authors-1-last_name': 'Eze',
+                'authors-1-email': '',
+                'authors-1-affiliation': 'Bayero University',
+            },
+        ))
+
+        self.assertEqual(article.author_list, 'Ada Obi, Chidi Eze')
+        second.refresh_from_db()
+        self.assertEqual(second.affiliation, 'Bayero University')
+        self.assertEqual(second.order, 1)
+
+    def test_an_author_can_be_removed_from_the_byline(self):
+        article = self.make_article()
+        first = ArticleAuthor.objects.create(
+            article=article, first_name='Ada', last_name='Obi', order=0,
+        )
+        second = ArticleAuthor.objects.create(
+            article=article, first_name='Chidi', last_name='Eze', order=1,
+        )
+        self.client.force_login(self.editor_user)
+
+        self.client.post(reverse('journal:article_edit', args=[article.pk]), self.edit_payload(
+            article,
+            **{
+                'authors-TOTAL_FORMS': '2',
+                'authors-INITIAL_FORMS': '2',
+                'authors-0-id': first.pk,
+                'authors-0-article': article.pk,
+                'authors-0-first_name': 'Ada',
+                'authors-0-last_name': 'Obi',
+                'authors-0-DELETE': 'on',
+                'authors-1-id': second.pk,
+                'authors-1-article': article.pk,
+                'authors-1-first_name': 'Chidi',
+                'authors-1-last_name': 'Eze',
+            },
+        ))
+
+        # The remaining author moves up rather than keeping a gap at position 0.
+        self.assertEqual(article.author_list, 'Chidi Eze')
+        second.refresh_from_db()
+        self.assertEqual(second.order, 0)
+
+
+def a_docx(paragraphs, title=''):
+    """A real .docx — a zip of the XML Word writes — built without a library."""
+    import io
+    import zipfile
+
+    body = ''.join(
+        '<w:p><w:r><w:t xml:space="preserve">%s</w:t></w:r></w:p>' % line.replace('&', '&amp;')
+        for line in paragraphs
+    )
+    document = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f'<w:body>{body}</w:body></w:document>'
+    )
+    core = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<cp:coreProperties '
+        'xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+        'xmlns:dc="http://purl.org/dc/elements/1.1/">'
+        f'<dc:title>{title}</dc:title></cp:coreProperties>'
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w') as archive:
+        archive.writestr('word/document.xml', document)
+        archive.writestr('docProps/core.xml', core)
+    return buffer.getvalue()
+
+
+def a_pdf(lines):
+    """A minimal single-page PDF whose text pypdf can actually extract."""
+    import io
+
+    from pypdf import PdfWriter
+
+    try:
+        from reportlab.pdfgen import canvas
+    except ImportError:                      # pragma: no cover - optional
+        return None
+
+    buffer = io.BytesIO()
+    page = canvas.Canvas(buffer)
+    y = 800
+    for line in lines:
+        page.drawString(60, y, line)
+        y -= 20
+    page.save()
+    buffer.seek(0)
+    writer = PdfWriter(clone_from=buffer)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+PAPER_LINES = [
+    'Task repetition and oral fluency in Nigerian secondary schools',
+    'Ada Obi, Chidi Eze',
+    'University of Lagos',
+    'Abstract',
+    'This study examines whether repeating a speaking task improves the oral '
+    'fluency of senior secondary students in Lagos. Sixty learners took part '
+    'over one term, and the results point to a modest but consistent gain.',
+    'Keywords: task repetition, oral fluency, secondary school',
+    'Introduction',
+    'Fluency has long been treated as a by-product of practice.',
+]
+
+
+class IngestTests(TestCase):
+    """Reading a paper's front matter. Every result is a guess, so it must be a
+    careful one: a wrong author in the record is worse than a blank field."""
+
+    def extract_docx(self, lines, title=''):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from journal import ingest
+        return ingest.extract(SimpleUploadedFile(
+            'paper.docx', a_docx(lines, title=title),
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ))
+
+    def test_a_word_file_gives_up_its_front_matter(self):
+        found = self.extract_docx(PAPER_LINES)
+
+        self.assertEqual(found.title, PAPER_LINES[0])
+        self.assertIn('oral fluency of senior secondary students', found.abstract)
+        self.assertEqual(found.keywords, 'task repetition, oral fluency, secondary school')
+        self.assertEqual(found.authors, [('Ada', 'Obi'), ('Chidi', 'Eze')])
+
+    def test_the_abstract_stops_where_the_paper_does(self):
+        found = self.extract_docx(PAPER_LINES)
+
+        # Running on into the introduction would put the paper's opening line
+        # into the abstract on the public page.
+        self.assertNotIn('by-product of practice', found.abstract)
+        self.assertNotIn('Keywords', found.abstract)
+
+    def test_an_affiliation_is_never_read_as_a_byline(self):
+        found = self.extract_docx([
+            'A study of classroom talk',
+            'Department of English, University of Lagos',
+            'Abstract',
+            'A long enough abstract to be believed by the reader of this test suite.',
+        ])
+
+        self.assertEqual(found.authors, [])
+
+    def test_a_word_title_property_of_a_filename_is_ignored(self):
+        # Word stamps "Microsoft Word - draft.doc" into the title of anything
+        # printed from it, which is not the paper's title.
+        found = self.extract_docx(PAPER_LINES, title='Microsoft Word - paper draft 3.doc')
+
+        self.assertEqual(found.title, PAPER_LINES[0])
+
+    def test_the_document_title_property_is_used_when_it_is_real(self):
+        found = self.extract_docx(PAPER_LINES, title='A Better Title From The Properties')
+
+        self.assertEqual(found.title, 'A Better Title From The Properties')
+
+    def test_an_unreadable_file_still_yields_a_title_from_its_name(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from journal import ingest
+        found = ingest.extract(SimpleUploadedFile(
+            'Task_repetition-and-oral-fluency_final.docx', b'this is not a zip',
+        ))
+
+        self.assertEqual(found.title, 'Task repetition and oral fluency')
+        self.assertTrue(found.error)
+
+    def test_the_file_can_still_be_saved_after_being_read(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from journal import ingest
+        uploaded = SimpleUploadedFile('paper.docx', a_docx(PAPER_LINES))
+        ingest.extract(uploaded)
+
+        # Reading for metadata must not consume the upload — the same file is
+        # about to become the galley.
+        self.assertEqual(uploaded.tell(), 0)
+        self.assertTrue(uploaded.read())
+
+    def test_a_pdf_gives_up_its_front_matter(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from journal import ingest
+        content = a_pdf(PAPER_LINES)
+        if content is None:
+            self.skipTest('reportlab is not installed')
+
+        found = ingest.extract(SimpleUploadedFile(
+            'paper.pdf', content, content_type='application/pdf',
+        ))
+
+        self.assertEqual(found.title, PAPER_LINES[0])
+        self.assertIn('oral fluency', found.abstract)
+        self.assertEqual(found.authors, [('Ada', 'Obi'), ('Chidi', 'Eze')])
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class ArticleImportTests(JournalTestCase):
+    """Uploading a folder of ready papers and publishing them as a batch."""
+
+    def setUp(self):
+        super().setUp()
+        self.section_editor = CustomUser.objects.create_user(
+            email='section2@example.com', password='pw-for-tests-only',
+            first_name='Tunde', last_name='Adeyemi',
+        )
+        JournalRole.objects.create(user=self.section_editor, role=JournalRole.EDITOR)
+        self.issue = Issue.objects.create(volume=3, number=1, year=2026)
+
+    def docx(self, name, lines=None, title=''):
+        return SimpleUploadedFile(
+            name, a_docx(lines or PAPER_LINES, title=title),
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
+
+    def upload(self, files, **overrides):
+        data = {
+            'section': self.section.pk,
+            'issue': self.issue.pk,
+            'licence': 'CC BY 4.0',
+            'files': files,
+        }
+        data.update(overrides)
+        self.client.force_login(self.editor_user)
+        return self.client.post(reverse('journal:article_import'), data)
+
+    def review_payload(self, articles, per_row=None):
+        """The review formset, posted back unchanged unless a row says otherwise."""
+        per_row = per_row or {}
+        data = {
+            'rows-TOTAL_FORMS': str(len(articles)),
+            'rows-INITIAL_FORMS': str(len(articles)),
+            'rows-MIN_NUM_FORMS': '0',
+            'rows-MAX_NUM_FORMS': '1000',
+        }
+        for index, article in enumerate(articles):
+            data.update({
+                f'rows-{index}-id': article.pk,
+                f'rows-{index}-title': article.title,
+                f'rows-{index}-authors': article.author_list,
+                f'rows-{index}-abstract': article.abstract,
+                f'rows-{index}-keywords': article.keywords,
+                f'rows-{index}-section': article.section_id or '',
+                f'rows-{index}-issue': article.issue_id or '',
+                f'rows-{index}-first_page': article.first_page or '',
+                f'rows-{index}-last_page': article.last_page or '',
+                f'rows-{index}-doi': article.doi,
+            })
+            data.update({f'rows-{index}-{key}': value for key, value in per_row.get(index, {}).items()})
+        return {key: value for key, value in data.items() if value is not None}
+
+    # --- step one ---------------------------------------------------------
+
+    def test_several_files_become_one_staged_article_each(self):
+        response = self.upload([
+            self.docx('first-paper.docx'),
+            self.docx('second-paper.docx'),
+            self.docx('third-paper.docx'),
+        ])
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Article.objects.count(), 3)
+        # Nothing is public until an editor has looked at the review screen.
+        self.assertEqual(Article.objects.filter(is_published=True).count(), 0)
+        self.assertEqual(len(set(Article.objects.values_list('import_batch', flat=True))), 1)
+
+    def test_the_batch_carries_the_common_details_to_every_article(self):
+        self.upload([self.docx('a.docx'), self.docx('b.docx')])
+
+        for article in Article.objects.all():
+            self.assertEqual(article.section, self.section)
+            self.assertEqual(article.issue, self.issue)
+            self.assertEqual(article.licence, 'CC BY 4.0')
+            self.assertEqual(article.added_by, self.editor_user)
+
+    def test_what_was_read_out_of_the_file_is_filled_in(self):
+        self.upload([self.docx('a-paper.docx')])
+        article = Article.objects.get()
+
+        self.assertEqual(article.title, PAPER_LINES[0])
+        self.assertIn('oral fluency', article.abstract)
+        self.assertEqual(article.author_list, 'Ada Obi, Chidi Eze')
+
+    def test_the_uploaded_file_is_kept_as_the_source(self):
+        self.upload([self.docx('a-paper.docx')])
+        article = Article.objects.get()
+
+        # The manuscript is kept so the article can always be typeset again;
+        # the galley is generated later, once the metadata has been confirmed.
+        self.assertTrue(article.source_file)
+        self.assertEqual(article.source_extension, '.docx')
+
+    def test_an_unreadable_file_still_imports_under_its_filename(self):
+        # A scanned PDF with no text layer must not lose the whole batch.
+        response = self.upload([
+            SimpleUploadedFile('Silent_reading_strategies.docx', b'not really a docx'),
+        ])
+
+        article = Article.objects.get()
+        self.assertEqual(article.title, 'Silent reading strategies')
+        self.assertContains(
+            self.client.get(response.url), 'type the rest in', status_code=200,
+        )
+
+    def test_a_file_the_journal_cannot_open_is_refused(self):
+        response = self.upload([SimpleUploadedFile('notes.txt', b'plain text')])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Article.objects.exists())
+
+    def test_a_section_editor_cannot_import(self):
+        self.client.force_login(self.section_editor)
+        self.assertEqual(self.client.get(reverse('journal:article_import')).status_code, 404)
+
+    # --- step two ---------------------------------------------------------
+
+    def test_only_the_ticked_articles_go_public(self):
+        self.upload([self.docx('a.docx'), self.docx('b.docx'), self.docx('c.docx')])
+        articles = list(Article.objects.order_by('pk'))
+        batch = articles[0].import_batch
+
+        self.client.post(
+            reverse('journal:article_import_review', args=[batch]),
+            self.review_payload(articles, {0: {'publish': 'on'}, 2: {'publish': 'on'}}),
+        )
+
+        published = set(Article.objects.filter(is_published=True).values_list('pk', flat=True))
+        self.assertEqual(published, {articles[0].pk, articles[2].pk})
+
+    def test_corrections_on_the_review_screen_are_kept(self):
+        self.upload([self.docx('a.docx')])
+        article = Article.objects.get()
+
+        self.client.post(
+            reverse('journal:article_import_review', args=[article.import_batch]),
+            self.review_payload([article], {0: {
+                'title': 'The title the reader will actually see',
+                'authors': 'Ngozi Adaora, Kunle Bello',
+                'first_page': '12', 'last_page': '30',
+                'publish': 'on',
+            }}),
+        )
+
+        article.refresh_from_db()
+        self.assertEqual(article.title, 'The title the reader will actually see')
+        self.assertEqual(article.author_list, 'Ngozi Adaora, Kunle Bello')
+        self.assertEqual(article.page_range, '12–30')
+        self.assertTrue(article.is_published)
+
+    def test_an_article_with_no_byline_cannot_be_published(self):
+        # Publishing a paper with nobody credited is worse than leaving it staged.
+        self.upload([self.docx('a.docx')])
+        article = Article.objects.get()
+
+        response = self.client.post(
+            reverse('journal:article_import_review', args=[article.import_batch]),
+            self.review_payload([article], {0: {'authors': '', 'publish': 'on'}}),
+        )
+
+        article.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(article.is_published)
+
+    def test_an_unwanted_file_can_be_discarded(self):
+        self.upload([self.docx('wanted.docx'), self.docx('unwanted.docx')])
+        articles = list(Article.objects.order_by('pk'))
+        batch = articles[0].import_batch
+
+        self.client.post(
+            reverse('journal:article_import_review', args=[batch]),
+            self.review_payload(articles, {1: {'DELETE': 'on'}}),
+        )
+
+        self.assertEqual(Article.objects.count(), 1)
+        self.assertEqual(Article.objects.get().pk, articles[0].pk)
+
+    def test_a_discarded_row_is_not_held_up_by_its_own_blank_fields(self):
+        self.upload([self.docx('unwanted.docx')])
+        article = Article.objects.get()
+
+        self.client.post(
+            reverse('journal:article_import_review', args=[article.import_batch]),
+            self.review_payload([article], {0: {'title': '', 'DELETE': 'on'}}),
+        )
+
+        self.assertFalse(Article.objects.exists())
+
+    def test_a_published_batch_is_readable_by_the_public(self):
+        self.upload([self.docx('a.docx')])
+        article = Article.objects.get()
+        self.client.post(
+            reverse('journal:article_import_review', args=[article.import_batch]),
+            self.review_payload([article], {0: {'publish': 'on'}}),
+        )
+
+        self.client.logout()
+        article.refresh_from_db()
+        response = self.client.get(reverse('journal:article_detail', args=[article.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Ada Obi')
+
+    def test_publishing_a_batch_typesets_every_article(self):
+        self.upload([self.docx('a.docx')])
+        article = Article.objects.get()
+        self.client.post(
+            reverse('journal:article_import_review', args=[article.import_batch]),
+            self.review_payload([article], {0: {'publish': 'on'}}),
+        )
+        article.refresh_from_db()
+
+        self.assertTrue(article.is_typeset)
+        self.assertEqual(article.galley_extension, '.pdf')
+        response = self.client.get(reverse('journal:article_pdf', args=[article.slug]))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('.pdf', response['Content-Disposition'])
+
+    def test_a_missing_batch_says_so_rather_than_erroring(self):
+        self.client.force_login(self.editor_user)
+        response = self.client.get(
+            reverse('journal:article_import_review', args=['00000000-0000-0000-0000-000000000000'])
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+
+def a_structured_docx(paragraphs):
+    """A .docx with real Word styles — paragraphs are (text, style, bold)."""
+    import io
+    import zipfile
+
+    body = ''
+    for text, style, bold in paragraphs:
+        properties = f'<w:pPr><w:pStyle w:val="{style}"/></w:pPr>' if style else ''
+        run_properties = '<w:rPr><w:b/></w:rPr>' if bold else ''
+        safe = text.replace('&', '&amp;').replace('<', '&lt;')
+        body += (
+            f'<w:p>{properties}<w:r>{run_properties}'
+            f'<w:t xml:space="preserve">{safe}</w:t></w:r></w:p>'
+        )
+    document = (
+        '<?xml version="1.0"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f'<w:body>{body}</w:body></w:document>'
+    )
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w') as archive:
+        archive.writestr('word/document.xml', document)
+    return buffer.getvalue()
+
+
+def a_real_pdf(lines):
+    from pypdf import PdfWriter
+    from reportlab.pdfgen import canvas
+    import io
+
+    buffer = io.BytesIO()
+    page = canvas.Canvas(buffer)
+    y = 800
+    for line in lines:
+        page.drawString(60, y, line)
+        y -= 20
+    page.save()
+    buffer.seek(0)
+    writer = PdfWriter(clone_from=buffer)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+MANUSCRIPT = [
+    ('Task repetition and oral fluency in Nigerian secondary schools', 'Title', False),
+    ('Ada Obi, Chidi Eze', None, False),
+    ('Abstract', None, True),
+    ('This study examines whether repeating a speaking task improves oral fluency.', None, False),
+    ('Introduction', 'Heading1', False),
+    ('Fluency has long been treated as a by-product of practice rather than something '
+     'that a teacher plans for directly, and this study asks whether that holds.', None, False),
+    ('Method', None, True),
+    ('Sixty senior secondary students in three Lagos schools took part over one term.', None, False),
+    ('References', 'Heading1', False),
+    ('Bygate, M. (2001). Effects of task repetition. Longman.', None, False),
+]
+
+
+class TypesettingTests(JournalTestCase):
+    """Turning what an author supplied into the article the journal publishes."""
+
+    def make_article(self, source, **overrides):
+        fields = {
+            'title': 'Task repetition and oral fluency in Nigerian secondary schools',
+            'abstract': 'This study examines whether repeating a speaking task improves oral fluency.',
+            'keywords': 'task repetition, oral fluency',
+            'section': self.section, 'licence': 'CC BY 4.0', 'is_published': True,
+            'source_file': source,
+        }
+        fields.update(overrides)
+        article = Article.objects.create(**fields)
+        ArticleAuthor.objects.create(
+            article=article, first_name='Ada', last_name='Obi',
+            affiliation='University of Lagos', order=0,
+        )
+        ArticleAuthor.objects.create(
+            article=article, first_name='Chidi', last_name='Eze', order=1,
+        )
+        return article
+
+    def a_manuscript(self, paragraphs=None, name='paper.docx'):
+        return SimpleUploadedFile(
+            name, a_structured_docx(paragraphs or MANUSCRIPT),
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
+
+    # --- from a Word manuscript ------------------------------------------
+
+    def test_a_manuscript_becomes_a_jeltan_galley(self):
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript())
+        self.assertTrue(typeset.typeset(article))
+
+        article.refresh_from_db()
+        self.assertTrue(article.is_typeset)
+        self.assertEqual(article.galley_extension, '.pdf')
+        article.pdf.open('rb')
+        try:
+            self.assertTrue(article.pdf.read().startswith(b'%PDF'))
+        finally:
+            article.pdf.close()
+
+    def test_the_structure_of_the_manuscript_survives(self):
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript())
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        self.assertIn('<h2>Introduction</h2>', article.body_html)
+        # A bold one-line paragraph is a heading in nearly every manuscript that
+        # never learned to use Word's heading styles.
+        self.assertIn('<h2>Method</h2>', article.body_html)
+        self.assertIn('<p>Fluency has long been treated', article.body_html)
+
+    def test_a_reference_list_is_marked_as_one(self):
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript())
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        self.assertIn('<p class="reference">Bygate, M.', article.body_html)
+
+    def test_the_manuscripts_own_title_page_is_not_printed_twice(self):
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript())
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        # The template sets the title, byline and abstract itself.
+        self.assertNotIn('Task repetition and oral fluency', article.body_html)
+        self.assertNotIn('Ada Obi, Chidi Eze', article.body_html)
+
+    def test_markup_in_a_manuscript_cannot_reach_the_page(self):
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript([
+            ('Introduction', 'Heading1', False),
+            ('An author pasted <script>alert(1)</script> in from a web page.', None, False),
+        ]))
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        self.assertNotIn('<script>', article.body_html)
+        self.assertIn('&lt;script&gt;', article.body_html)
+
+    def test_the_full_text_appears_on_the_article_page(self):
+        from journal import typeset
+
+        article = self.make_article(self.a_manuscript())
+        typeset.typeset(article)
+        article.refresh_from_db()
+
+        response = self.client.get(reverse('journal:article_detail', args=[article.slug]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Full text')
+        self.assertContains(response, 'Fluency has long been treated')
+
+    # --- from somebody else's PDF ----------------------------------------
+
+    def test_a_supplied_pdf_keeps_its_pages_behind_a_jeltan_cover(self):
+        import io
+
+        from pypdf import PdfReader
+
+        from journal import typeset
+
+        source = SimpleUploadedFile(
+            'paper.pdf', a_real_pdf(['Page one of the original', 'x' * 40]),
+            content_type='application/pdf',
+        )
+        article = self.make_article(source)
+        self.assertTrue(typeset.typeset(article))
+
+        article.refresh_from_db()
+        article.pdf.open('rb')
+        try:
+            # Read it out in full: pypdf seeks lazily, and the file is about to
+            # be closed underneath it.
+            content = io.BytesIO(article.pdf.read())
+        finally:
+            article.pdf.close()
+        pages = PdfReader(content).pages
+
+        # One cover page, then the author's own page, untouched.
+        self.assertEqual(len(pages), 2)
+        self.assertIn('Journal of ELTAN', pages[0].extract_text())
+        self.assertIn('Page one of the original', pages[1].extract_text())
+
+    def test_a_supplied_pdf_is_not_re_flowed_into_full_text(self):
+        from journal import typeset
+
+        article = self.make_article(SimpleUploadedFile(
+            'paper.pdf', a_real_pdf(['Original typesetting']), content_type='application/pdf',
+        ))
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        # Text scraped out of a designed page makes a worse article than the
+        # page it came from, so it is not offered as the full text.
+        self.assertEqual(article.body_html, '')
+        self.assertFalse(article.has_full_text)
+
+    # --- when it cannot be done -------------------------------------------
+
+    def test_a_broken_file_still_leaves_a_downloadable_article(self):
+        from journal import typeset
+
+        article = self.make_article(SimpleUploadedFile('paper.docx', b'not a zip at all'))
+
+        self.assertFalse(typeset.typeset(article))
+        article.refresh_from_db()
+        self.assertTrue(article.pdf)
+        self.assertFalse(article.is_typeset)
+        self.assertIn('Could not typeset', article.typeset_note)
+
+    # --- keeping the galley in step ---------------------------------------
+
+    def test_correcting_the_title_regenerates_the_galley(self):
+        import io
+
+        from pypdf import PdfReader
+
+        article = self.make_article(self.a_manuscript())
+        self.client.force_login(self.editor_user)
+
+        self.client.post(reverse('journal:article_edit', args=[article.pk]), {
+            'section': self.section.pk,
+            'title': 'A corrected title for the record',
+            'abstract': article.abstract,
+            'keywords': article.keywords,
+            'licence': 'CC BY 4.0',
+            'is_published': 'on',
+            'authors-TOTAL_FORMS': '1', 'authors-INITIAL_FORMS': '0',
+            'authors-MIN_NUM_FORMS': '1', 'authors-MAX_NUM_FORMS': '1000',
+            'authors-0-first_name': 'Ada', 'authors-0-last_name': 'Obi',
+        })
+
+        article.refresh_from_db()
+        article.pdf.open('rb')
+        try:
+            content = io.BytesIO(article.pdf.read())
+        finally:
+            article.pdf.close()
+        printed = PdfReader(content).pages[0].extract_text()
+
+        # A galley still carrying the old title is the version readers cite.
+        self.assertIn('A corrected title', printed)
+
+    def test_an_editor_can_generate_the_galley_again(self):
+        article = self.make_article(self.a_manuscript())
+        self.client.force_login(self.editor_user)
+
+        response = self.client.post(reverse('journal:article_retypeset', args=[article.pk]))
+
+        article.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(article.is_typeset)
+
+    def test_a_section_editor_cannot_regenerate_a_galley(self):
+        article = self.make_article(self.a_manuscript())
+        editor = CustomUser.objects.create_user(
+            email='section3@example.com', password='pw-for-tests-only',
+            first_name='Tunde', last_name='Adeyemi',
+        )
+        JournalRole.objects.create(user=editor, role=JournalRole.EDITOR)
+        self.client.force_login(editor)
+
+        response = self.client.post(reverse('journal:article_retypeset', args=[article.pk]))
+        self.assertEqual(response.status_code, 404)

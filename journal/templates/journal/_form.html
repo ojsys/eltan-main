@@ -9,7 +9,14 @@ Checkboxes put the label beside the box; everything else puts it above.
 </div>
 {% endif %}
 
-{% for field in form %}
+{% comment %}
+Hidden fields carry no label — a formset's `id` and parent-link render as "Id"
+and "Article" rows if they go through the loop below, which is nonsense on the
+page and reads as two unlabelled inputs to a screen reader.
+{% endcomment %}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+{% for field in form.visible_fields %}
     {% if field.field.widget.input_type == 'checkbox' %}
     <div class="jeltan-checkbox">
         {{ field }}

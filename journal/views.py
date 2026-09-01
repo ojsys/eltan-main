@@ -122,10 +122,12 @@ def article_pdf(request, slug):
     if not article.pdf:
         raise Http404('This article has no PDF.')
     Article.objects.filter(pk=article.pk).update(download_count=article.download_count + 1)
+    # Named for the file that is actually stored: handing a reader a .docx
+    # called ".pdf" breaks it on every operating system that trusts extensions.
     return FileResponse(
         article.pdf.open('rb'),
         as_attachment=True,
-        filename=f'{article.slug}.pdf',
+        filename=f'{article.slug}{article.galley_extension or ".pdf"}',
     )
 
 

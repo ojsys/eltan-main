@@ -1,6 +1,8 @@
 """The editorial office: the queue, peer review management, decisions, publishing."""
 
 import logging
+import uuid
+from datetime import datetime, time
 from functools import wraps
 
 from django.contrib import messages
@@ -10,13 +12,19 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.defaultfilters import pluralize
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import urlencode
 
-from . import emails
+from . import emails, ingest, typeset
 from .forms import (
     ArticleAuthorFormSet,
+    ArticleImportForm,
     CopyeditForm,
     DecisionForm,
+    DirectArticleForm,
+    ImportedArticleFormSet,
     IssueForm,
     ProofForm,
     PublishArticleForm,
@@ -48,6 +56,22 @@ def editor_required(view):
     @login_required
     def wrapper(request, *args, **kwargs):
         if not JournalRole.is_editor(request.user):
+            raise Http404('Not found.')
+        return view(request, *args, **kwargs)
+    return wrapper
+
+
+def chief_required(view):
+    """Editors-in-chief, managing editors and site administrators only.
+
+    Publishing an article without review, and editing the published record after
+    the fact, are the two things in this system that no peer reviewer and no
+    author ever checks. They belong to the people who answer for the journal.
+    """
+    @wraps(view)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not JournalRole.is_chief(request.user):
             raise Http404('Not found.')
         return view(request, *args, **kwargs)
     return wrapper
@@ -766,7 +790,6 @@ def portal(request):
         issues=Issue.objects.all()[:8],
         my_role=JournalRole.describe(request.user),
         is_site_admin=JournalRole.is_site_admin(request.user),
-        is_chief=JournalRole.is_chief(request.user),
         totals={
             'submissions': submissions.count(),
             'open': submissions.in_progress().count(),
@@ -774,3 +797,377 @@ def portal(request):
             'sections': Section.objects.filter(is_active=True).count(),
         },
     ))
+
+
+# ------------------------------------------------------ articles loaded by hand
+
+def _article_authors_formset(request, article, prefix='authors'):
+    return ArticleAuthorFormSet(
+        request.POST or None, prefix=prefix,
+        instance=article if article.pk else None,
+    )
+
+
+def _save_article_authors(formset, article):
+    """Save the byline, numbered by the order the forms appear on the page.
+
+    ``formset.save(commit=False)`` hands back only the forms that changed, so
+    numbering *those* would push a single edited author to position one and
+    scramble a byline that nobody touched. The order has to come from the whole
+    formset, every time.
+    """
+    formset.instance = article
+    formset.save()
+
+    position = 0
+    for author_form in formset.forms:
+        author = author_form.instance
+        if author.pk is None or author_form in formset.deleted_forms:
+            continue
+        if author.order != position:
+            author.order = position
+            author.save(update_fields=['order'])
+        position += 1
+
+
+@chief_required
+def article_list(request):
+    """Everything in the published record, whatever route it took to get there."""
+    articles = Article.objects.select_related('issue', 'section', 'added_by').prefetch_related('authors')
+
+    view = request.GET.get('show', 'all')
+    if view == 'published':
+        articles = articles.filter(is_published=True)
+    elif view == 'draft':
+        articles = articles.filter(is_published=False)
+    elif view == 'online_first':
+        articles = articles.filter(is_published=True, issue__isnull=True)
+    elif view == 'direct':
+        articles = articles.filter(submission__isnull=True)
+
+    search = request.GET.get('q', '').strip()
+    if search:
+        articles = articles.filter(
+            Q(title__icontains=search) | Q(doi__icontains=search)
+            | Q(authors__last_name__icontains=search)
+        ).distinct()
+
+    return render(request, 'journal/editor/articles.html', journal_context(
+        nav='editor',
+        articles=articles.order_by('-published_at', '-created_at')[:200],
+        counts={
+            'all': Article.objects.count(),
+            'published': Article.objects.filter(is_published=True).count(),
+            'draft': Article.objects.filter(is_published=False).count(),
+            'direct': Article.objects.filter(submission__isnull=True).count(),
+        },
+        view=view,
+        search=search,
+    ))
+
+
+@chief_required
+def article_create(request):
+    """Publish an article that has already been reviewed, without a manuscript.
+
+    Papers reviewed elsewhere, invited pieces, and the back catalogue all arrive
+    ready to typeset. Forcing them through the submission pipeline would mean
+    inventing a review that never happened, so they are loaded here instead —
+    and ``added_by`` records who did it, since nothing else in the record can.
+    """
+    article = Article()
+
+    # Loading an issue is loading a run of articles, so the section and issue
+    # of the last one carry over to the next.
+    initial = {}
+    for field in ('section', 'issue'):
+        if request.GET.get(field):
+            initial[field] = request.GET[field]
+
+    form = DirectArticleForm(request.POST or None, request.FILES or None, initial=initial)
+    formset = _article_authors_formset(request, article)
+
+    if request.method == 'POST' and form.is_valid() and formset.is_valid():
+        with transaction.atomic():
+            saved = form.save(commit=False)
+            saved.added_by = request.user
+            saved.save()
+            _save_article_authors(formset, saved)
+
+        # After the byline is stored, never before: the galley prints the
+        # authors, so typesetting first would set a paper with no names on it.
+        typeset.typeset(saved)
+
+        if saved.is_published and form.cleaned_data.get('notify_authors'):
+            emails.send_published(saved, request)
+        messages.success(
+            request,
+            f'"{saved.title[:60]}" published.' if saved.is_published
+            else f'"{saved.title[:60]}" saved as a draft — it is not public until you tick "Publish now".',
+        )
+
+        if 'save_and_add' in request.POST:
+            carry = {'section': saved.section_id or '', 'issue': saved.issue_id or ''}
+            return redirect(
+                reverse('journal:article_create') + '?'
+                + urlencode({key: value for key, value in carry.items() if value})
+            )
+        return redirect('journal:editor_articles')
+
+    return render(request, 'journal/editor/article_form.html', journal_context(
+        nav='editor', form=form, formset=formset, article=None,
+    ))
+
+
+@chief_required
+def article_edit(request, pk):
+    """Correct a published article — metadata, PDF, authors, issue placement.
+
+    Corrections have to be possible without the Django admin, because the admin
+    does not run the slug, page-range or publication-date rules that keep the
+    published record citable.
+    """
+    article = get_object_or_404(
+        Article.objects.select_related('submission', 'issue', 'section'), pk=pk,
+    )
+    was_published = article.is_published
+
+    form = DirectArticleForm(request.POST or None, request.FILES or None, instance=article)
+    formset = _article_authors_formset(request, article)
+
+    if request.method == 'POST' and form.is_valid() and formset.is_valid():
+        with transaction.atomic():
+            saved = form.save()
+            _save_article_authors(formset, saved)
+
+            # An article published from a manuscript has to keep the manuscript
+            # in step, or the author's own page still says "in production".
+            if saved.is_published and saved.submission_id:
+                submission_row = saved.submission
+                if submission_row.status != Submission.PUBLISHED:
+                    submission_row.status = Submission.PUBLISHED
+                    submission_row.save(update_fields=['status', 'updated_at'])
+                    submission_row.log('Published', actor=request.user)
+
+        # The galley prints the title, byline and front matter, so a correction
+        # to any of them means the PDF readers download is now out of date.
+        if saved.source_file or saved.pdf:
+            typeset.typeset(saved)
+
+        # Only on the transition: editing the pages of a live article must not
+        # email its authors again.
+        if saved.is_published and not was_published and form.cleaned_data.get('notify_authors'):
+            emails.send_published(saved, request)
+            messages.success(request, 'The article is published and the authors have been told.')
+        else:
+            messages.success(request, 'Saved.')
+        return redirect('journal:editor_articles')
+
+    return render(request, 'journal/editor/article_form.html', journal_context(
+        nav='editor', form=form, formset=formset, article=article,
+    ))
+
+
+# ------------------------------------------------------------- bulk import
+
+def _apply_byline(article, names):
+    """Replace an article's byline with the names given, in order.
+
+    Rewritten rather than reconciled: on the import screen the text field *is*
+    the byline, so what it says is what the article should credit.
+    """
+    existing = list(article.authors.all())
+    for position, (first_name, last_name) in enumerate(names):
+        if position < len(existing):
+            author = existing[position]
+            author.first_name, author.last_name, author.order = first_name, last_name, position
+            author.save(update_fields=['first_name', 'last_name', 'order'])
+        else:
+            ArticleAuthor.objects.create(
+                article=article, first_name=first_name, last_name=last_name, order=position,
+            )
+    for surplus in existing[len(names):]:
+        surplus.delete()
+
+
+@chief_required
+def article_import(request):
+    """Step one: take a folder of ready papers and stage one article per file.
+
+    Each file becomes a staged article straight away rather than sitting in a
+    temporary area, so a browser crash between the upload and the review screen
+    costs nothing — the batch is already in the database, just not public.
+    """
+    form = ArticleImportForm(request.POST or None, request.FILES or None)
+
+    if request.method == 'POST' and form.is_valid():
+        batch = uuid.uuid4()
+        date = form.cleaned_data.get('publication_date')
+        unreadable = []
+
+        with transaction.atomic():
+            for uploaded in form.cleaned_data['files']:
+                metadata = ingest.extract(uploaded)
+                if metadata.error:
+                    unreadable.append(uploaded.name)
+
+                article = Article.objects.create(
+                    section=form.cleaned_data['section'],
+                    issue=form.cleaned_data.get('issue'),
+                    licence=form.cleaned_data['licence'],
+                    title=metadata.title or ingest.title_from_filename(uploaded.name),
+                    abstract=metadata.abstract,
+                    keywords=metadata.keywords,
+                    source_file=uploaded,
+                    is_published=False,
+                    added_by=request.user,
+                    import_batch=batch,
+                    published_at=_publication_datetime(date),
+                )
+                _apply_byline(article, metadata.authors)
+
+        count = len(form.cleaned_data['files'])
+        messages.success(
+            request,
+            f'{count} file{pluralize(count)} staged. Nothing is public yet — '
+            'check the details below, then publish.',
+        )
+        if unreadable:
+            messages.warning(
+                request,
+                'Could not read the details out of: ' + ', '.join(unreadable[:5])
+                + ('…' if len(unreadable) > 5 else '')
+                + '. Their titles come from the filenames — type the rest in.',
+            )
+        return redirect('journal:article_import_review', batch=batch)
+
+    return render(request, 'journal/editor/article_import.html', journal_context(
+        nav='editor', form=form,
+    ))
+
+
+def _publication_datetime(date):
+    """Midnight on the chosen day, or nothing at all.
+
+    A staged article with no date shows none; ``Article.save`` stamps one the
+    moment it is actually published.
+    """
+    if not date:
+        return None
+    return timezone.make_aware(
+        datetime.combine(date, time.min), timezone.get_current_timezone(),
+    )
+
+
+@chief_required
+def article_import_review(request, batch):
+    """Step two: check what was read out of the files, then publish the batch.
+
+    Extraction guesses. This screen is where the guesses become the published
+    record or get corrected, and nothing in the batch is public until an editor
+    has ticked it here.
+    """
+    articles = (
+        Article.objects.filter(import_batch=batch)
+        .select_related('section', 'issue').prefetch_related('authors')
+        .order_by('created_at', 'pk')
+    )
+    if not articles.exists():
+        messages.error(request, 'That import batch no longer exists.')
+        return redirect('journal:editor_articles')
+
+    formset = ImportedArticleFormSet(request.POST or None, queryset=articles, prefix='rows')
+
+    if request.method == 'POST' and formset.is_valid():
+        published, discarded, saved = 0, 0, 0
+        deleted_rows = formset.deleted_forms
+        with transaction.atomic():
+            for row in formset.forms:
+                if row in deleted_rows:
+                    # The galley goes with the record: a discarded import must
+                    # not leave its file behind on disk.
+                    row.instance.pdf.delete(save=False)
+                    row.instance.delete()
+                    discarded += 1
+                    continue
+
+                article = row.save(commit=False)
+                if row.cleaned_data.get('publish'):
+                    article.is_published = True
+                    published += 1
+                article.save()
+                _apply_byline(article, ingest.names_to_pairs(row.cleaned_data.get('authors', '')))
+                # Now, not at upload: the galley prints the metadata that was
+                # just corrected on this screen.
+                typeset.typeset(article)
+                saved += 1
+
+        parts = []
+        if published:
+            parts.append(f'{published} article{pluralize(published)} published')
+        if saved - published:
+            parts.append(f'{saved - published} still staged')
+        if discarded:
+            parts.append(f'{discarded} discarded')
+        messages.success(request, ', '.join(parts).capitalize() + '.' if parts else 'Nothing to do.')
+
+        # Authors imported this way have no email address on file, so nobody was
+        # written to. Saying so beats leaving an editor to assume otherwise.
+        if published:
+            messages.info(
+                request,
+                'No emails were sent: imported articles carry no author addresses. '
+                'Add them on an article if you want to write to its authors.',
+            )
+
+        if Article.objects.filter(import_batch=batch).exists():
+            return redirect('journal:article_import_review', batch=batch)
+        return redirect('journal:editor_articles')
+
+    return render(request, 'journal/editor/article_import_review.html', journal_context(
+        nav='editor',
+        formset=formset,
+        batch=batch,
+        rows=list(zip(formset.forms, articles)),
+        staged=articles.filter(is_published=False).count(),
+        live=articles.filter(is_published=True).count(),
+        non_pdf=[article for article in articles if not article.galley_is_pdf],
+    ))
+
+
+@chief_required
+def article_retypeset(request, pk):
+    """Generate the JELTAN galley again from the source manuscript.
+
+    Needed whenever something outside an article's own form changes what its
+    galley should say — the journal's name, its ISSN, the template itself — none
+    of which touch the article record, and all of which are printed on the page.
+    """
+    article = get_object_or_404(Article, pk=pk)
+    if request.method != 'POST':
+        return redirect('journal:article_edit', pk=pk)
+
+    if not (article.source_file or article.pdf):
+        messages.error(request, 'There is no file to typeset for this article.')
+        return redirect('journal:article_edit', pk=pk)
+
+    if typeset.typeset(article):
+        messages.success(request, article.typeset_note or 'The galley has been generated again.')
+    else:
+        messages.error(request, article.typeset_note or 'The galley could not be generated.')
+    return redirect('journal:article_edit', pk=pk)
+
+
+@chief_required
+def article_retypeset_batch(request, batch):
+    """Re-typeset a whole import batch, for when a template change lands."""
+    articles = list(Article.objects.filter(import_batch=batch))
+    if request.method != 'POST' or not articles:
+        return redirect('journal:article_import_review', batch=batch)
+
+    done = sum(1 for article in articles if typeset.typeset(article))
+    messages.success(
+        request,
+        f'{done} of {len(articles)} galley{pluralize(len(articles))} generated again.',
+    )
+    return redirect('journal:article_import_review', batch=batch)

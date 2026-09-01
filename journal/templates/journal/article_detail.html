@@ -81,6 +81,19 @@ but invisible to the people looking for it.
             {% endif %}
         </section>
 
+        {% if article.has_full_text %}
+        {% comment %}
+        The full text, typeset from the manuscript the journal was given. It is
+        built from escaped text and a fixed set of tags in journal/typeset.py —
+        never from anything an author supplied as markup — which is what makes
+        it safe to print here unescaped.
+        {% endcomment %}
+        <section class="jeltan-fulltext" style="margin-top:2.5rem;" aria-labelledby="fulltext-heading">
+            <h2 class="jeltan-eyebrow jeltan-eyebrow-muted" id="fulltext-heading">Full text</h2>
+            <div class="jeltan-prose jeltan-body-text">{{ article.body_html|safe }}</div>
+        </section>
+        {% endif %}
+
         <section style="margin-top:2.5rem;" aria-labelledby="cite-heading">
             <h2 class="jeltan-eyebrow jeltan-eyebrow-muted" id="cite-heading">How to cite this article</h2>
             <p class="jeltan-citation">{{ article.citation }}</p>
@@ -106,6 +119,11 @@ but invisible to the people looking for it.
                 <a class="jeltan-btn jeltan-btn-block" href="{% url 'journal:article_pdf' article.slug %}">
                     Download the full text (PDF)
                 </a>
+                {% if article.is_typeset %}
+                <p class="jeltan-muted jeltan-small" style="margin:.6rem 0 0; text-align:center;">
+                    Typeset in the {{ journal.short_name|default:"journal" }} template
+                </p>
+                {% endif %}
                 <div class="jeltan-metric" style="margin-top:1.25rem; justify-content:center;">
                     <div><strong>{{ article.view_count }}</strong><span>Views</span></div>
                     <div><strong>{{ article.download_count }}</strong><span>Downloads</span></div>
@@ -124,7 +142,9 @@ but invisible to the people looking for it.
                     {% if article.published_at %}<tr><th>Published</th><td>{{ article.published_at|date:"j M Y" }}</td></tr>{% endif %}
                     {% if article.doi %}<tr><th>DOI</th><td class="jeltan-mono">{{ article.doi }}</td></tr>{% endif %}
                     <tr><th>Licence</th><td>{{ article.licence }}</td></tr>
-                    <tr><th>Peer review</th><td>Double-blind</td></tr>
+                    {# An article loaded by hand was not reviewed here, and the page must not say it was. #}
+                    <tr><th>Peer review</th>
+                        <td>{% if article.was_reviewed_here %}Double-blind{% else %}Reviewed before publication{% endif %}</td></tr>
                 </table>
             </div>
 

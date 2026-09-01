@@ -9,6 +9,7 @@
     </div>
     <div class="jeltan-btn-row">
         <a class="jeltan-btn-ghost" href="{% url 'journal:editor_issues' %}">Manage issues</a>
+        {% if is_journal_chief %}<a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">Articles</a>{% endif %}
         <a class="jeltan-btn" href="{% url 'journal:editor_portal' %}">Editorial portal</a>
     </div>
 </div>

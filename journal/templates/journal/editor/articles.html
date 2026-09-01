@@ -1,0 +1,116 @@
+{% extends 'journal/base.html' %}
+
+{% comment %}
+The published record. Articles reach it two ways — through peer review here, or
+loaded by hand because they were reviewed elsewhere — and the list says which,
+because that is the one thing the article page itself cannot show.
+{% endcomment %}
+
+{% block journal_title %}Articles — editorial{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-portal-head">
+    <div>
+        <p class="jeltan-eyebrow">Editorial</p>
+        <h1 class="jeltan-h1" style="margin-bottom:.25rem;">Articles</h1>
+        <p class="jeltan-muted" style="margin:0;">
+            Everything in the published record, and everything staged to go into it.
+        </p>
+    </div>
+    <div class="jeltan-btn-row">
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_portal' %}">Portal</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_issues' %}">Issues</a>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:article_create' %}">Add one article</a>
+        <a class="jeltan-btn" href="{% url 'journal:article_import' %}">Import a batch</a>
+    </div>
+</div>
+
+<div class="jeltan-statrow">
+    <div class="jeltan-stat"><strong>{{ counts.all }}</strong><span>Articles in total</span></div>
+    <div class="jeltan-stat"><strong>{{ counts.published }}</strong><span>Public</span></div>
+    <div class="jeltan-stat {% if counts.draft %}jeltan-stat-act{% endif %}"><strong>{{ counts.draft }}</strong><span>Staged, not public</span></div>
+    <div class="jeltan-stat"><strong>{{ counts.direct }}</strong><span>Loaded by hand</span></div>
+</div>
+
+<form method="get" action="" class="jeltan-card jeltan-filterbar" role="search" aria-label="Find an article"
+      style="margin-top:1.5rem;">
+    <div class="jeltan-field" style="margin:0;">
+        <label for="q">Search</label>
+        <input type="text" id="q" name="q" value="{{ search }}" placeholder="Title, DOI or author">
+    </div>
+    <div class="jeltan-field" style="margin:0;">
+        <label for="show">Show</label>
+        <select id="show" name="show">
+            <option value="all" {% if view == 'all' %}selected{% endif %}>All articles</option>
+            <option value="published" {% if view == 'published' %}selected{% endif %}>Public</option>
+            <option value="draft" {% if view == 'draft' %}selected{% endif %}>Staged, not public</option>
+            <option value="online_first" {% if view == 'online_first' %}selected{% endif %}>Online first (no issue)</option>
+            <option value="direct" {% if view == 'direct' %}selected{% endif %}>Loaded by hand</option>
+        </select>
+    </div>
+    <div class="jeltan-btn-row">
+        <button type="submit" class="jeltan-btn">Filter</button>
+        <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">Clear</a>
+    </div>
+</form>
+
+<div class="jeltan-card jeltan-card-flush" style="margin-top:1.25rem;">
+    <div class="jeltan-table-wrap">
+        <table class="jeltan-table">
+            <thead>
+                <tr>
+                    <th style="padding-left:1.25rem;">Article</th>
+                    <th>Section</th><th>Issue</th><th>Pages</th><th>Route</th><th>Status</th>
+                    <th style="padding-right:1.25rem;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles %}
+                <tr>
+                    <td style="padding-left:1.25rem; max-width:420px;">
+                        <a href="{% url 'journal:article_edit' article.pk %}"
+                           style="color:var(--j-ink); font-weight:500; text-decoration:none;">{{ article.title|truncatewords:12 }}</a>
+                        <div class="jeltan-event-time">
+                            {{ article.author_list|truncatewords:8|default:"No authors listed" }}
+                            {% if article.published_at %} · {{ article.published_at|date:"j M Y" }}{% endif %}
+                        </div>
+                    </td>
+                    <td class="jeltan-small">{{ article.section.name|default:"—" }}</td>
+                    {# "Online first" is a claim about a published article; a staged one is nowhere yet. #}
+                    <td class="jeltan-small">
+                        {% if article.issue %}{{ article.issue.label }}
+                        {% elif article.is_published %}Online first
+                        {% else %}&mdash;{% endif %}
+                    </td>
+                    <td class="jeltan-small">{{ article.page_range|default:"—" }}</td>
+                    <td>
+                        {% if article.was_reviewed_here %}
+                        <span class="jeltan-badge jeltan-badge-info">Reviewed here</span>
+                        {% else %}
+                        <span class="jeltan-badge">Loaded by hand</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if article.is_published %}
+                        <span class="jeltan-badge jeltan-badge-good">Public</span>
+                        {% else %}
+                        <span class="jeltan-badge jeltan-badge-warn">Staged</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding-right:1.25rem; white-space:nowrap;">
+                        <a class="jeltan-btn-ghost jeltan-btn-sm" href="{% url 'journal:article_edit' article.pk %}">Edit</a>
+                        {% if article.is_published %}
+                        <a class="jeltan-btn-ghost jeltan-btn-sm" href="{{ article.get_absolute_url }}">View</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" style="text-align:center; padding:3rem;">
+                    <span class="jeltan-muted">No articles match.</span>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

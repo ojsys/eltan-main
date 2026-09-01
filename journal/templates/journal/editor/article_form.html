@@ -1,0 +1,142 @@
+{% extends 'journal/base.html' %}
+
+{% comment %}
+Publishing an article that did not go through review here, and correcting one
+that did. The same fields either way — what differs is only what the page has to
+warn about, which is why the notice at the top is conditional and the form is not.
+{% endcomment %}
+
+{% block journal_title %}
+{% if article %}Edit article{% else %}Publish an article{% endif %} — editorial
+{% endblock %}
+
+{% block journal_content %}
+<div class="jeltan-portal-head">
+    <div>
+        <p class="jeltan-eyebrow">Editorial</p>
+        <h1 class="jeltan-h1" style="margin-bottom:.25rem;">
+            {% if article %}Edit article{% else %}Publish an article{% endif %}
+        </h1>
+        <p class="jeltan-muted" style="margin:0;">
+            {% if article %}
+            Corrections to the published record — metadata, PDF, authors and issue placement.
+            {% else %}
+            For a paper that has already been reviewed and is ready to typeset.
+            {% endif %}
+        </p>
+    </div>
+    <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">All articles</a>
+</div>
+
+{% if not article %}
+<div class="jeltan-alert jeltan-alert-warn">
+    <strong>This bypasses peer review.</strong>
+    Nothing here is screened, sent to a reviewer or decided on — the article goes
+    into the published record as it stands, and your name is recorded against it.
+    Use it for papers reviewed elsewhere, invited pieces, and the back catalogue.
+    A paper still to be reviewed belongs in
+    <a href="{% url 'journal:editor_dashboard' %}">the manuscript queue</a>.
+</div>
+{% elif article.submission %}
+<div class="jeltan-alert jeltan-alert-info">
+    Published from <a href="{% url 'journal:editor_submission' article.submission.pk %}">{{ article.submission.manuscript_id }}</a>,
+    which carries the review history. Changing the title or authors here does not change the manuscript.
+</div>
+{% elif article.added_by %}
+<div class="jeltan-alert jeltan-alert-info">
+    Loaded by hand by {{ article.added_by.get_full_name|default:article.added_by.email }}
+    on {{ article.created_at|date:"j M Y" }}. This article has no review history in the system.
+</div>
+{% endif %}
+
+{% if article %}
+<div class="jeltan-card jeltan-card-quiet">
+    <h2 class="jeltan-h3">The galley readers download</h2>
+    <table class="jeltan-deflist">
+        <tr><th>Status</th>
+            <td>{% if article.is_typeset %}
+                <span class="jeltan-badge jeltan-badge-good">Typeset in the JELTAN template</span>
+                {% else %}
+                <span class="jeltan-badge jeltan-badge-warn">Not typeset — the supplied file is served as it is</span>
+                {% endif %}</td></tr>
+        {% if article.typeset_note %}
+        <tr><th>Last run</th><td>{{ article.typeset_note }}
+            {% if article.typeset_at %}<span class="jeltan-muted">· {{ article.typeset_at|date:"j M Y, H:i" }}</span>{% endif %}
+        </td></tr>
+        {% endif %}
+        {% if article.source_file %}
+        <tr><th>Source</th><td class="jeltan-mono jeltan-small">{{ article.source_file.name|cut:"journal/sources/" }}</td></tr>
+        {% endif %}
+        <tr><th>Full text on the page</th>
+            <td>{% if article.has_full_text %}Yes — read from the Word manuscript{% else %}No — the PDF is the only full text{% endif %}</td></tr>
+    </table>
+    <p class="jeltan-muted jeltan-small" style="margin:.9rem 0 0;">
+        The galley prints the title, byline and front matter, so it is generated
+        again whenever you save this form. Use the button when something outside
+        this page changed — the journal's name, its ISSN, or the template itself.
+    </p>
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <div class="jeltan-card">
+        <h2 class="jeltan-h2">The article</h2>
+        {% include 'journal/_form.html' with form=form %}
+    </div>
+
+    <div class="jeltan-card">
+        <h2 class="jeltan-h2">Authors as they should be credited</h2>
+        <p class="jeltan-muted jeltan-small" style="margin:-.4rem 0 1rem;">
+            In the order they appear on the paper. This is the byline readers see
+            and the author list every indexer harvests, so spell it as it is printed.
+        </p>
+
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}
+        <div class="jeltan-alert jeltan-alert-bad">
+            {% for error in formset.non_form_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+        {% for author_form in formset %}
+        <fieldset class="jeltan-author-block">
+            <legend>Author {{ forloop.counter }}</legend>
+            {% include 'journal/_form.html' with form=author_form %}
+        </fieldset>
+        {% endfor %}
+        <p class="jeltan-muted jeltan-small" style="margin:0;">
+            Save to add more authors — an empty slot appears each time.
+        </p>
+    </div>
+
+    <div class="jeltan-card">
+        <div class="jeltan-btn-row">
+            <button type="submit" class="jeltan-btn">
+                {% if article %}Save changes{% else %}Save this article{% endif %}
+            </button>
+            {% if not article %}
+            <button type="submit" name="save_and_add" value="1" class="jeltan-btn-ghost">
+                Save and add another
+            </button>
+            {% endif %}
+            <a class="jeltan-btn-ghost" href="{% url 'journal:editor_articles' %}">Cancel</a>
+        </div>
+    </div>
+</form>
+
+{% if article %}
+<form method="post" action="{% url 'journal:article_retypeset' article.pk %}">
+    {% csrf_token %}
+    <div class="jeltan-card">
+        <div class="jeltan-btn-row">
+            <button type="submit" class="jeltan-btn-ghost">Generate the galley again</button>
+            {% if article.pdf %}
+            <a class="jeltan-btn-ghost" href="{% url 'journal:article_pdf' article.slug %}">See the current galley</a>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endif %}
+{% endblock %}

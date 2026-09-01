@@ -19,4 +19,8 @@ def journal_chrome(request):
         # Editors get a link to the editorial office in the journal navigation;
         # everyone else never learns it is there.
         'is_journal_editor': JournalRole.is_editor(request.user),
+        # Publishing without review, and editing the published record, are
+        # chiefs-and-administrators work, so the doors to it are not drawn for
+        # anyone who would only meet a 404 behind them.
+        'is_journal_chief': JournalRole.is_chief(request.user),
     }

@@ -794,6 +794,105 @@
 }
 .jeltan-meter-fill { height: 100%; background: var(--j-accent); border-radius: 3px; }
 
+/* One author's fields on the article form. A fieldset rather than a div: a
+   screen reader announces the legend with every field inside it, which is the
+   only thing telling "First name" in slot 2 apart from "First name" in slot 1. */
+.jeltan-author-block {
+    border: 1px solid var(--j-line); border-radius: var(--j-radius);
+    padding: 1rem 1.15rem 1.15rem; margin: 0 0 .9rem;
+}
+.jeltan-author-block legend {
+    padding: 0 .45rem; font-size: .78rem; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase; color: var(--j-muted);
+}
+
+/* ---------------------------------------------------------- bulk import */
+
+/* One imported article per card. The title and byline get a full line each
+   because they are what actually needs reading back against the paper; the
+   short numeric fields share a row so a batch of twenty stays scrollable. */
+.jeltan-import-row { margin-bottom: 1.1rem; }
+
+.jeltan-import-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 1rem; flex-wrap: wrap;
+    padding-bottom: .8rem; margin-bottom: .9rem;
+    border-bottom: 1px solid var(--j-line);
+}
+
+.jeltan-import-fields {
+    display: grid; gap: .9rem 1.1rem;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.jeltan-import-fields .jeltan-field { margin: 0; }
+.jeltan-import-title,
+.jeltan-import-authors,
+.jeltan-import-abstract { grid-column: 1 / -1; }
+@media (min-width: 820px) {
+    .jeltan-import-keywords { grid-column: span 2; }
+}
+
+.jeltan-import-actions {
+    display: flex; gap: 1.6rem; flex-wrap: wrap;
+    margin-top: 1rem; padding-top: .9rem;
+    border-top: 1px solid var(--j-line);
+}
+.jeltan-import-actions .jeltan-checkbox { margin: 0; }
+
+/* The save control follows the editor down a long batch — twenty cards is a
+   long way to scroll back to a button. */
+.jeltan-sticky-actions { position: sticky; bottom: 1rem; box-shadow: var(--j-shadow); }
+
+/* Numbered steps in a sidebar note. */
+.jeltan-steps { margin: .5rem 0 0; padding-left: 1.1rem; }
+.jeltan-steps li { font-size: .85rem; color: var(--j-ink-2); margin-bottom: .45rem; line-height: 1.5; }
+
+/* -------------------------------------------------------------- full text */
+
+/* The article body, typeset from the author's manuscript. It reuses the reading
+   surface — serif, generous measure — and only adds what a paper needs that an
+   abstract does not: numbered-looking headings, tables, figures and a reference
+   list that hangs. */
+.jeltan-body-text h2 {
+    font-family: var(--j-sans);
+    font-size: 1.05rem; font-weight: 600; color: var(--j-ink);
+    margin: 2rem 0 .6rem; padding: 0;
+}
+.jeltan-body-text h3 {
+    font-family: var(--j-sans);
+    font-size: .95rem; font-weight: 600; color: var(--j-ink-2);
+    margin: 1.5rem 0 .5rem;
+}
+.jeltan-body-text h4 {
+    font-size: .95rem; font-style: italic; font-weight: 500;
+    margin: 1.2rem 0 .4rem;
+}
+.jeltan-body-text p { margin: 0 0 .85rem; }
+.jeltan-body-text blockquote {
+    margin: 1rem 0 1rem 1.2rem; padding-left: .9rem;
+    border-left: 2px solid var(--j-line-2); color: var(--j-ink-2);
+}
+.jeltan-body-text figure { margin: 1.4rem 0; text-align: center; }
+.jeltan-body-text img { max-width: 100%; height: auto; border-radius: var(--j-radius-sm); }
+
+.jeltan-body-text table {
+    width: 100%; margin: 1.2rem 0; font-family: var(--j-sans); font-size: .85rem;
+    border-collapse: collapse;
+    border-top: 1px solid var(--j-ink); border-bottom: 1px solid var(--j-ink);
+}
+.jeltan-body-text th {
+    text-align: left; font-weight: 600; padding: .5rem .55rem;
+    border-bottom: 1px solid var(--j-line-2);
+}
+.jeltan-body-text td { padding: .45rem .55rem; vertical-align: top; }
+
+/* A reference is scanned by its author's surname, which only works if the
+   surname is the leftmost thing on the line. */
+.jeltan-body-text p.reference {
+    margin: 0 0 .5rem 1.6rem; text-indent: -1.6rem;
+    font-size: .93rem; line-height: 1.55;
+}
+
 /* ------------------------------------------------------------------- print */
 
 /* Journals get printed. The article page should come out as a clean document:

@@ -1,0 +1,246 @@
+{% load static %}<!DOCTYPE html>
+{% comment %}
+The JELTAN galley. Two jobs from one template: with `full_text` it is the whole
+article typeset from a Word manuscript; without it, it is the cover page that
+goes in front of a PDF somebody else typeset.
+
+Written for xhtml2pdf, which is not a browser — no flexbox, no grid, no custom
+properties, and layout that matters is done with tables. Everything here is
+deliberately conservative for that reason.
+{% endcomment %}
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ article.title }}</title>
+<style>
+    @page {
+        size: a4 portrait;
+        margin: 2.4cm 2.1cm 2.2cm 2.1cm;
+
+        @frame footer_frame {
+            -pdf-frame-content: page-footer;
+            left: 2.1cm; width: 17cm; top: 27.4cm; height: 1cm;
+        }
+    }
+
+    body {
+        font-family: "Times-Roman", serif;
+        font-size: 10.5pt;
+        line-height: 1.45;
+        color: #10202f;
+    }
+
+    /* --- masthead ---------------------------------------------------- */
+
+    /* xhtml2pdf repeats a block container's border and background on every
+       child block inside it, so anything boxed is a one-cell table and every
+       rule is an element of its own. This is the single biggest difference
+       between writing for this renderer and writing for a browser. */
+    /* An empty bordered div collapses to nothing here, so a rule is a filled
+       table cell — the one shape this renderer always draws. */
+    table.rule { width: 100%; margin: 5pt 0 4pt; }
+    table.rule td { background-color: #E67918; font-size: 2pt; line-height: 2pt; }
+    table.rule-thin { width: 100%; margin: 4pt 0 14pt; }
+    table.rule-thin td { background-color: #cfd8e0; font-size: 1pt; line-height: 1pt; }
+    .masthead { margin-bottom: 0; }
+    .journal-name {
+        font-family: "Helvetica", sans-serif;
+        font-size: 13pt; font-weight: bold; letter-spacing: .4pt; margin: 0;
+    }
+    .imprint {
+        font-family: "Helvetica", sans-serif;
+        font-size: 7.5pt; color: #64788a; margin: 2pt 0 0;
+    }
+    .locator {
+        font-family: "Helvetica", sans-serif;
+        font-size: 7.5pt; color: #64788a;
+        padding-bottom: 6pt; margin: 0;
+    }
+
+    /* --- title block ------------------------------------------------- */
+    .section-label {
+        font-family: "Helvetica", sans-serif;
+        font-size: 7.5pt; font-weight: bold; letter-spacing: 1pt;
+        text-transform: uppercase; color: #B45309; margin: 0 0 6pt;
+    }
+    h1.title {
+        font-size: 17pt; line-height: 1.25; font-weight: bold;
+        margin: 0 0 12pt; color: #10202f;
+    }
+    .byline { font-size: 11pt; margin: 0 0 2pt; }
+    .affiliation { font-size: 8.5pt; color: #35485c; margin: 0 0 2pt; }
+
+    /* --- abstract ---------------------------------------------------- */
+    table.boxed { width: 100%; margin: 12pt 0 12pt; }
+    table.boxed td.abstract-cell {
+        background-color: #f6f8fa;
+        border-left: 2.5pt solid #E67918;
+        padding: 10pt 12pt;
+    }
+    table.boxed td.panel-cell {
+        background-color: #fcfbf9;
+        border: .5pt solid #e4e9ee;
+        padding: 9pt 11pt;
+    }
+    .abstract-heading {
+        font-family: "Helvetica", sans-serif;
+        font-size: 8pt; font-weight: bold; letter-spacing: 1pt;
+        text-transform: uppercase; color: #64788a;
+        margin: 0; padding: 0 0 2pt;
+    }
+    .abstract-cell p { margin: 0; padding: 0 0 4pt; font-size: 9.5pt; line-height: 1.35; text-align: justify; }
+    .keywords { font-size: 8.5pt; color: #35485c; margin: 0; padding: 3pt 0 0; }
+    .keywords strong { font-family: "Helvetica", sans-serif; font-size: 8pt; }
+
+    /* --- article body ------------------------------------------------ */
+    .body h2 {
+        font-family: "Helvetica", sans-serif;
+        font-size: 11pt; font-weight: bold; color: #10202f;
+        margin: 16pt 0 6pt;
+    }
+    .body h3 {
+        font-family: "Helvetica", sans-serif;
+        font-size: 9.5pt; font-weight: bold; color: #35485c;
+        margin: 13pt 0 5pt;
+    }
+    .body h4 { font-size: 9.5pt; font-style: italic; margin: 11pt 0 4pt; }
+    .body p { margin: 0 0 7pt; text-align: justify; }
+    .body blockquote {
+        margin: 8pt 0 8pt 18pt; padding-left: 10pt;
+        border-left: 1.5pt solid #cfd8e0; color: #35485c; font-size: 9.5pt;
+    }
+    .body ul { margin: 0 0 8pt 14pt; }
+    .body li { margin-bottom: 3pt; }
+    .body table {
+        width: 100%; margin: 10pt 0; font-size: 9pt;
+        border-top: 1pt solid #10202f; border-bottom: 1pt solid #10202f;
+    }
+    .body th {
+        font-family: "Helvetica", sans-serif; font-size: 8.5pt; text-align: left;
+        padding: 5pt 4pt; border-bottom: .5pt solid #10202f;
+    }
+    .body td { padding: 4pt; vertical-align: top; }
+    .body figure { margin: 10pt 0; text-align: center; }
+    .body img { max-width: 100%; }
+
+    /* A reference list is a hanging indent — the marker readers scan by. */
+    .body p.reference {
+        margin: 0 0 4pt 18pt; text-indent: -18pt;
+        text-align: left; font-size: 9.5pt;
+    }
+
+    /* --- front-matter panels ----------------------------------------- */
+    .panel-heading {
+        font-family: "Helvetica", sans-serif;
+        font-size: 8pt; font-weight: bold; letter-spacing: 1pt;
+        text-transform: uppercase; color: #64788a;
+        margin: 0; padding: 0 0 3pt;
+    }
+    .panel-cell p { margin: 0; padding: 0 0 3pt; font-size: 8.5pt; line-height: 1.4; }
+    .citation { font-size: 8.5pt; }
+
+    .meta-table { width: 100%; font-size: 8.5pt; }
+    .meta-table td { padding: 2pt 0; vertical-align: top; }
+    .meta-label {
+        font-family: "Helvetica", sans-serif; font-size: 7.5pt;
+        color: #64788a; width: 4.2cm;
+    }
+
+    .continues {
+        font-family: "Helvetica", sans-serif;
+        font-size: 8pt; color: #64788a; text-align: center;
+        margin-top: 20pt; padding-top: 8pt; border-top: .5pt solid #cfd8e0;
+    }
+
+    #page-footer {
+        font-family: "Helvetica", sans-serif;
+        font-size: 7.5pt; color: #8c9cab;
+        border-top: .5pt solid #e4e9ee; padding-top: 4pt;
+    }
+</style>
+</head>
+<body>
+
+<div id="page-footer">
+    <table width="100%"><tr>
+        <td>{{ journal.short_name|default:journal.name }}{% if article.issue %} · {{ article.issue.label }}{% endif %}</td>
+        <td align="right">{{ article.title|truncatechars:58 }} · <pdf:pagenumber></td>
+    </tr></table>
+</div>
+
+<div class="masthead">
+    <table width="100%"><tr>
+        <td><p class="journal-name">{{ journal.name }}</p></td>
+        <td align="right">
+            <p class="imprint">
+                {% if journal.issn_online %}ISSN {{ journal.issn_online }}<br>{% endif %}
+                {{ article.licence }}
+            </p>
+        </td>
+    </tr></table>
+    <p class="imprint">{{ journal.publisher|default:"English Language Teachers Association of Nigeria" }}</p>
+</div>
+<table class="rule"><tr><td>&nbsp;</td></tr></table>
+
+<p class="locator">
+    {% if article.issue %}{{ article.issue.label }}{% else %}Online first{% endif %}
+    {% if article.page_range %} &middot; pp. {{ article.page_range }}{% endif %}
+    {% if article.published_at %} &middot; Published {{ article.published_at|date:"j F Y" }}{% endif %}
+    {% if article.doi %} &middot; DOI {{ article.doi }}{% endif %}
+</p>
+<table class="rule-thin"><tr><td>&nbsp;</td></tr></table>
+
+{% if article.section %}<p class="section-label">{{ article.section.name }}</p>{% endif %}
+<h1 class="title">{{ article.title }}</h1>
+
+{% for author in authors %}
+<p class="byline">{{ author.full_name }}{% if author.orcid %} <span class="affiliation">ORCID {{ author.orcid }}</span>{% endif %}</p>
+{% if author.affiliation %}
+<p class="affiliation">{{ author.affiliation }}{% if author.country %}, {{ author.country }}{% endif %}</p>
+{% endif %}
+{% endfor %}
+
+{% if article.abstract %}
+<table class="boxed"><tr><td class="abstract-cell">
+    <p class="abstract-heading">Abstract</p>
+    {% for paragraph in article.abstract.splitlines %}{% if paragraph.strip %}<p>{{ paragraph }}</p>{% endif %}{% endfor %}
+    {% if article.keyword_list %}
+    <p class="keywords"><strong>Keywords:</strong>
+        {% for keyword in article.keyword_list %}{{ keyword }}{% if not forloop.last %}; {% endif %}{% endfor %}
+    </p>
+    {% endif %}
+</td></tr></table>
+{% endif %}
+
+{% if full_text %}
+<div class="body">
+    {{ body_html|safe }}
+</div>
+{% endif %}
+
+<table class="boxed"><tr><td class="panel-cell">
+    <p class="panel-heading">How to cite this article</p>
+    <p class="citation">{{ article.citation }}</p>
+</td></tr></table>
+
+<table class="boxed"><tr><td class="panel-cell">
+    <p class="panel-heading">Article details</p>
+    <table class="meta-table">
+        {% if article.section %}
+        <tr><td class="meta-label">Section</td><td>{{ article.section.name }}</td></tr>
+        {% endif %}
+        <tr><td class="meta-label">Peer review</td>
+            <td>{% if article.was_reviewed_here %}Double-blind, by {{ journal.short_name|default:journal.name }}{% else %}Reviewed before publication{% endif %}</td></tr>
+        <tr><td class="meta-label">Licence</td><td>{{ article.licence }}</td></tr>
+        {% if article.doi %}<tr><td class="meta-label">DOI</td><td>{{ article.doi }}</td></tr>{% endif %}
+        <tr><td class="meta-label">Published by</td>
+            <td>{{ journal.publisher|default:"English Language Teachers Association of Nigeria" }}</td></tr>
+    </table>
+</td></tr></table>
+
+{% if not full_text %}
+<p class="continues">The article follows on the next page, as supplied by the authors.</p>
+{% endif %}
+
+</body>
+</html>
