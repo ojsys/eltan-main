@@ -107,10 +107,12 @@
                                     <span class="material-icons" style="font-size: 20px; color: #E67918;">calendar_today</span>
                                     <span>ELTAN Year</span>
                                 </label>
-                                {# Years come from ELTANYearSetting via the form, so adding one in
-                                   the admin is all it takes for members to be able to pick it.
-                                   form.eltan_year.value keeps the member's choice after a failed
-                                   submit; it falls back to the current year on a fresh form. #}
+                                {% comment %}
+                                Years come from ELTANYearSetting via the form, so adding one in
+                                the admin is all it takes for members to be able to pick it.
+                                form.eltan_year.value keeps the member's choice after a failed
+                                submit; it falls back to the current year on a fresh form.
+                                {% endcomment %}
                                 <select name="eltan_year" id="eltan_year" class="form-input-modern" required>
                                     <option value="">Select ELTAN year</option>
                                     {% for value, label in form.eltan_year.field.choices %}
