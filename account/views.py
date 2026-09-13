@@ -1,6 +1,6 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, MemberSignupForm
-from django.contrib.auth import login as auth_login, logout
+from django.contrib.auth import get_user_model, login as auth_login, logout
 from django.contrib import messages
 from membership.models import Subscription, MemberProfile
 from django.core.mail import send_mail
@@ -99,6 +99,10 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
 def logout_view(request):
+    # Close the audit record first: logging out of a borrowed session must not
+    # leave an impersonation that looks like it is still running.
+    if request.session.get(impersonation.SESSION_KEY):
+        impersonation.stop(request, reason='logout')
     logout(request)
     return redirect('login')
 
@@ -117,3 +121,72 @@ def member_search(request):
 
 
 
+
+
+# ---------------------------------------------------------------------------
+# Admin impersonation
+#
+# Staff can borrow a member's session to see what the member sees. The rules
+# that make that safe live in account/impersonation.py; these views are the
+# doors into it. Both require POST, so no impersonation can ever start or stop
+# from a link someone was tricked into following.
+# ---------------------------------------------------------------------------
+
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_POST
+from . import impersonation
+
+
+@staff_member_required
+def impersonate_user(request, user_id):
+    """Confirm, then sign the current session in as ``user_id``.
+
+    GET shows what is about to happen and who will be able to see it afterwards;
+    POST performs the switch. Deliberately two steps: taking over someone's
+    account is not something to do by misclicking a row in a list.
+    """
+    User = get_user_model()
+    target = get_object_or_404(User, pk=user_id)
+
+    try:
+        impersonation.check_permission(request.user, target)
+    except impersonation.ImpersonationDenied as denied:
+        messages.error(request, str(denied))
+        return redirect('admin:account_customuser_changelist')
+
+    if request.method != 'POST':
+        return render(request, 'account/impersonate_confirm.html', {'target': target})
+
+    try:
+        impersonation.start(request, target)
+    except impersonation.ImpersonationDenied as denied:
+        messages.error(request, str(denied))
+        return redirect('admin:account_customuser_changelist')
+
+    messages.info(
+        request,
+        f"You are now viewing the site as {target.email}. "
+        "Use the red banner at the bottom of the page to stop.",
+    )
+    return redirect('dash')
+
+
+@require_POST
+def stop_impersonation(request):
+    """Hand the session back to the administrator who borrowed it.
+
+    Not staff-gated on purpose: the person holding the session right now is the
+    *member*, not a staff account, so a staff check here would lock the only
+    people who can press this button out of pressing it. The session itself is
+    the credential — it only works if this session was impersonating.
+    """
+    if not request.session.get(impersonation.SESSION_KEY):
+        return redirect('home')
+
+    impersonator = impersonation.stop(request, reason='manual')
+    if impersonator is None:
+        messages.info(request, "That session has ended. Please sign in again.")
+        return redirect('login')
+
+    messages.success(request, f"You are signed in as {impersonator.email} again.")
+    return redirect('admin:account_customuser_changelist')

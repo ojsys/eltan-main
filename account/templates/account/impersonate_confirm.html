@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign in as {{ target.email }} - ELTAN Admin{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Staff Tools</p>
+        <h1>Sign in as a member</h1>
+        <p class="description">Confirm before you take over this account's view of the site</p>
+    </div>
+</section>
+
+<section class="content-container">
+    <div class="card-modern" style="max-width:640px; margin:0 auto; border-left:4px solid #7f1d1d;">
+        <div class="card-body">
+
+            <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+                <div style="width:52px; height:52px; background:#fef2f2; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <span class="material-icons" style="color:#7f1d1d; font-size:28px;">supervisor_account</span>
+                </div>
+                <div>
+                    <h2 class="card-title" style="margin:0 0 .2rem;">
+                        {{ target.first_name }} {{ target.last_name }}
+                    </h2>
+                    <p style="color:#616161; margin:0; font-size:.9rem;">{{ target.email }}</p>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; margin-bottom:1.5rem; padding-bottom:1.5rem; border-bottom:1px solid #ECECEC;">
+                <div>
+                    <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">ELTAN number</p>
+                    <p style="font-weight:600; color:#1A1A1A; margin:0;">{{ target.eltan_number|default:"Not assigned" }}</p>
+                </div>
+                <div>
+                    <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">Joined</p>
+                    <p style="font-weight:600; color:#1A1A1A; margin:0;">{{ target.date_joined|date:"j M Y" }}</p>
+                </div>
+                <div>
+                    <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">Last login</p>
+                    <p style="font-weight:600; color:#1A1A1A; margin:0;">{{ target.last_login|date:"j M Y"|default:"Never" }}</p>
+                </div>
+            </div>
+
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:1.15rem; margin-bottom:1.5rem;">
+                <strong style="display:block; color:#7f1d1d; margin-bottom:.5rem; font-size:.95rem;">
+                    What happens next
+                </strong>
+                <ul style="margin:0; padding-left:1.15rem; color:#7f1d1d; font-size:.875rem; line-height:1.7;">
+                    <li>You will see the site exactly as this member sees it.</li>
+                    <li>Anything you change will be saved <strong>as this member</strong>.</li>
+                    <li>A red banner stays on screen until you stop. Your own session is waiting behind it.</li>
+                    <li>This is recorded against your account, with the time and your IP address.</li>
+                    <li>It ends by itself after an hour if you forget to stop.</li>
+                </ul>
+            </div>
+
+            <form method="post" style="display:flex; gap:.75rem; flex-wrap:wrap;">
+                {% csrf_token %}
+                <button type="submit" class="btn-modern" style="background:#7f1d1d; color:#fff;">
+                    <span class="material-icons">login</span> Sign in as this member
+                </button>
+                <a href="{% url 'admin:account_customuser_changelist' %}" class="btn-modern btn-secondary-modern">
+                    Cancel
+                </a>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

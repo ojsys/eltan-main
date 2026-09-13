@@ -78,6 +78,12 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    # Placement matters. On the way in it needs request.user (Authentication) and
+    # request._messages (Messages), so it sits after both. On the way out
+    # middleware runs in reverse, so sitting after CsrfViewMiddleware means it
+    # still runs before it — and the CSRF token it puts in the banner's "stop"
+    # form gets its cookie set.
+    'account.middleware.ImpersonationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
