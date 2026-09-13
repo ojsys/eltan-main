@@ -13,7 +13,7 @@ from django.db import models
 from django.http import HttpResponse
 from openpyxl import Workbook
 from datetime import datetime
-from .models import Conference, ConferenceRegistration, EltanConference, EltanConferenceRegistration, ConferenceDocument, MemberProfile, MembershipType, Subscription, Sigs, SigsRegistration, Events, News, Resource, Download, ELTANYearSetting, Newsletter, ConferenceSpeaker, ConferenceSchedule, ConferenceSponsor, ConferenceLocMember, ExcoMember, SponsorshipPackage, ConferenceAccommodation, CertificateSignatory, normalize_eltan_year
+from .models import Conference, ConferenceRegistration, EltanConference, EltanConferenceRegistration, ConferenceCertificate, ConferenceDocument, MemberProfile, MembershipType, Subscription, Sigs, SigsRegistration, Events, News, Resource, Download, ELTANYearSetting, Newsletter, ConferenceSpeaker, ConferenceSchedule, ConferenceSponsor, ConferenceLocMember, ExcoMember, SponsorshipPackage, ConferenceAccommodation, CertificateSignatory, normalize_eltan_year
 
 
 
@@ -575,7 +575,7 @@ class ConferenceAccommodationAdmin(admin.ModelAdmin):
 
 @admin.register(EltanConference)
 class EltanConferenceAdmin(admin.ModelAdmin):
-    list_display = ('title', 'start_date', 'end_date', 'registration_status', 'is_active', 'member_fee', 'non_member_fee')
+    list_display = ('title', 'start_date', 'end_date', 'registration_status', 'is_active', 'certificates_released', 'member_fee', 'non_member_fee')
     readonly_fields = ('is_early_bird_active',)
     list_filter = ('is_active', 'start_date')
     search_fields = ('title', 'theme', 'description')
@@ -607,6 +607,25 @@ class EltanConferenceAdmin(admin.ModelAdmin):
             'fields': ('sub_themes', 'cfp_guidelines', 'sponsor_packages'),
             'description': 'These fields populate the Sub-Themes, Call for Papers, and Sponsors tabs on the conference portal.',
         }),
+        ('Certificates of Participation', {
+            'fields': ('certificates_released', 'certificate_template'),
+            'description': (
+                'Attendees whose payment is confirmed can download a Certificate of Participation '
+                'once "Certificates released" is ticked — usually after the conference has ended. '
+                'Leave the template empty to use the standard ELTAN certificate design.'
+            ),
+        }),
+        ('Certificate layout (advanced)', {
+            'fields': ('certificate_name_x', 'certificate_name_baseline',
+                       'certificate_name_max_width', 'certificate_name_font_size'),
+            'classes': ('collapse',),
+            'description': (
+                'Where the participant\u2019s name is printed on the certificate template. '
+                'The defaults suit the standard design — only change these if you upload artwork '
+                'whose name line sits somewhere else. Positions are fractions of the page '
+                '(0.5 = halfway across / down).'
+            ),
+        }),
     )
     
     def get_queryset(self, request):
@@ -619,7 +638,7 @@ class EltanConferenceAdmin(admin.ModelAdmin):
                 'id', 'title', 'theme', 'image', 'start_date', 'end_date', 'venue',
                 'registration_start', 'registration_end', 'early_bird_end', 'is_active',
                 'member_fee', 'member_early_bird_fee', 'non_member_fee', 'non_member_early_bird_fee',
-                'international_delegate_fee', 'sponsor_packages'
+                'international_delegate_fee', 'sponsor_packages', 'certificates_released'
             )
         except DBOperationalError:
             messages.error(request, 'Conference list is limited until database migrations are applied. Please run migrations to enable new fields.')
@@ -750,7 +769,7 @@ class EltanConferenceRegistrationAdmin(admin.ModelAdmin):
     readonly_fields = ('registered_at', 'ticket_id', 'payment_verified_at', 'verified_by',
                        'receipt_sent_at', 'receipt_error')
 
-    actions = ['verify_payments', 'resend_tickets', 'export_registrations']
+    actions = ['verify_payments', 'resend_tickets', 'issue_certificates', 'export_registrations']
 
     def verify_payments(self, request, queryset):
         from .views import send_registration_receipt
@@ -815,6 +834,39 @@ class EltanConferenceRegistrationAdmin(admin.ModelAdmin):
                 messages.ERROR,
             )
     resend_tickets.short_description = "Resend ticket / receipt email"
+
+    def issue_certificates(self, request, queryset):
+        """Create certificate records up front instead of waiting for downloads.
+
+        Certificates are normally issued lazily, the first time an attendee
+        downloads one. Doing it in bulk here gives staff the full list of
+        certificate ids before the emails go out — useful when the ids have to be
+        cross-checked against an attendance register.
+        """
+        issued = 0
+        existing = 0
+        skipped = 0
+        for registration in queryset.select_related('conference'):
+            if registration.payment_status != 'completed' or not registration.participant_name:
+                skipped += 1
+                continue
+            had_one = ConferenceCertificate.objects.filter(registration=registration).exists()
+            registration.issue_certificate()
+            if had_one:
+                existing += 1
+            else:
+                issued += 1
+
+        parts = [f"{issued} certificate(s) issued."]
+        if existing:
+            parts.append(f"{existing} already existed.")
+        if skipped:
+            parts.append(f"{skipped} skipped (payment not confirmed, or no name on file).")
+        self.message_user(
+            request, ' '.join(parts),
+            messages.SUCCESS if issued else messages.WARNING,
+        )
+    issue_certificates.short_description = "Issue Certificate of Participation"
 
     def export_registrations(self, request, queryset):
         import csv
@@ -1227,6 +1279,72 @@ class CertificateSignatoryAdmin(admin.ModelAdmin):
             )
         return format_html('<span style="color:#9ca3af;">Upload a signature image to preview it here.</span>')
     signature_preview_large.short_description = 'Preview'
+
+
+@admin.register(ConferenceCertificate)
+class ConferenceCertificateAdmin(admin.ModelAdmin):
+    """Issued Certificates of Participation.
+
+    Read-mostly: the id and the name are set when the certificate is issued and
+    must not drift afterwards, or a printed certificate would stop matching what
+    the verification page says about it. The one thing staff change here is
+    ``is_revoked``, for the rare case where a certificate has to be withdrawn.
+    """
+
+    list_display = ('certificate_id', 'participant_name', 'conference_title', 'registration_email',
+                    'issued_at', 'download_count', 'is_revoked')
+    list_filter = ('is_revoked', 'registration__conference', 'issued_at')
+    search_fields = ('certificate_id', 'participant_name', 'registration__email',
+                     'registration__user__email', 'registration__ticket_id')
+    readonly_fields = ('certificate_id', 'participant_name', 'registration', 'issued_at',
+                       'download_count', 'last_downloaded_at', 'verification_link')
+    date_hierarchy = 'issued_at'
+    actions = ['revoke_certificates', 'restore_certificates']
+
+    fieldsets = (
+        ('Certificate', {
+            'fields': ('certificate_id', 'participant_name', 'registration', 'verification_link'),
+        }),
+        ('Status', {
+            'fields': ('is_revoked',),
+            'description': 'Tick "is revoked" to invalidate this certificate. '
+                           'The verification page will then report it as withdrawn.',
+        }),
+        ('Activity', {
+            'fields': ('issued_at', 'download_count', 'last_downloaded_at'),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # Certificates are issued from a registration, never typed in by hand.
+        return False
+
+    def conference_title(self, obj):
+        return obj.registration.conference.title
+    conference_title.short_description = 'Conference'
+    conference_title.admin_order_field = 'registration__conference__title'
+
+    def registration_email(self, obj):
+        return obj.registration.contact_email or '—'
+    registration_email.short_description = 'Email'
+
+    def verification_link(self, obj):
+        if not obj.certificate_id:
+            return '—'
+        from django.urls import reverse as url_reverse
+        url = url_reverse('verify_conference_certificate', args=[obj.certificate_id])
+        return format_html('<a href="{}" target="_blank">{}</a>', url, url)
+    verification_link.short_description = 'Verification page'
+
+    def revoke_certificates(self, request, queryset):
+        updated = queryset.update(is_revoked=True)
+        self.message_user(request, f"{updated} certificate(s) revoked.", messages.SUCCESS)
+    revoke_certificates.short_description = "Revoke selected certificates"
+
+    def restore_certificates(self, request, queryset):
+        updated = queryset.update(is_revoked=False)
+        self.message_user(request, f"{updated} certificate(s) restored.", messages.SUCCESS)
+    restore_certificates.short_description = "Restore selected certificates"
 
 
 admin.site.register(Sigs, SigsAdmin)

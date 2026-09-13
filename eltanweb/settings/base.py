@@ -204,6 +204,11 @@ EMAIL_TIMEOUT = int(config('EMAIL_TIMEOUT', default=20))
 # Address members should reply to / contact for support (used in receipt emails).
 CONTACT_EMAIL = config('CONTACT_EMAIL', default='info@eltanigeria.org')
 
+# Canonical public address of the site. Emails are built outside a request, so
+# there is no HttpRequest to derive an absolute URL from — links in them would
+# otherwise come out relative and dead in the recipient's inbox.
+SITE_URL = config('SITE_URL', default='https://web.eltanigeria.org').rstrip('/')
+
 # Hosts whose SMTP *login* is an account identifier, not a mailbox you can send
 # from. Brevo issues logins like 'b479b8001@smtp-brevo.com'; SendGrid's login is
 # literally 'apikey'; SES uses an IAM-style key. Using any of them as the From:

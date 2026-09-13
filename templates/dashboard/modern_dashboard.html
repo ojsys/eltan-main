@@ -135,12 +135,22 @@
 .db-notice.pending     { background: #fff8e1; border: 1px solid #ffe082; }
 .db-notice.rejected    { background: #fce4ec; border: 1px solid #f48fb1; }
 .db-notice.processing  { background: #e3f2fd; border: 1px solid #90caf9; }
+.db-notice.ready       { background: #e8f5e9; border: 1px solid #a5d6a7; }
 .db-notice .material-icons { flex-shrink: 0; font-size: 1.3rem; margin-top: 1px; }
 .db-notice.pending    .material-icons { color: #f9a825; }
 .db-notice.rejected   .material-icons { color: #c62828; }
 .db-notice.processing .material-icons { color: #1565c0; }
+.db-notice.ready      .material-icons { color: #2e7d32; }
 .db-notice p { margin: 0; font-size: 0.875rem; line-height: 1.5; }
 .db-notice strong { display: block; margin-bottom: 0.2rem; font-size: 0.9rem; }
+.db-notice.ready .db-notice-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.65rem; }
+.db-notice.ready .db-notice-actions a {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    background: #2e7d32; color: #fff; border-radius: 999px;
+    padding: 0.45rem 0.95rem; font-size: 0.8rem; font-weight: 600; text-decoration: none;
+}
+.db-notice.ready .db-notice-actions a:hover { background: #1b5e20; color: #fff; }
+.db-notice.ready .db-notice-actions .material-icons { font-size: 1rem; margin: 0; color: #fff; }
 
 /* ── Stats row ───────────────────────────────────────────── */
 .db-stats {
@@ -410,6 +420,24 @@
 <div class="db-body">
 <div class="container">
 
+    <!-- Conference Certificate of Participation ready -->
+    {% if certificate_registrations %}
+    <div class="db-notice ready">
+        <span class="material-icons">workspace_premium</span>
+        <p>
+            <strong>Your Certificate of Participation {{ certificate_registrations|length|pluralize:"is,are" }} ready</strong>
+            Download your certificate for {{ certificate_registrations|length|pluralize:"the conference,the conferences" }} you attended.
+            <span class="db-notice-actions">
+                {% for registration in certificate_registrations %}
+                <a href="{% url 'conference_certificate' registration.pk %}">
+                    <span class="material-icons">download</span> {{ registration.conference.title }}
+                </a>
+                {% endfor %}
+            </span>
+        </p>
+    </div>
+    {% endif %}
+
     <!-- Certificate pending/rejected notice -->
     {% if latest_subscription and latest_subscription.payment_status == 'paid' and latest_subscription.certificate_status != 'approved' %}
         {% if latest_subscription.certificate_status == 'pending' %}
@@ -548,6 +576,13 @@
             </div>
             <h6>My Certificates</h6>
             <p>View and download your membership certificates</p>
+        </a>
+        <a href="{% url 'my_conferences' %}" class="db-action-card">
+            <div class="db-action-icon" style="background:#00695c;">
+                <span class="material-icons">event_available</span>
+            </div>
+            <h6>My Conferences</h6>
+            <p>Tickets and Certificates of Participation</p>
         </a>
         <a href="{% url 'resource' %}" class="db-action-card">
             <div class="db-action-icon" style="background:#2e7d32;">

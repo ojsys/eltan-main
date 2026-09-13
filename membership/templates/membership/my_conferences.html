@@ -1,41 +1,102 @@
-{% extends 'membership/base.html' %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Conferences - ELTAN{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h2 class="mb-4">My Conference Registrations</h2>
-    
-    {% if registrations %}
-        <div class="row">
-            {% for registration in registrations %}
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ registration.conference.title }}</h5>
-                            <p class="card-text">
-                                <small class="text-muted">
-                                    {{ registration.conference.start_date|date:"F d" }} - 
-                                    {{ registration.conference.end_date|date:"F d, Y" }}
-                                </small>
-                            </p>
-                            
-                            <div class="mb-3">
-                                <span class="badge bg-{% if registration.payment_status == 'paid' %}success{% else %}warning{% endif %}">
-                                    {{ registration.payment_status|title }}
-                                </span>
-                            </div>
-                            
-                            <a href="{% url 'conference_registration_detail' registration.pk %}" 
-                               class="btn btn-primary">View Details</a>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">My Account</p>
+        <h1>My Conference Registrations</h1>
+        <p class="description">
+            Your tickets, payment status and Certificates of Participation
+        </p>
+    </div>
+</section>
+
+<section class="content-container">
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert-modern {% if message.tags == 'error' %}alert-warning{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}" style="margin-bottom:1.5rem;">
+            {{ message }}
         </div>
-    {% else %}
-        <div class="alert alert-info">
-            You haven't registered for any conferences yet.
-            <a href="{% url 'conference_list' %}" class="alert-link">View Available Conferences</a>
-        </div>
+        {% endfor %}
     {% endif %}
-</div>
+
+    {% if registrations %}
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:1.5rem;">
+        {% for registration in registrations %}
+        <div class="card-modern">
+            <div class="card-body">
+                <h2 class="card-title" style="margin-bottom:.35rem;">{{ registration.conference.title }}</h2>
+                <p style="color:#757575; font-size:.9rem; margin-bottom:1rem;">
+                    {{ registration.conference.start_date|date:"F d" }} &ndash; {{ registration.conference.end_date|date:"F d, Y" }}
+                    &middot; {{ registration.conference.venue }}
+                </p>
+
+                <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.25rem;">
+                    <span class="card-label" style="{% if registration.payment_status == 'completed' %}background:#D4EDDA; color:#155724;{% elif registration.payment_status == 'failed' %}background:#F8D7DA; color:#721C24;{% else %}background:#FFF3CD; color:#856404;{% endif %}">
+                        {% if registration.payment_status == 'completed' %}Payment confirmed{% else %}Payment {{ registration.payment_status }}{% endif %}
+                    </span>
+                    {% if registration.ticket_id %}
+                    <span class="card-label" style="background:#E7EEFB; color:#1A3A7A;">Ticket {{ registration.ticket_id }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Certificate of Participation -->
+                <div style="border-top:1px solid #ECECEC; padding-top:1.15rem; margin-bottom:1.15rem;">
+                    <div style="display:flex; align-items:center; gap:.6rem; margin-bottom:.6rem;">
+                        <span class="material-icons" style="color:#E67918; font-size:22px;">workspace_premium</span>
+                        <strong style="color:#1A1A1A;">Certificate of Participation</strong>
+                    </div>
+
+                    {% if registration.certificate_available %}
+                        <p style="color:#616161; font-size:.875rem; margin:0 0 .9rem;">
+                            Your certificate is ready. It will be issued in the name
+                            <strong>{{ registration.participant_name }}</strong>.
+                        </p>
+                        <a href="{% url 'conference_certificate' registration.pk %}"
+                           class="btn-modern btn-primary-modern">
+                            <span class="material-icons">download</span> Download Certificate
+                        </a>
+                    {% elif registration.payment_status != 'completed' %}
+                        <p style="color:#856404; font-size:.875rem; margin:0;">
+                            Your certificate becomes available once your payment has been confirmed.
+                        </p>
+                    {% else %}
+                        <p style="color:#616161; font-size:.875rem; margin:0;">
+                            Certificates for this conference have not been released yet. Check back
+                            after the conference &mdash; this is where yours will appear.
+                        </p>
+                    {% endif %}
+                </div>
+
+                <a href="{% url 'conference_registration_detail' registration.pk %}"
+                   class="btn-modern btn-outline-modern">
+                    <span class="material-icons">receipt_long</span> View Details
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card-modern">
+        <div class="card-body" style="text-align:center; padding:3rem 1.5rem;">
+            <span class="material-icons" style="font-size:56px; color:#CFCFCF;">event_busy</span>
+            <h2 class="card-title" style="margin-top:1rem;">No conference registrations yet</h2>
+            <p style="color:#757575; margin-bottom:1.5rem;">
+                When you register for an ELTAN conference, your ticket and certificate will appear here.
+            </p>
+            <a href="{% url 'conference_list' %}" class="btn-modern btn-primary-modern">
+                <span class="material-icons">event</span> View Conferences
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <p style="text-align:center; color:#757575; font-size:.875rem; margin-top:2rem;">
+        Registered without an ELTAN account, or looking for a colleague's certificate?
+        <a href="{% url 'certificate_lookup' %}" style="color:#E67918; font-weight:600;">Look up a certificate by ticket ID</a>.
+    </p>
+</section>
 {% endblock %}

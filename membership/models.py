@@ -708,7 +708,49 @@ class EltanConference(models.Model):
     
     member_payment_link = models.URLField(null=True, blank=True, help_text="Paystack payment link for members")
     non_member_payment_link = models.URLField(null=True, blank=True, help_text="Paystack payment link for non-members")
-    
+
+    # ---- Certificate of participation -------------------------------------
+    # The artwork is a finished single-page PDF with everything on it except the
+    # participant's name, which is stamped on at download time. Keeping it as an
+    # upload means a new year's certificate is an admin task, not a deploy.
+    certificates_released = models.BooleanField(
+        default=False,
+        help_text=(
+            "Tick to let attendees download their Certificate of Participation. "
+            "Leave off until the conference has ended and the committee has approved release."
+        ),
+    )
+    certificate_template = models.FileField(
+        upload_to='certificate_templates/',
+        null=True, blank=True,
+        help_text=(
+            "Single-page PDF of the certificate artwork with the participant's name left "
+            "blank. Leave empty to use the standard ELTAN certificate design."
+        ),
+    )
+    certificate_name_x = models.FloatField(
+        default=0.5005,
+        help_text="Horizontal centre of the participant's name, as a fraction of page width (0.5 = centred).",
+    )
+    certificate_name_baseline = models.FloatField(
+        default=0.4690,
+        help_text="Baseline the name sits on, as a fraction of page height measured from the top.",
+    )
+    certificate_name_max_width = models.FloatField(
+        default=0.5225,
+        help_text="Widest the name may run, as a fraction of page width. Long names shrink to fit.",
+    )
+    certificate_name_font_size = models.FloatField(
+        default=30,
+        help_text="Point size for the participant's name on an A4 landscape certificate.",
+    )
+
+    @property
+    def certificates_available(self):
+        """Whether attendees may download certificates right now."""
+        return bool(self.certificates_released)
+
+
     def get_fee_for_type(self, registration_type):
         if registration_type == 'member':
             return self.member_early_bird_fee if self.is_early_bird_active else self.member_fee
@@ -804,6 +846,49 @@ class EltanConferenceRegistration(models.Model):
         """The address a ticket should go to."""
         return self.email or (self.user.email if self.user else None)
 
+    @property
+    def participant_name(self):
+        """The name to print on a certificate.
+
+        Members registered through their account, so their profile name is the
+        authoritative one; non-members typed theirs into the registration form.
+        Falls back to the email local part rather than printing an empty
+        certificate.
+        """
+        if self.user:
+            full = f"{self.user.first_name or ''} {self.user.last_name or ''}".strip()
+            if full:
+                return full
+        typed = f"{self.first_name or ''} {self.last_name or ''}".strip()
+        if typed:
+            return typed
+        if self.user and getattr(self.user, 'username', None):
+            return self.user.username
+        email = self.contact_email or ''
+        return email.split('@')[0] if email else ''
+
+    @property
+    def certificate_available(self):
+        """Whether this attendee may download their certificate right now."""
+        return (
+            self.payment_status == 'completed'
+            and self.conference is not None
+            and self.conference.certificates_available
+        )
+
+    def issue_certificate(self):
+        """Get or create this registration's certificate record.
+
+        The name is snapshotted at issue time so a certificate someone has
+        already downloaded and hung on a wall keeps matching the one the
+        verification page describes, even if they later edit their profile.
+        """
+        certificate, _ = ConferenceCertificate.objects.get_or_create(
+            registration=self,
+            defaults={'participant_name': self.participant_name},
+        )
+        return certificate
+
     class Meta:
         unique_together = ['conference', 'user']
         ordering = ['-registered_at']
@@ -863,6 +948,74 @@ class EltanConferenceRegistration(models.Model):
             self.ticket_id = self.generate_ticket_id()
         self.save()
         return self
+
+
+class ConferenceCertificate(models.Model):
+    """A Certificate of Participation issued against a conference registration.
+
+    The PDF itself is regenerated on every download rather than stored — the
+    artwork is several megabytes and nothing about it changes between downloads,
+    so keeping a copy per attendee would cost a great deal of disk to save a
+    fraction of a second. What is worth keeping is the audit trail: who it was
+    issued to, under what id, and how often it has been fetched.
+    """
+
+    registration = models.OneToOneField(
+        EltanConferenceRegistration,
+        on_delete=models.CASCADE,
+        related_name='certificate',
+    )
+    certificate_id = models.CharField(
+        max_length=40, unique=True, null=True, blank=True, editable=False,
+        help_text="Public reference printed on the certificate and used to verify it.",
+    )
+    # Snapshotted so a printed certificate always matches what verification says.
+    participant_name = models.CharField(max_length=255)
+    issued_at = models.DateTimeField(auto_now_add=True)
+    download_count = models.PositiveIntegerField(default=0)
+    last_downloaded_at = models.DateTimeField(null=True, blank=True)
+    is_revoked = models.BooleanField(
+        default=False,
+        help_text="Tick to invalidate this certificate. Verification will report it as revoked.",
+    )
+
+    class Meta:
+        ordering = ['-issued_at']
+        verbose_name = 'Conference Certificate'
+        verbose_name_plural = 'Conference Certificates'
+
+    def __str__(self):
+        return f"{self.certificate_id or 'unissued'} — {self.participant_name}"
+
+    def generate_certificate_id(self):
+        """A unique, readable id: ELTAN-CERT-{year}-{6 chars}."""
+        try:
+            year = self.registration.conference.start_date.year
+        except Exception:
+            year = timezone.now().year
+        while True:
+            candidate = f"ELTAN-CERT-{year}-{uuid.uuid4().hex[:6].upper()}"
+            if not ConferenceCertificate.objects.filter(certificate_id=candidate).exists():
+                return candidate
+
+    def save(self, *args, **kwargs):
+        if not self.certificate_id:
+            self.certificate_id = self.generate_certificate_id()
+        super().save(*args, **kwargs)
+
+    def record_download(self):
+        ConferenceCertificate.objects.filter(pk=self.pk).update(
+            download_count=models.F('download_count') + 1,
+            last_downloaded_at=timezone.now(),
+        )
+
+    @property
+    def conference(self):
+        return self.registration.conference
+
+    @property
+    def is_valid(self):
+        return not self.is_revoked and self.registration.payment_status == 'completed'
 
 
 class ConferenceDocument(models.Model):

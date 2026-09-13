@@ -27,6 +27,13 @@ urlpatterns = [
     path('conference/<int:pk>/register/', views.conference_register, name='conference_register'),
     path('conference/registration/<int:pk>/', views.registration_detail, name='conference_registration_detail'),
     path('my-conferences/', views.my_conferences, name='my_conferences'),
+
+    ## Conference Certificates of Participation
+    path('conference/registration/<int:pk>/certificate/', views.conference_certificate, name='conference_certificate'),
+    path('conference-certificate/', views.certificate_lookup, name='certificate_lookup'),
+    path('conference-certificate/download/<str:token>/', views.conference_certificate_link, name='conference_certificate_link'),
+    path('verify-conference-certificate/<str:certificate_id>/', views.verify_conference_certificate, name='verify_conference_certificate'),
+
     path('conference/<int:pk>/sponsor/', views.sponsor_application, name='sponsor_application'),
     
     ## Payment Links

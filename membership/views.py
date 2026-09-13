@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
-from .models import EltanConference, EltanConferenceRegistration, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, CertificateSignatory, Newsletter, ELTANYearSetting, Download, ExcoMember, normalize_eltan_year
+from .models import EltanConference, EltanConferenceRegistration, ConferenceCertificate, MemberProfile, Subscription, Sigs, SigsRegistration, Events, News, Resource, Certificate, CertificateSignatory, Newsletter, ELTANYearSetting, Download, ExcoMember, normalize_eltan_year
 from .forms import ConferenceRegistrationForm, MemberProfileUpdateForm, SigsForm, SubscriptionForm, DownloadForm, SponsorApplicationForm
 import qrcode
 import os
@@ -32,6 +32,11 @@ from io import BytesIO
 from .utils import get_subscription_eltan_year
 from .utils import Paystack
 from .email_utils import build_html_email, send_now
+from .conference_certificates import (
+    CertificateTemplateError,
+    certificate_filename,
+    render_certificate,
+)
 
 from django.core.mail import send_mail, EmailMultiAlternatives, EmailMessage, get_connection
 from django.utils.html import strip_tags
@@ -345,7 +350,11 @@ def dash(request):
         resources_downloaded = 0
 
     try:
-        certificates_earned = Certificate.objects.filter(subscription__user=user).count()
+        # Membership certificates plus any conference certificates already issued.
+        certificates_earned = (
+            Certificate.objects.filter(subscription__user=user).count()
+            + ConferenceCertificate.objects.filter(registration__user=user).count()
+        )
     except Exception:
         certificates_earned = 0
 
@@ -362,9 +371,27 @@ def dash(request):
     # Get user's SIGs
     user_sigs = Sigs.objects.filter(memberships__user=user, is_active=True).order_by('title')
 
+    # Conference certificates the member can download right now. Surfaced on the
+    # dashboard because an attendee should not have to remember which conference
+    # page to dig through to find one.
+    try:
+        certificate_registrations = list(
+            EltanConferenceRegistration.objects
+            .filter(
+                user=user,
+                payment_status='completed',
+                conference__certificates_released=True,
+            )
+            .select_related('conference')
+            .order_by('-conference__start_date')
+        )
+    except Exception:
+        certificate_registrations = []
+
     context = {
         'active_subscription': active_subscription,
         'membership_progress': membership_progress,
+        'certificate_registrations': certificate_registrations,
         'stats': stats,
         'upcoming_events': upcoming_events,
         'latest_news': latest_news,
@@ -1040,6 +1067,11 @@ def send_registration_receipt(registration, connection=None):
             'current_date': timezone.now(),
             'year': datetime.now().year,
             'contact_email': getattr(settings, 'CONTACT_EMAIL', settings.DEFAULT_FROM_EMAIL),
+            # Built from SITE_URL rather than a request: this runs from webhooks,
+            # admin actions and background threads where there is no request.
+            'certificate_url': (
+                getattr(settings, 'SITE_URL', '').rstrip('/') + reverse('certificate_lookup')
+            ),
         }
         html_content = render_to_string('emails/conference_receipt.html', context)
 
@@ -1238,9 +1270,21 @@ def _receipt_text_body(registration):
     reference = registration.paystack_ref or registration.payment_reference
     if reference:
         lines.append(f"Payment reference: {reference}")
+    certificate_url = getattr(settings, 'SITE_URL', '').rstrip('/') + reverse('certificate_lookup')
     lines += [
         "",
         "Please keep your Ticket ID safe — you may be asked to present it at the event.",
+        "",
+        "Your Certificate of Participation will be available to download once the "
+        "conference has ended.",
+    ]
+    if registration.user:
+        lines.append("You will find it on your ELTAN dashboard.")
+    else:
+        lines.append(
+            f"Get it at {certificate_url} using this email address and your Ticket ID."
+        )
+    lines += [
         "",
         f"Questions? Contact us at {contact}.",
         "",
@@ -1656,13 +1700,350 @@ def registration_detail(request, pk):
 @login_required
 def my_conferences(request):
     """View for users to see their conference registrations"""
-    registrations = EltanConferenceRegistration.objects.filter(user=request.user)
-    
+    registrations = (
+        EltanConferenceRegistration.objects
+        .filter(user=request.user)
+        .select_related('conference')
+    )
+
     context = {
         'registrations': registrations,
     }
     return render(request, 'membership/my_conferences.html', context)
-    
+
+
+# ---------------------------------------------------------------------------
+# Certificates of Participation
+#
+# Members reach theirs from the dashboard. Non-members registered with nothing
+# but an email address and a ticket id, so they get a public lookup page that
+# accepts either the ticket id or — for the many people who will have lost it —
+# an emailed, time-limited link.
+# ---------------------------------------------------------------------------
+
+# How long an emailed certificate link stays usable. Long enough to survive a
+# slow inbox or a weekend, short enough that a forwarded mail does not hand out
+# a permanent credential.
+CERTIFICATE_LINK_MAX_AGE = 7 * 24 * 60 * 60  # seconds
+CERTIFICATE_LINK_SALT = 'membership.conference_certificate'
+
+# The public lookup form is unauthenticated, so failed attempts are throttled to
+# keep it from being used to probe which email addresses registered. Only misses
+# are counted: a school or conference venue behind one shared IP can have any
+# number of people collect their own certificates without locking each other out.
+CERTIFICATE_LOOKUP_MAX_MISSES = 15
+CERTIFICATE_LOOKUP_WINDOW = 15 * 60  # seconds
+
+
+def _certificate_verify_url(request, certificate):
+    return request.build_absolute_uri(
+        reverse('verify_conference_certificate', args=[certificate.certificate_id])
+    )
+
+
+def _certificate_pdf_response(request, registration):
+    """Build the PDF download response for a registration, or raise.
+
+    Issues the certificate record on first download — there is no point creating
+    rows for people who never come to collect them.
+    """
+    certificate = registration.issue_certificate()
+    verify_url = _certificate_verify_url(request, certificate)
+    # Printed on the certificate itself, so keep it short enough to read.
+    printed_verify = verify_url.split('://', 1)[-1]
+
+    pdf = render_certificate(
+        registration.conference,
+        certificate.participant_name,
+        certificate_id=certificate.certificate_id,
+        verify_url=printed_verify,
+    )
+    certificate.record_download()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    filename = certificate_filename(registration.conference, certificate.participant_name)
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+def _serve_certificate(request, registration, fallback_url):
+    """Run the eligibility checks, then serve the PDF or bounce with a message."""
+    conference = registration.conference
+
+    if registration.payment_status != 'completed':
+        messages.error(
+            request,
+            "Your conference payment has not been confirmed yet, so your certificate "
+            "is not available. Please contact us if you believe this is a mistake.",
+        )
+        return redirect(fallback_url)
+
+    if not conference.certificates_available:
+        messages.info(
+            request,
+            f"Certificates for {conference.title} have not been released yet. "
+            "You will be able to download yours here once they are.",
+        )
+        return redirect(fallback_url)
+
+    existing = getattr(registration, 'certificate', None)
+    if existing and existing.is_revoked:
+        messages.error(
+            request,
+            "This certificate has been withdrawn. Please contact ELTAN if you need help.",
+        )
+        return redirect(fallback_url)
+
+    if not registration.participant_name:
+        messages.error(
+            request,
+            "We do not have a name on file for this registration, so we cannot issue a "
+            "certificate. Please update your profile or contact us.",
+        )
+        return redirect(fallback_url)
+
+    try:
+        return _certificate_pdf_response(request, registration)
+    except CertificateTemplateError as exc:
+        logger.error("Certificate artwork unavailable for conference %s: %s", conference.pk, exc)
+        messages.error(
+            request,
+            "The certificate could not be produced because the artwork is missing. "
+            "Our team has been notified — please try again later.",
+        )
+        return redirect(fallback_url)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error(
+            "Failed to render certificate for registration %s: %s",
+            registration.pk, exc, exc_info=True,
+        )
+        messages.error(
+            request,
+            "Something went wrong while producing your certificate. Please try again, "
+            "or contact us if it keeps happening.",
+        )
+        return redirect(fallback_url)
+
+
+@login_required
+def conference_certificate(request, pk):
+    """Download the signed-in member's Certificate of Participation."""
+    registration = get_object_or_404(
+        EltanConferenceRegistration.objects.select_related('conference'),
+        pk=pk, user=request.user,
+    )
+    return _serve_certificate(request, registration, 'my_conferences')
+
+
+def _lookup_cache_key(request):
+    ip = (
+        request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+        or request.META.get('REMOTE_ADDR', 'unknown')
+    )
+    return f'certlookup:{ip}'
+
+
+def _lookup_throttled(request):
+    """True once this caller has missed too many times recently."""
+    from django.core.cache import cache
+
+    try:
+        return cache.get(_lookup_cache_key(request), 0) >= CERTIFICATE_LOOKUP_MAX_MISSES
+    except Exception:
+        # A cache outage must not lock people out of their own certificates.
+        return False
+
+
+def _record_lookup_miss(request):
+    """Count a lookup that matched nothing — the signal that someone is probing."""
+    from django.core.cache import cache
+
+    try:
+        key = _lookup_cache_key(request)
+        cache.set(key, cache.get(key, 0) + 1, CERTIFICATE_LOOKUP_WINDOW)
+    except Exception:
+        pass
+
+
+def _eligible_registrations_for_email(email):
+    """Confirmed registrations for ``email`` whose conference has released certificates.
+
+    Non-members are matched on the email they typed into the registration form;
+    members may have registered while signed in, so the account email counts too.
+    """
+    email = (email or '').strip()
+    if not email:
+        return EltanConferenceRegistration.objects.none()
+    return (
+        EltanConferenceRegistration.objects
+        .select_related('conference', 'user')
+        .filter(
+            models.Q(email__iexact=email) | models.Q(user__email__iexact=email),
+            payment_status='completed',
+            conference__certificates_released=True,
+        )
+        .distinct()
+    )
+
+
+def _send_certificate_link_email(request, registrations, email):
+    """Email time-limited download links for each eligible registration."""
+    from django.core.signing import TimestampSigner
+
+    signer = TimestampSigner(salt=CERTIFICATE_LINK_SALT)
+    items = []
+    for registration in registrations:
+        token = signer.sign(str(registration.pk))
+        items.append({
+            'conference': registration.conference,
+            'ticket_id': registration.ticket_id,
+            'url': request.build_absolute_uri(
+                reverse('conference_certificate_link', args=[token])
+            ),
+        })
+
+    html = render_to_string('emails/certificate_link.html', {
+        'items': items,
+        'name': registrations[0].participant_name,
+        'expiry_days': CERTIFICATE_LINK_MAX_AGE // (24 * 60 * 60),
+        'year': timezone.now().year,
+        'contact_email': getattr(settings, 'CONTACT_EMAIL', settings.DEFAULT_FROM_EMAIL),
+    })
+
+    lines = [
+        f"Hello {registrations[0].participant_name},",
+        "",
+        "Here are the download links for your ELTAN Certificate(s) of Participation:",
+        "",
+    ]
+    for item in items:
+        lines.append(f"{item['conference'].title}")
+        lines.append(f"  {item['url']}")
+        lines.append("")
+    lines.append(
+        f"These links stop working after {CERTIFICATE_LINK_MAX_AGE // (24 * 60 * 60)} days. "
+        "Request a new one from the certificate page if yours expires."
+    )
+
+    message = build_html_email(
+        subject='Your ELTAN Certificate of Participation',
+        html_body=html,
+        to=email,
+        text_body='\n'.join(lines),
+    )
+    return send_now(message)
+
+
+def certificate_lookup(request):
+    """Public page where a non-member finds their Certificate of Participation.
+
+    Two ways in: email plus ticket id downloads straight away, while email alone
+    sends a signed link. The response is deliberately identical whether or not
+    the address is on file, so the form cannot be used to discover who attended.
+    """
+    conferences = EltanConference.objects.filter(certificates_released=True).order_by('-start_date')
+    context = {
+        'conferences': conferences,
+        'email': '',
+        'ticket_id': '',
+    }
+
+    if request.method != 'POST':
+        return render(request, 'membership/certificate_lookup.html', context)
+
+    email = (request.POST.get('email') or '').strip()
+    ticket_id = (request.POST.get('ticket_id') or '').strip().upper()
+    context['email'] = email
+    context['ticket_id'] = ticket_id
+
+    if not email:
+        messages.error(request, "Please enter the email address you registered with.")
+        return render(request, 'membership/certificate_lookup.html', context)
+
+    if _lookup_throttled(request):
+        messages.error(
+            request,
+            "Too many attempts. Please wait a few minutes and try again.",
+        )
+        return render(request, 'membership/certificate_lookup.html', context)
+
+    if ticket_id:
+        registration = (
+            EltanConferenceRegistration.objects
+            .select_related('conference', 'user')
+            .filter(
+                models.Q(email__iexact=email) | models.Q(user__email__iexact=email),
+                ticket_id__iexact=ticket_id,
+            )
+            .first()
+        )
+        if not registration:
+            _record_lookup_miss(request)
+            messages.error(
+                request,
+                "We could not find a registration with that ticket ID and email address. "
+                "Check both, or leave the ticket ID blank and we will email you a link.",
+            )
+            return render(request, 'membership/certificate_lookup.html', context)
+        return _serve_certificate(request, registration, 'certificate_lookup')
+
+    # No ticket id: email the links instead.
+    registrations = list(_eligible_registrations_for_email(email))
+    if registrations:
+        ok, error = _send_certificate_link_email(request, registrations, email)
+        if not ok:
+            logger.error("Certificate link email to %s failed: %s", email, error)
+    else:
+        _record_lookup_miss(request)
+        logger.info("Certificate link requested for %s with no eligible registration.", email)
+
+    messages.success(
+        request,
+        f"If {email} has a confirmed conference registration, we have just emailed a "
+        "download link to it. Please check your inbox, and your spam folder.",
+    )
+    return redirect('certificate_lookup')
+
+
+def conference_certificate_link(request, token):
+    """Serve a certificate from a signed, time-limited emailed link."""
+    from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
+
+    signer = TimestampSigner(salt=CERTIFICATE_LINK_SALT)
+    try:
+        registration_pk = signer.unsign(token, max_age=CERTIFICATE_LINK_MAX_AGE)
+    except SignatureExpired:
+        messages.error(
+            request,
+            "That download link has expired. Enter your email below and we will send a new one.",
+        )
+        return redirect('certificate_lookup')
+    except BadSignature:
+        messages.error(
+            request,
+            "That download link is not valid. Please request a new one below.",
+        )
+        return redirect('certificate_lookup')
+
+    registration = get_object_or_404(
+        EltanConferenceRegistration.objects.select_related('conference'),
+        pk=registration_pk,
+    )
+    return _serve_certificate(request, registration, 'certificate_lookup')
+
+
+def verify_conference_certificate(request, certificate_id):
+    """Public page confirming whether a certificate id is genuine."""
+    certificate = (
+        ConferenceCertificate.objects
+        .select_related('registration__conference')
+        .filter(certificate_id__iexact=(certificate_id or '').strip())
+        .first()
+    )
+    return render(request, 'membership/verify_conference_certificate.html', {
+        'certificate': certificate,
+        'certificate_id': certificate_id,
+    })
 
 
 @login_required

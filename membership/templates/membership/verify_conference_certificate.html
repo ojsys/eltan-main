@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verify Certificate - ELTAN{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Verification</p>
+        <h1>Certificate of Participation</h1>
+        <p class="description">Checking certificate {{ certificate_id }}</p>
+    </div>
+</section>
+
+<section class="content-container">
+    <div class="card-modern" style="max-width:720px; margin:0 auto;">
+        <div class="card-body">
+            {% if certificate and certificate.is_valid %}
+                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.75rem;">
+                    <div style="width:56px; height:56px; background:#D4EDDA; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <span class="material-icons" style="color:#155724; font-size:32px;">verified</span>
+                    </div>
+                    <div>
+                        <h2 class="card-title" style="margin:0 0 .2rem;">Genuine certificate</h2>
+                        <p style="color:#155724; margin:0; font-weight:600;">Issued by ELTAN</p>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1.25rem;">
+                    <div>
+                        <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">Issued to</p>
+                        <p style="font-weight:600; color:#1A1A1A; margin:0;">{{ certificate.participant_name }}</p>
+                    </div>
+                    <div>
+                        <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">Certificate ID</p>
+                        <p style="font-weight:600; color:#1A1A1A; margin:0;">{{ certificate.certificate_id }}</p>
+                    </div>
+                    <div>
+                        <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">Conference</p>
+                        <p style="font-weight:600; color:#1A1A1A; margin:0;">{{ certificate.conference.title }}</p>
+                    </div>
+                    <div>
+                        <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">Held</p>
+                        <p style="font-weight:600; color:#1A1A1A; margin:0;">
+                            {{ certificate.conference.start_date|date:"j F" }} &ndash; {{ certificate.conference.end_date|date:"j F Y" }}
+                        </p>
+                    </div>
+                    <div>
+                        <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">Venue</p>
+                        <p style="font-weight:600; color:#1A1A1A; margin:0;">{{ certificate.conference.venue }}</p>
+                    </div>
+                    <div>
+                        <p style="color:#757575; font-size:.8rem; margin:0 0 .2rem;">Issued on</p>
+                        <p style="font-weight:600; color:#1A1A1A; margin:0;">{{ certificate.issued_at|date:"j F Y" }}</p>
+                    </div>
+                </div>
+
+            {% elif certificate and certificate.is_revoked %}
+                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.25rem;">
+                    <div style="width:56px; height:56px; background:#F8D7DA; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <span class="material-icons" style="color:#721C24; font-size:32px;">block</span>
+                    </div>
+                    <div>
+                        <h2 class="card-title" style="margin:0 0 .2rem;">Certificate withdrawn</h2>
+                        <p style="color:#721C24; margin:0; font-weight:600;">This certificate is no longer valid</p>
+                    </div>
+                </div>
+                <p style="color:#616161;">
+                    Certificate {{ certificate.certificate_id }} was issued but has since been withdrawn by ELTAN.
+                    Please contact <a href="mailto:info@eltanigeria.org" style="color:#E67918;">info@eltanigeria.org</a> if you need more information.
+                </p>
+
+            {% elif certificate %}
+                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.25rem;">
+                    <div style="width:56px; height:56px; background:#FFF3CD; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <span class="material-icons" style="color:#856404; font-size:32px;">help_outline</span>
+                    </div>
+                    <div>
+                        <h2 class="card-title" style="margin:0 0 .2rem;">Cannot be confirmed</h2>
+                        <p style="color:#856404; margin:0; font-weight:600;">The registration behind this certificate is not confirmed</p>
+                    </div>
+                </div>
+                <p style="color:#616161;">
+                    Please contact <a href="mailto:info@eltanigeria.org" style="color:#E67918;">info@eltanigeria.org</a> to resolve this.
+                </p>
+
+            {% else %}
+                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.25rem;">
+                    <div style="width:56px; height:56px; background:#F8D7DA; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <span class="material-icons" style="color:#721C24; font-size:32px;">error_outline</span>
+                    </div>
+                    <div>
+                        <h2 class="card-title" style="margin:0 0 .2rem;">No such certificate</h2>
+                        <p style="color:#721C24; margin:0; font-weight:600;">ELTAN has not issued certificate {{ certificate_id }}</p>
+                    </div>
+                </div>
+                <p style="color:#616161;">
+                    Check that the ID was typed exactly as it appears on the certificate. If it was,
+                    the document may not be genuine &mdash; please let us know at
+                    <a href="mailto:info@eltanigeria.org" style="color:#E67918;">info@eltanigeria.org</a>.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

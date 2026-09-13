@@ -39,6 +39,26 @@
                     <img src="{{ registration.payment_proof.url }}" alt="Payment Proof" class="img-fluid">
                 </div>
             {% endif %}
+
+            <hr class="my-4">
+            <h5>Certificate of Participation</h5>
+            {% if registration.certificate_available %}
+                <p class="text-muted">
+                    Issued in the name <strong>{{ registration.participant_name }}</strong>.
+                </p>
+                <a href="{% url 'conference_certificate' registration.pk %}" class="btn btn-primary">
+                    Download Certificate
+                </a>
+            {% elif registration.payment_status != 'completed' %}
+                <p class="text-muted mb-0">
+                    Your certificate becomes available once your payment has been confirmed.
+                </p>
+            {% else %}
+                <p class="text-muted mb-0">
+                    Certificates for this conference have not been released yet. Yours will
+                    appear here once they are.
+                </p>
+            {% endif %}
         </div>
     </div>
 </div>

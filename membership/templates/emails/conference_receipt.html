@@ -135,6 +135,26 @@
                         </td>
                     </tr>
 
+                    <!-- Certificate of Participation -->
+                    <tr>
+                        <td style="padding:14px 40px 4px;" class="cv-pad">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f6fb; border:1px solid #d9e2f1; border-radius:12px;">
+                                <tr>
+                                    <td style="padding:18px 22px;">
+                                        <p style="margin:0 0 6px; color:#1A3A7A; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase;">After the conference</p>
+                                        <p style="margin:0; color:#4a5262; font-size:13px; line-height:1.6;">
+                                            Your <strong>Certificate of Participation</strong> will be available to download once
+                                            the conference has ended. {% if registration.user %}It will appear on your ELTAN dashboard.{% else %}Visit
+                                            <a href="{{ certificate_url }}" style="color:#E67918; text-decoration:none; font-weight:600;">the certificate page</a>
+                                            and enter this email address together with the ticket ID above.{% endif %}
+                                            {% if ticket_id %}Keep <strong>{{ ticket_id }}</strong> safe &mdash; you will need it.{% endif %}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
                     <!-- Contact -->
                     <tr>
                         <td style="padding:14px 40px 28px;" class="cv-pad">
