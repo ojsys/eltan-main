@@ -26,6 +26,7 @@ manuscript and a separate title page, and only the anonymised file is ever
 exposed to a reviewer (see SubmissionFile.REVIEWER_VISIBLE_KINDS).
 """
 
+import re
 import secrets
 from datetime import timedelta
 
@@ -110,6 +111,30 @@ class JournalSettings(models.Model):
         blank=True,
         default='JELTAN is not accepting new submissions at the moment. Please check back soon.',
     )
+
+    # Article titles are printed in one house style whatever the author typed,
+    # so a contents page reads as one journal. An ALL-CAPS title has thrown away
+    # the information that says which words are acronyms, so anything the
+    # built-in list does not know about goes here rather than into a deploy.
+    title_acronyms = models.TextField(
+        blank=True,
+        verbose_name='Acronyms in titles',
+        help_text=(
+            'Extra acronyms to keep capitalised in article titles, separated by commas '
+            'or new lines — for example: NELFA, SUBEB, ALTEN. Common ones (ELT, ESL, '
+            'WAEC, JAMB, ICT, UNESCO…) are already known. Spell each one exactly as it '
+            'should be printed.'
+        ),
+    )
+
+    @property
+    def acronym_list(self):
+        """The journal's own acronyms, as a list."""
+        return [
+            value.strip()
+            for value in re.split(r'[,\n\r]+', self.title_acronyms or '')
+            if value.strip()
+        ]
 
     class Meta:
         verbose_name = 'Journal Settings'
@@ -1199,11 +1224,37 @@ class Article(models.Model):
         return self.title[:80]
 
     def save(self, *args, **kwargs):
+        # One house style for every title, applied here rather than in the
+        # templates: the title is printed on the article page, in the contents
+        # list, in the galley, in the citation, in the RSS feed and in the OAI
+        # record. Styling it at each of those would mean styling it the same way
+        # in a dozen places, and the first one missed is the inconsistency this
+        # is meant to remove.
+        self.title = self.styled_title(self.title)
         if not self.slug:
             self.slug = self._unique_slug()
         if self.is_published and not self.published_at:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
+
+    @staticmethod
+    def styled_title(title):
+        """``title`` in the journal's house style."""
+        from .titles import to_title_case
+
+        acronyms = ()
+        try:
+            # first(), not load(): styling a title must not be what creates the
+            # journal's settings row, and it must not write anything at all.
+            settings_row = JournalSettings.objects.first()
+            if settings_row is not None:
+                acronyms = settings_row.acronym_list
+        except Exception:                                # noqa: BLE001
+            # Casing a title must never be the thing that stops an article being
+            # saved — without the journal's own acronyms the built-in list still
+            # covers the common ones.
+            pass
+        return to_title_case(title, acronyms)
 
     def _unique_slug(self):
         base = slugify(self.title)[:200] or 'article'

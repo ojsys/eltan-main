@@ -54,6 +54,16 @@ class JournalSettingsAdmin(admin.ModelAdmin):
         ('Submissions', {
             'fields': ('is_accepting_submissions', 'closed_message', 'contact_email'),
         }),
+        ('Article titles', {
+            'fields': ('title_acronyms',),
+            'description': (
+                'Every article title is printed in the journal\u2019s house style '
+                '(Title Case) whatever the author typed, so the contents page reads '
+                'as one journal. Acronyms are kept capitalised; add any this journal '
+                'uses that are not already known. After changing this, run '
+                '<code>manage.py restyle_titles</code> to apply it to existing articles.'
+            ),
+        }),
     )
 
     readonly_fields = ('portal_link',)

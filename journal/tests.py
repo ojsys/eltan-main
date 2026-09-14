@@ -5,17 +5,19 @@ review actually holds, that a manuscript can only move the way the workflow
 allows, and that the record of each round survives the next one.
 """
 
+import io
 from datetime import timedelta
 from unittest.mock import patch
 from xml.etree import ElementTree as ET
 
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from account.models import CustomUser
+from journal.titles import to_title_case
 from journal.models import (
     Article,
     ArticleAuthor,
@@ -702,7 +704,7 @@ class PublicationTests(JournalTestCase):
 
         response = self.client.get(reverse('journal:issue_detail', args=[issue.slug]))
 
-        self.assertContains(response, 'A paper from 2019')
+        self.assertContains(response, 'A Paper from 2019')
         self.assertIsNone(article.submission)
 
     def test_search_finds_a_published_article_by_author(self):
@@ -1650,7 +1652,7 @@ class DirectPublicationTests(JournalTestCase):
         response = self.client.get(reverse('journal:article_detail', args=[article.slug]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Task repetition')
+        self.assertContains(response, 'Task Repetition')
 
     def test_a_back_issue_keeps_the_date_it_was_actually_published(self):
         # An article from 2019 dated today would misstate the record and sort
@@ -2137,7 +2139,8 @@ class ArticleImportTests(JournalTestCase):
         self.upload([self.docx('a-paper.docx')])
         article = Article.objects.get()
 
-        self.assertEqual(article.title, PAPER_LINES[0])
+        # Read out of the file, then put into the journal's house style.
+        self.assertEqual(article.title, to_title_case(PAPER_LINES[0]))
         self.assertIn('oral fluency', article.abstract)
         self.assertEqual(article.author_list, 'Ada Obi, Chidi Eze')
 
@@ -2157,7 +2160,7 @@ class ArticleImportTests(JournalTestCase):
         ])
 
         article = Article.objects.get()
-        self.assertEqual(article.title, 'Silent reading strategies')
+        self.assertEqual(article.title, 'Silent Reading Strategies')
         self.assertContains(
             self.client.get(response.url), 'type the rest in', status_code=200,
         )
@@ -2202,7 +2205,7 @@ class ArticleImportTests(JournalTestCase):
         )
 
         article.refresh_from_db()
-        self.assertEqual(article.title, 'The title the reader will actually see')
+        self.assertEqual(article.title, 'The Title the Reader Will Actually See')
         self.assertEqual(article.author_list, 'Ngozi Adaora, Kunle Bello')
         self.assertEqual(article.page_range, '12–30')
         self.assertTrue(article.is_published)
@@ -2455,7 +2458,7 @@ class TypesettingTests(JournalTestCase):
         # names belong to the manuscript, which sets them in the body below.
         front_matter = printed.split('Abstract')[0]
         self.assertNotIn('Ada Obi', front_matter)
-        self.assertIn('Task repetition', front_matter)     # the title still is
+        self.assertIn('Task Repetition', front_matter)     # the title still is
         # Named again further down is right: the citation has to credit them.
         self.assertIn('Ada Obi', printed)
 
@@ -2705,7 +2708,7 @@ class TypesettingTests(JournalTestCase):
         printed = PdfReader(content).pages[0].extract_text()
 
         # A galley still carrying the old title is the version readers cite.
-        self.assertIn('A corrected title', printed)
+        self.assertIn('A Corrected Title', printed)
 
     def test_an_editor_can_generate_the_galley_again(self):
         article = self.make_article(self.a_manuscript())
@@ -2799,7 +2802,8 @@ class GenerateFromDocumentTests(JournalTestCase):
 
         article = Article.objects.get()
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(article.title, MANUSCRIPT[0][0])
+        # Read out of the manuscript, then put into the journal's house style.
+        self.assertEqual(article.title, to_title_case(MANUSCRIPT[0][0]))
         self.assertIn('repeating a speaking task', article.abstract)
         self.assertEqual(article.author_list, 'Ada Obi, Chidi Eze')
         self.assertEqual(article.section, self.section)
@@ -2873,7 +2877,7 @@ class GenerateFromDocumentTests(JournalTestCase):
         })
 
         article.refresh_from_db()
-        self.assertEqual(article.title, 'The title as it should have been read')
+        self.assertEqual(article.title, 'The Title as It Should Have Been Read')
         self.assertEqual(article.author_list, 'Ngozi Adaora')
         self.assertTrue(article.is_published)
 
@@ -2883,7 +2887,7 @@ class GenerateFromDocumentTests(JournalTestCase):
         finally:
             article.pdf.close()
         printed = PdfReader(content).pages[0].extract_text()
-        self.assertIn('The title as it should have been read', printed)
+        self.assertIn('The Title as It Should Have Been Read', printed)
         self.assertIn('Ngozi Adaora', printed)
 
     def test_publishing_needs_a_byline(self):
@@ -3020,7 +3024,7 @@ class StagedArticleTests(JournalTestCase):
         )
 
         self.article.refresh_from_db()
-        self.assertEqual(self.article.title, 'A corrected title')
+        self.assertEqual(self.article.title, 'A Corrected Title')
         self.assertFalse(self.article.is_published)
 
     def test_a_staged_article_can_be_returned_to_and_published_later(self):
@@ -3304,5 +3308,183 @@ class TypesetModeControlTests(JournalTestCase):
         })
 
         article.refresh_from_db()
-        self.assertEqual(article.title, 'A corrected title')
+        self.assertEqual(article.title, 'A Corrected Title')
         self.assertEqual(article.typeset_mode, Article.TYPESET_ORIGINAL)
+
+
+class TitleStyleTests(SimpleTestCase):
+    """One house style for every title, whatever the author typed.
+
+    Each case here is a way the naive rule gets it wrong: a shouted title has
+    thrown away which words are acronyms, `str.title()` breaks apostrophes, and
+    a deliberate inner capital must survive being 'corrected'.
+    """
+
+    def style(self, text, extra=()):
+        from journal.titles import to_title_case
+
+        return to_title_case(text, extra)
+
+    def test_a_shouted_title_comes_back_in_house_style(self):
+        self.assertEqual(
+            self.style('TASK REPETITION AND ORAL FLUENCY IN NIGERIAN SECONDARY SCHOOLS'),
+            'Task Repetition and Oral Fluency in Nigerian Secondary Schools',
+        )
+
+    def test_a_sentence_case_title_comes_back_in_the_same_style(self):
+        self.assertEqual(
+            self.style('task repetition and oral fluency in nigerian secondary schools'),
+            'Task Repetition and Oral Fluency in Nigerian Secondary Schools',
+        )
+
+    def test_a_title_already_in_house_style_is_left_exactly_as_it_is(self):
+        title = 'Code-Switching as a Teaching Resource in Igbo-Speaking ESL Classrooms'
+        self.assertEqual(self.style(title), title)
+
+    def test_small_words_stay_lower_unless_they_open_or_close_the_title(self):
+        self.assertEqual(self.style('THE ROLE OF THE TEACHER'), 'The Role of the Teacher')
+        self.assertEqual(self.style('WHAT IS FLUENCY FOR'), 'What Is Fluency For')
+
+    def test_a_subtitle_after_a_colon_takes_a_capital(self):
+        self.assertEqual(
+            self.style("TEACHERS' PERCEPTIONS: A CASE STUDY"),
+            "Teachers' Perceptions: A Case Study",
+        )
+
+    def test_acronyms_survive_a_shouted_title(self):
+        """The case no casing rule can work out for itself."""
+        self.assertEqual(
+            self.style('AN ANALYSIS OF ESP NEEDS AT THE NCE LEVEL'),
+            'An Analysis of ESP Needs at the NCE Level',
+        )
+        self.assertEqual(
+            self.style('the impact of covid-19 on jamb candidates'),
+            'The Impact of COVID-19 on JAMB Candidates',
+        )
+
+    def test_a_word_that_is_also_an_acronym_stays_a_word(self):
+        """The trap: forcing every known acronym ruins ordinary English.
+
+        In a journal about English teaching, 'the noun phrase' must not become
+        'the NOUN Phrase' because the National Open University shares the
+        spelling. A shouted title has no capitals left to tell them apart, so
+        these resolve to the word.
+        """
+        self.assertEqual(
+            self.style('THE ROLE OF THE NOUN PHRASE IN ESL WRITING'),
+            'The Role of the Noun Phrase in ESL Writing',
+        )
+        self.assertEqual(self.style('A CALL FOR PAPERS'), 'A Call for Papers')
+        self.assertEqual(self.style('THE TITLE AS IT SHOULD BE READ'),
+                         'The Title as It Should Be Read')
+        self.assertEqual(self.style('US AND THEM'), 'Us and Them')
+
+    def test_such_an_acronym_is_kept_when_the_authors_own_capitals_say_so(self):
+        """A title with real case left in it can be trusted on the point."""
+        self.assertEqual(
+            self.style('the role of CALL and ICT in the ESL classroom'),
+            'The Role of CALL and ICT in the ESL Classroom',
+        )
+        self.assertEqual(self.style('students at NOUN and their use of IT'),
+                         'Students at NOUN and Their Use of IT')
+
+    def test_the_journal_can_add_acronyms_of_its_own(self):
+        self.assertEqual(
+            self.style('A STUDY OF SUBEB POLICY', extra=['SUBEB']),
+            'A Study of SUBEB Policy',
+        )
+
+    def test_hyphenated_compounds_take_a_capital_on_each_part(self):
+        self.assertEqual(
+            self.style('CODE-SWITCHING IN NORTH-CENTRAL NIGERIA'),
+            'Code-Switching in North-Central Nigeria',
+        )
+
+    def test_apostrophes_do_not_gain_a_stray_capital(self):
+        # str.title() would give "Teachers' Don'T".
+        self.assertEqual(self.style("WHAT TEACHERS DON'T SAY"), "What Teachers Don't Say")
+
+    def test_irish_and_scottish_names_keep_their_inner_capital(self):
+        self.assertEqual(self.style("MCGREGOR AND O'BRIEN REVISITED"),
+                         "McGregor and O'Brien Revisited")
+
+    def test_a_deliberate_inner_capital_is_left_alone(self):
+        self.assertEqual(self.style('eLearning in the Nigerian classroom'),
+                         'eLearning in the Nigerian Classroom')
+
+    def test_roman_numerals_are_not_lowercased(self):
+        self.assertEqual(self.style('PART II: BEYOND THE TEXTBOOK'),
+                         'Part II: Beyond the Textbook')
+
+    def test_blank_and_whitespace_titles_do_not_raise(self):
+        self.assertEqual(self.style(''), '')
+        self.assertEqual(self.style('   '), '')
+        self.assertEqual(self.style(None), '')
+
+    def test_runs_of_whitespace_are_collapsed(self):
+        self.assertEqual(self.style('READING   STRATEGIES\tTHAT  WORK'),
+                         'Reading Strategies That Work')
+
+    def test_styling_is_stable_when_applied_twice(self):
+        """Saving an article repeatedly must not walk its title somewhere else."""
+        for original in [
+            'TASK REPETITION AND ORAL FLUENCY',
+            "teachers' perceptions: a case study",
+            'eLearning and the L2 Classroom',
+            'MCGREGOR AND O’BRIEN REVISITED',
+        ]:
+            once = self.style(original)
+            self.assertEqual(self.style(once), once, original)
+
+
+class ArticleTitleStyleTests(JournalTestCase):
+    """The style is applied to the stored record, not just to one template."""
+
+    def test_a_saved_article_is_stored_in_house_style(self):
+        article = Article.objects.create(
+            title='THE WASHBACK EFFECT OF WAEC ENGLISH ON CLASSROOM PRACTICE',
+            abstract='An abstract.', section=self.section, licence='CC BY 4.0',
+        )
+        article.refresh_from_db()
+        self.assertEqual(
+            article.title,
+            'The Washback Effect of WAEC English on Classroom Practice',
+        )
+
+    def test_the_styled_title_is_what_the_page_shows(self):
+        article = Article.objects.create(
+            title='A STUDY OF ICT ADOPTION AMONG ENGLISH TEACHERS',
+            abstract='An abstract.', section=self.section, licence='CC BY 4.0',
+            is_published=True,
+            pdf=SimpleUploadedFile('a.pdf', b'%PDF-1.4', content_type='application/pdf'),
+        )
+
+        response = self.client.get(reverse('journal:article_detail', args=[article.slug]))
+
+        self.assertContains(response, 'A Study of ICT Adoption Among English Teachers')
+        self.assertNotContains(response, 'A STUDY OF ICT ADOPTION')
+
+    def test_styling_does_not_create_a_settings_row(self):
+        """Saving an article must not have side effects on journal configuration."""
+        JournalSettings.objects.all().delete()
+        Article.objects.create(
+            title='A PAPER', abstract='x', section=self.section, licence='CC BY 4.0',
+        )
+        self.assertEqual(JournalSettings.objects.count(), 0)
+
+    def test_restyling_the_back_catalogue_leaves_slugs_alone(self):
+        """A published URL must keep working after its title is restyled."""
+        from django.core.management import call_command
+
+        article = Article.objects.create(
+            title='Task repetition and oral fluency', abstract='x',
+            section=self.section, licence='CC BY 4.0',
+        )
+        Article.objects.filter(pk=article.pk).update(title='TASK REPETITION AND ORAL FLUENCY')
+        slug_before = article.slug
+
+        call_command('restyle_titles', stdout=io.StringIO())
+
+        article.refresh_from_db()
+        self.assertEqual(article.title, 'Task Repetition and Oral Fluency')
+        self.assertEqual(article.slug, slug_before)
