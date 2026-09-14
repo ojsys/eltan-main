@@ -2487,13 +2487,145 @@ class TypesettingTests(JournalTestCase):
 
     # --- from somebody else's PDF ----------------------------------------
 
-    def test_a_supplied_pdf_keeps_its_pages_behind_a_jeltan_cover(self):
+    def a_supplied_pdf(self, name='paper.pdf', pages=2):
+        """A PDF the way an author supplies one: real prose, somebody else's type."""
+        body = (
+            'Fluency has long been treated as a by-product of practice rather than '
+            'something a teacher plans for directly, and this study asks whether that '
+            'holds in the Nigerian secondary classroom. '
+        )
+        lines = []
+        for page in range(pages):
+            lines.append(f'{page + 1}. Introduction' if page == 0 else f'{page + 1}. Method')
+            for _ in range(26):
+                lines.append(body[:88])
+                body = body[88:] + body[:88]
+        lines.append('References')
+        lines.append('Bygate, M. (2001). Effects of task repetition. Longman.')
+        return SimpleUploadedFile(
+            name, a_real_pdf(lines), content_type='application/pdf',
+        )
+
+    def test_a_supplied_pdf_is_re_set_in_the_journals_own_type(self):
+        """The whole point: two articles must not arrive in two different fonts.
+
+        A PDF carries no structure, so its text is read back out and put through
+        the same template a Word manuscript uses. That, and only that, is what
+        makes a supplied PDF match the rest of the journal.
+        """
+        from journal import typeset
+
+        article = self.make_article(self.a_supplied_pdf())
+        self.assertTrue(typeset.typeset(article))
+
+        article.refresh_from_db()
+        self.assertIn('JELTAN type', article.typeset_note)
+        # Re-set means there is now a full text, exactly as for a manuscript.
+        self.assertTrue(article.body_html)
+        self.assertIn('Introduction', article.body_html)
+
+    def test_a_re_set_pdf_carries_the_same_fonts_as_a_manuscript(self):
+        """Uniformity, checked against the file rather than against the code."""
         import io
 
         from pypdf import PdfReader
 
         from journal import typeset
 
+        def fonts_of(article):
+            article.pdf.open('rb')
+            try:
+                content = io.BytesIO(article.pdf.read())
+            finally:
+                article.pdf.close()
+            names = set()
+            for page in PdfReader(content).pages:
+                resources = page.get('/Resources') or {}
+                for value in (resources.get('/Font') or {}).values():
+                    base = value.get_object().get('/BaseFont')
+                    if base:
+                        # Drop the subset tag: 'AAAAAA+Charis-Regular'.
+                        names.add(str(base).lstrip('/').split('+')[-1])
+            return names
+
+        from_pdf = self.make_article(self.a_supplied_pdf(), title='From a PDF')
+        typeset.typeset(from_pdf)
+        from_pdf.refresh_from_db()
+
+        from_docx = self.make_article(self.a_manuscript(), title='From a manuscript')
+        typeset.typeset(from_docx)
+        from_docx.refresh_from_db()
+
+        pdf_fonts = fonts_of(from_pdf)
+        docx_fonts = fonts_of(from_docx)
+
+        self.assertTrue(any('Charis' in name for name in pdf_fonts), pdf_fonts)
+        # The author's original face must be gone, replaced by the journal's.
+        self.assertFalse(any('Courier' in name for name in pdf_fonts), pdf_fonts)
+        self.assertEqual(pdf_fonts, docx_fonts)
+
+    def test_the_title_is_not_printed_twice_when_it_runs_into_the_byline(self):
+        """A PDF has no paragraph marks, so its title and byline arrive glued."""
+        from journal import typeset
+
+        article = self.make_article(self.a_supplied_pdf())
+        typeset.typeset(article)
+        article.refresh_from_db()
+
+        title = 'Task repetition and oral fluency'
+        self.assertNotIn(title.lower(), (article.body_html or '').lower())
+
+    def test_a_scan_keeps_its_pages_because_there_is_no_text_to_re_set(self):
+        """The one case re-setting must not attempt: there is nothing to read."""
+        from journal import typeset
+
+        # Two pages carrying almost no extractable text, like a scanned paper.
+        article = self.make_article(SimpleUploadedFile(
+            'scan.pdf', a_real_pdf(['.', '.']), content_type='application/pdf',
+        ))
+        self.assertTrue(typeset.typeset(article))
+
+        article.refresh_from_db()
+        self.assertIn('cover page', article.typeset_note)
+        self.assertIn('scan', article.typeset_note)
+        self.assertEqual(article.body_html, '')
+
+    def test_an_editor_can_insist_on_keeping_the_authors_pages(self):
+        """For the papers that lose more by re-flowing than they gain."""
+        from journal import typeset
+
+        article = self.make_article(self.a_supplied_pdf())
+        article.typeset_mode = Article.TYPESET_ORIGINAL
+        article.save(update_fields=['typeset_mode'])
+        self.assertTrue(typeset.typeset(article))
+
+        article.refresh_from_db()
+        self.assertIn("author's own pages", article.typeset_note)
+        self.assertEqual(article.body_html, '')
+
+    def test_an_editor_can_insist_on_jeltan_type_despite_a_poor_read(self):
+        from journal import typeset
+
+        article = self.make_article(SimpleUploadedFile(
+            'thin.pdf', a_real_pdf(['Short paper', 'Only a little text here.']),
+            content_type='application/pdf',
+        ))
+        article.typeset_mode = Article.TYPESET_JELTAN
+        article.save(update_fields=['typeset_mode'])
+        typeset.typeset(article)
+
+        article.refresh_from_db()
+        self.assertIn('forced', article.typeset_note)
+        self.assertTrue(article.body_html)
+
+    def test_a_thin_pdf_keeps_its_pages_behind_a_jeltan_cover(self):
+        import io
+
+        from pypdf import PdfReader
+
+        from journal import typeset
+
+        # Too little text to re-set safely, so the author's page is kept whole.
         source = SimpleUploadedFile(
             'paper.pdf', a_real_pdf(['Page one of the original', 'x' * 40]),
             content_type='application/pdf',
@@ -2516,7 +2648,7 @@ class TypesettingTests(JournalTestCase):
         self.assertIn('Journal of ELTAN', pages[0].extract_text())
         self.assertIn('Page one of the original', pages[1].extract_text())
 
-    def test_a_supplied_pdf_is_not_re_flowed_into_full_text(self):
+    def test_an_unreadable_pdf_offers_no_full_text(self):
         from journal import typeset
 
         article = self.make_article(SimpleUploadedFile(
@@ -2525,8 +2657,7 @@ class TypesettingTests(JournalTestCase):
         typeset.typeset(article)
 
         article.refresh_from_db()
-        # Text scraped out of a designed page makes a worse article than the
-        # page it came from, so it is not offered as the full text.
+        # Nothing trustworthy came out of it, so nothing is offered as full text.
         self.assertEqual(article.body_html, '')
         self.assertFalse(article.has_full_text)
 
@@ -3128,3 +3259,50 @@ class GalleyGlyphTests(JournalTestCase):
         # A missing file falls back silently to a font that cannot spell half
         # this journal's authors, so it is worth failing loudly here instead.
         self.assertEqual(len(typeset.font_faces()), len(typeset.FONT_FACES))
+
+
+class TypesetModeControlTests(JournalTestCase):
+    """The editor's override is reachable, and defaults to leaving it alone."""
+
+    def make_article(self, **overrides):
+        fields = {
+            'title': 'Talk in the classroom', 'abstract': 'An abstract.',
+            'section': self.section, 'is_published': True, 'licence': 'CC BY 4.0',
+            'pdf': SimpleUploadedFile('a.pdf', b'%PDF-1.4', content_type='application/pdf'),
+        }
+        fields.update(overrides)
+        return Article.objects.create(**fields)
+
+    def test_the_default_is_to_set_everything_in_jeltan_type(self):
+        self.assertEqual(self.make_article().typeset_mode, Article.TYPESET_AUTO)
+
+    def test_the_control_is_offered_on_the_article_form(self):
+        article = self.make_article()
+        self.client.force_login(self.editor_user)
+
+        response = self.client.get(reverse('journal:article_edit', args=[article.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'typeset_mode')
+        self.assertContains(response, "Keep the author&#x27;s own pages")
+
+    def test_saving_without_the_field_keeps_the_choice_already_made(self):
+        """An edit screen that omits it must not silently reset it."""
+        article = self.make_article(typeset_mode=Article.TYPESET_ORIGINAL)
+        self.client.force_login(self.editor_user)
+
+        self.client.post(reverse('journal:article_edit', args=[article.pk]), {
+            'section': self.section.pk,
+            'title': 'A corrected title',
+            'abstract': article.abstract,
+            'keywords': '',
+            'licence': 'CC BY 4.0',
+            'is_published': 'on',
+            'authors-TOTAL_FORMS': '1', 'authors-INITIAL_FORMS': '0',
+            'authors-MIN_NUM_FORMS': '1', 'authors-MAX_NUM_FORMS': '1000',
+            'authors-0-first_name': 'Ada', 'authors-0-last_name': 'Obi',
+        })
+
+        article.refresh_from_db()
+        self.assertEqual(article.title, 'A corrected title')
+        self.assertEqual(article.typeset_mode, Article.TYPESET_ORIGINAL)

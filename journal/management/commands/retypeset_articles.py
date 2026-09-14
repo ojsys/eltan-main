@@ -51,9 +51,16 @@ class Command(BaseCommand):
             return
 
         done, failed = 0, []
+        in_journal_type, kept_author_pages = 0, []
         for article in candidates:
             if typeset(article):
                 done += 1
+                # body_html is only set when the article was actually re-set in
+                # the journal's type; a cover-and-keep run leaves it empty.
+                if article.body_html:
+                    in_journal_type += 1
+                else:
+                    kept_author_pages.append(article)
                 self.stdout.write(self.style.SUCCESS(f'  ok      {article.pk}  {article.title[:60]}'))
             else:
                 failed.append(article)
@@ -63,6 +70,23 @@ class Command(BaseCommand):
 
         self.stdout.write('')
         self.stdout.write(f'{done} generated.')
+
+        # The point of the exercise is that every article looks the same, so say
+        # plainly which ones do not, rather than leaving it to be discovered by
+        # opening PDFs one at a time.
+        self.stdout.write(self.style.SUCCESS(
+            f'{in_journal_type} set in JELTAN type.'
+        ))
+        if kept_author_pages:
+            self.stdout.write(self.style.WARNING(
+                f"{len(kept_author_pages)} kept the author's own pages behind a JELTAN cover:"
+            ))
+            for article in kept_author_pages:
+                self.stdout.write(f'  {article.pk}  {article.title[:52]} — {article.typeset_note}')
+            self.stdout.write(
+                "These are scans, or files whose text could not be read. Supply a Word "
+                "manuscript, or set one to 'Always set in JELTAN type' to force it."
+            )
         if failed:
             self.stdout.write(self.style.ERROR(
                 f'{len(failed)} could not be, and kept the galley they had. '

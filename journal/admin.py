@@ -6,7 +6,7 @@ and the corrections: journal front matter, sections, the board, editor roles, an
 a read-mostly view of manuscripts for when someone needs to look at the record.
 """
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -288,10 +288,64 @@ class ArticleAdmin(admin.ModelAdmin):
     issues published before this system existed — gets into the archive.
     """
 
-    list_display = ('title', 'issue', 'author_list', 'is_published', 'published_at', 'view_count', 'download_count')
-    list_filter = ('is_published', 'issue', 'section')
+    list_display = ('title', 'issue', 'author_list', 'typeset_state', 'is_published',
+                    'published_at', 'view_count', 'download_count')
+    list_filter = ('is_published', 'issue', 'section', 'typeset_mode')
     search_fields = ('title', 'abstract', 'keywords', 'doi', 'authors__last_name')
     prepopulated_fields = {'slug': ('title',)}
-    readonly_fields = ('view_count', 'download_count', 'created_at', 'updated_at')
+    readonly_fields = ('view_count', 'download_count', 'created_at', 'updated_at',
+                       'typeset_at', 'typeset_note')
     inlines = [ArticleAuthorInline]
     autocomplete_fields = ('submission',)
+    actions = ['retypeset_selected', 'set_jeltan_type', 'keep_original_pages']
+
+    def typeset_state(self, obj):
+        """Whether this article is set in the journal's own type.
+
+        The column exists so a uniform-looking archive can be confirmed at a
+        glance instead of by opening PDFs: anything not marked JELTAN is an
+        article a reader will see in somebody else's fonts.
+        """
+        if not obj.typeset_at:
+            return format_html('<span style="color:#9ca3af;">not typeset</span>')
+        if obj.body_html:
+            return format_html(
+                '<span style="background:#f0fdf4; color:#16a34a; border:1px solid #16a34a; '
+                'padding:2px 9px; border-radius:12px; font-size:11px; font-weight:600;" '
+                'title="{}">JELTAN type</span>', obj.typeset_note or '',
+            )
+        return format_html(
+            '<span style="background:#fffbeb; color:#b45309; border:1px solid #b45309; '
+            'padding:2px 9px; border-radius:12px; font-size:11px; font-weight:600;" '
+            'title="{}">author pages</span>', obj.typeset_note or '',
+        )
+    typeset_state.short_description = 'Typesetting'
+
+    def _run_typeset(self, request, queryset, label):
+        from .typeset import typeset as run_typeset
+        done = failed = 0
+        for article in queryset:
+            if run_typeset(article):
+                done += 1
+            else:
+                failed += 1
+        self.message_user(
+            request,
+            f'{label}: {done} article(s) re-typeset'
+            + (f', {failed} could not be (see each article\u2019s note).' if failed else '.'),
+            messages.SUCCESS if done else messages.WARNING,
+        )
+
+    def retypeset_selected(self, request, queryset):
+        self._run_typeset(request, queryset, 'Re-typeset')
+    retypeset_selected.short_description = 'Re-typeset selected articles'
+
+    def set_jeltan_type(self, request, queryset):
+        queryset.update(typeset_mode=Article.TYPESET_JELTAN)
+        self._run_typeset(request, queryset, 'Set in JELTAN type')
+    set_jeltan_type.short_description = "Always set in JELTAN type, then re-typeset"
+
+    def keep_original_pages(self, request, queryset):
+        queryset.update(typeset_mode=Article.TYPESET_ORIGINAL)
+        self._run_typeset(request, queryset, "Keep the author's pages")
+    keep_original_pages.short_description = "Keep the author's own pages, then re-typeset"

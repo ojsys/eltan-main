@@ -552,3 +552,271 @@ def _group_lists(blocks):
         else:
             grouped.append(block)
     return grouped
+
+
+# --- reading a supplied PDF as blocks --------------------------------------
+#
+# A Word manuscript says what it is: this paragraph is a heading, that one is a
+# list. A PDF says only where ink sits on a page, so everything below is
+# inference from the shape of the text, and it is wrong sometimes. That is
+# tolerable only because typeset.py checks the result before it uses it and an
+# editor can overrule the whole thing per article.
+
+# A running head or foot repeats on most pages; body text does not. Anything at
+# the very top or bottom of a page that shows up this often is furniture.
+RUNNING_HEAD_LINES = 2
+RUNNING_HEAD_SHARE = 0.5
+
+PAGE_NUMBER_LINE = re.compile(r'^\s*[\[\(]?\s*(?:page\s*)?[ivxlcdm\d]{1,6}\s*[\]\)]?\s*$', re.IGNORECASE)
+
+# Section names that are headings in essentially every research paper, however
+# the author chose to style them.
+KNOWN_HEADINGS = re.compile(
+    r'^\s*(abstract|keywords?|introduction|background|literature\s+review|'
+    r'theoretical\s+framework|conceptual\s+framework|statement\s+of\s+the\s+problem|'
+    r'research\s+questions?|hypothes[ei]s|methodology|methods?|materials\s+and\s+methods|'
+    r'research\s+design|participants|instruments?|procedure|data\s+analysis|'
+    r'results?|findings|results?\s+and\s+discussion|discussion|'
+    r'conclusions?|conclusion\s+and\s+recommendations?|recommendations?|'
+    r'implications|limitations|acknowledge?ments?|references|bibliography|works\s+cited|'
+    r'appendix(?:\s+[a-z0-9]+)?)\s*:?\s*$',
+    re.IGNORECASE,
+)
+
+# An author-date opener: "Adeyemi, K. (2019)." Used to tell one reference entry
+# from the wrapped second line of the one before it.
+REFERENCE_OPENER = re.compile(
+    r'^\s*(?:[A-ZÀ-ÿ][\w\'’\-]*(?:,| [A-Z]\.)|[A-Z][\w\'’\-]+\s+et\s+al\.?|\[\d+\]|\d+\.)',
+)
+
+# Where a paragraph clearly has not finished, whatever the line looks like.
+CONTINUES = ('-', '–', '—', ',', ';', ':', 'and', 'or', 'of', 'the', 'in', 'to', 'a', 'an')
+
+
+def read_pdf_blocks(uploaded):
+    """Read a supplied PDF into the same blocks a .docx produces.
+
+    Returns ``(blocks, {})`` — the empty mapping is where a manuscript's images
+    would go, and images embedded in somebody else's PDF are not recoverable
+    this way. Figures therefore do not survive; see ``pdf_text_quality`` for
+    why that is checked before the result is used.
+    """
+    _rewind(uploaded)
+    reader = PdfReader(uploaded)
+    if getattr(reader, 'is_encrypted', False):
+        try:
+            reader.decrypt('')
+        except Exception as exc:                      # noqa: BLE001
+            raise ValueError('The PDF is password protected.') from exc
+
+    pages = []
+    for page in reader.pages:
+        try:
+            pages.append((page.extract_text() or '').splitlines())
+        except Exception:                             # noqa: BLE001
+            logger.exception('Could not extract text from a PDF page')
+            pages.append([])
+
+    lines = _strip_page_furniture(pages)
+    paragraphs = _join_wrapped_lines(lines)
+    return _paragraphs_to_blocks(paragraphs), {}
+
+
+def _strip_page_furniture(pages):
+    """Flatten pages to lines, dropping running heads, feet and page numbers."""
+    counts = {}
+    for page in pages:
+        stripped = [line for line in page if line.strip()]
+        edges = stripped[:RUNNING_HEAD_LINES] + stripped[-RUNNING_HEAD_LINES:]
+        for line in set(_normalise_furniture(edge) for edge in edges):
+            if line:
+                counts[line] = counts.get(line, 0) + 1
+
+    threshold = max(2, int(len(pages) * RUNNING_HEAD_SHARE))
+    repeated = {line for line, count in counts.items() if count >= threshold}
+
+    lines = []
+    for page in pages:
+        stripped = [line for line in page if line.strip()]
+        for index, line in enumerate(stripped):
+            near_edge = index < RUNNING_HEAD_LINES or index >= len(stripped) - RUNNING_HEAD_LINES
+            if near_edge:
+                if PAGE_NUMBER_LINE.match(line):
+                    continue
+                if _normalise_furniture(line) in repeated:
+                    continue
+            lines.append(line.rstrip())
+        # A page break is a paragraph break only when the last line looked
+        # finished. A sentence running over the fold is one sentence, and
+        # splitting it there would put a stray half-paragraph in the galley.
+        if lines and lines[-1].rstrip().endswith(('.', '?', '!', '"', '”', ':')):
+            lines.append('')
+    return lines
+
+
+def _normalise_furniture(line):
+    """Collapse a running head so that its page number does not make it unique."""
+    return re.sub(r'\d+', '#', re.sub(r'\s+', ' ', (line or '').strip().lower()))
+
+
+def _join_wrapped_lines(lines):
+    """Turn hard-wrapped PDF lines back into paragraphs.
+
+    A PDF has no paragraphs, only lines that happened to end where the column
+    did. Rejoining them is what makes the text re-flowable — without it every
+    line would be set as its own paragraph and the galley would look like a poem.
+    """
+    widths = [len(line) for line in lines if len(line.strip()) > 20]
+    typical = sorted(widths)[len(widths) // 2] if widths else 80
+    # A line noticeably shorter than the column is the end of its paragraph.
+    short = typical * 0.72
+
+    paragraphs = []
+    current = []
+
+    def flush():
+        if current:
+            paragraphs.append(' '.join(current).strip())
+            current.clear()
+
+    for line in lines:
+        text = line.strip()
+        if not text:
+            flush()
+            continue
+
+        # A heading stands alone whatever its neighbours are doing.
+        if _looks_like_heading(text):
+            flush()
+            paragraphs.append(text)
+            continue
+
+        if current:
+            previous = current[-1]
+            if previous.endswith('-') and text[:1].islower():
+                # Hyphenated over the line break: "develop-" + "ment".
+                current[-1] = previous[:-1] + text
+                continue
+            current.append(text)
+        else:
+            current.append(text)
+
+        # Decide whether this line closes the paragraph.
+        lowered = text.lower()
+        if lowered.endswith(CONTINUES):
+            continue
+        if len(text) < short and text.endswith(('.', '?', '!', '"', '”', ')')):
+            flush()
+
+    flush()
+    return [paragraph for paragraph in paragraphs if paragraph]
+
+
+def _looks_like_heading(text):
+    """Whether a single line is a section heading rather than body text."""
+    stripped = text.strip()
+    if not stripped or len(stripped) > 120 or len(stripped.split()) > 14:
+        return False
+    if KNOWN_HEADINGS.match(stripped):
+        return True
+    if NUMBERED_HEADING.match(stripped) and not stripped.endswith(('.', ',', ';')):
+        # "3.2 Data analysis" is a heading; "1. Adeyemi, K. (2019)." is not.
+        return len(stripped.split()) <= 10
+    letters = [character for character in stripped if character.isalpha()]
+    if letters and len(letters) > 3 and all(character.isupper() for character in letters):
+        return True
+    return False
+
+
+def _paragraphs_to_blocks(paragraphs):
+    """Classify assembled paragraphs into headings, references and body text."""
+    blocks = []
+    in_references = False
+
+    for paragraph in paragraphs:
+        if _looks_like_heading(paragraph):
+            if REFERENCES_HEADING.match(paragraph):
+                in_references = True
+                blocks.append(Block('heading', level=1, text=paragraph.strip(),
+                                    runs=[(paragraph.strip(), True, False)]))
+                continue
+            in_references = False
+            level = 1
+            numbered = NUMBERED_HEADING.match(paragraph)
+            if numbered:
+                level = min(numbered.group(1).count('.') + 1, 3)
+            blocks.append(Block('heading', level=level, text=paragraph.strip(),
+                                runs=[(paragraph.strip(), True, False)]))
+            continue
+
+        if in_references:
+            for entry in _split_references(paragraph):
+                blocks.append(Block('paragraph', runs=[(entry, False, False)], images=[]))
+            continue
+
+        blocks.append(Block('paragraph', runs=[(paragraph, False, False)], images=[]))
+
+    return blocks[:MAX_BODY_BLOCKS]
+
+
+def _split_references(paragraph):
+    """Break a run-together reference list back into one entry per reference.
+
+    Reference lists wrap like prose but are not prose, so the paragraph joiner
+    above tends to glue several entries into one. A full stop followed by
+    something that opens like an author name is the seam.
+    """
+    parts = re.split(r'(?<=\.)\s+(?=[A-ZÀ-ÿ\[\d])', paragraph)
+    entries = []
+    for part in parts:
+        candidate = part.strip()
+        if not candidate:
+            continue
+        # Only treat it as a new entry if it actually opens like one; otherwise
+        # it is a sentence inside an annotation and belongs to the entry before.
+        if entries and not REFERENCE_OPENER.match(candidate):
+            entries[-1] = f'{entries[-1]} {candidate}'
+        else:
+            entries.append(candidate)
+    return entries or [paragraph]
+
+
+# --- is the extraction good enough to publish? -----------------------------
+
+# A page of a real article carries far more text than this. Anything below it is
+# a scan, a set of images, or a PDF whose fonts have no usable encoding — in
+# every one of those cases the text simply is not there to re-set.
+MIN_CHARS_PER_PAGE = 250
+# Extraction failures show up as runs of replacement characters and control
+# codes rather than as missing text.
+MIN_ALPHA_SHARE = 0.55
+
+
+def pdf_text_quality(blocks, page_count):
+    """Return ``(ok, reason)`` for whether extracted text is safe to re-typeset.
+
+    Re-setting a PDF means throwing away the author's own layout, so it is only
+    worth doing when what came out is genuinely the article. A scanned paper
+    yields a handful of stray characters, and setting those in the journal's
+    template would replace a readable page with an empty one.
+    """
+    text = ' '.join(
+        ''.join(part for part, _, _ in getattr(block, 'runs', []))
+        for block in blocks
+    ).strip()
+
+    if not text:
+        return False, 'no text could be read from it (it is probably a scan)'
+
+    pages = max(page_count, 1)
+    if len(text) / pages < MIN_CHARS_PER_PAGE:
+        return False, (
+            f'only {len(text)} characters were readable across {pages} page'
+            f'{"s" if pages != 1 else ""} (it is probably a scan)'
+        )
+
+    alphabetic = sum(1 for character in text if character.isalpha() or character.isspace())
+    if alphabetic / len(text) < MIN_ALPHA_SHARE:
+        return False, 'the text came out garbled, so its fonts cannot be read'
+
+    return True, ''

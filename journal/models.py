@@ -1142,6 +1142,29 @@ class Article(models.Model):
         max_length=300, blank=True,
         help_text='What the last typesetting run did, or why it could not.',
     )
+
+    # Every JELTAN article should read as one journal, so a supplied PDF is
+    # re-set in the journal's own type rather than passed through in whatever
+    # the author happened to use. Text extraction is inference, though, and a
+    # paper full of equations or a scan will come out worse than it went in —
+    # hence the override, which is the editor's answer to the one case the
+    # automatic check cannot judge for itself.
+    TYPESET_AUTO = 'auto'
+    TYPESET_JELTAN = 'jeltan'
+    TYPESET_ORIGINAL = 'original'
+    TYPESET_MODE_CHOICES = [
+        (TYPESET_AUTO, 'Automatic — re-set in JELTAN type when the text reads cleanly'),
+        (TYPESET_JELTAN, 'Always re-set in JELTAN type'),
+        (TYPESET_ORIGINAL, "Keep the author's own pages behind a JELTAN cover"),
+    ]
+    typeset_mode = models.CharField(
+        max_length=10, choices=TYPESET_MODE_CHOICES, default=TYPESET_AUTO,
+        help_text=(
+            "How a supplied PDF is handled. Word manuscripts are always set in the "
+            "journal's type. Choose 'Keep the author's own pages' only when re-setting "
+            "loses something the article needs, such as equations or complex tables."
+        ),
+    )
     first_page = models.PositiveIntegerField(null=True, blank=True)
     last_page = models.PositiveIntegerField(null=True, blank=True)
     doi = models.CharField('DOI', max_length=120, blank=True)

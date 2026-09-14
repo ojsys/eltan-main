@@ -576,19 +576,21 @@ class DirectArticleForm(BootstrapFormMixin, forms.ModelForm):
         model = Article
         fields = [
             'section', 'issue', 'title', 'abstract', 'keywords', 'source_file',
+            'typeset_mode',
             'first_page', 'last_page', 'doi', 'licence', 'is_published',
         ]
         widgets = {'abstract': forms.Textarea(attrs={'rows': 6})}
         labels = {
             'source_file': 'Article file (Word or PDF)',
+            'typeset_mode': 'Typesetting',
             'is_published': 'Publish now (visible to the public)',
         }
         help_texts = {
             'issue': 'Leave blank to publish online first, ahead of an issue.',
             'keywords': 'Comma separated.',
             'source_file': (
-                'A Word manuscript is typeset into the JELTAN template, full text and all. '
-                'A PDF keeps its own pages, with a JELTAN cover page in front of them.'
+                'Word or PDF. Either way the article is set in the journal\u2019s own type, '
+                'so every JELTAN article matches.'
             ),
         }
 
@@ -596,7 +598,7 @@ class DirectArticleForm(BootstrapFormMixin, forms.ModelForm):
     # whether it goes public, and who hears about it — so they sit together and
     # in that order, rather than wherever the model happened to declare them.
     field_order = [
-        'section', 'issue', 'title', 'abstract', 'keywords', 'source_file',
+        'section', 'issue', 'title', 'abstract', 'keywords', 'source_file', 'typeset_mode',
         'first_page', 'last_page', 'doi', 'licence',
         'publication_date', 'is_published', 'notify_authors',
     ]
@@ -611,8 +613,18 @@ class DirectArticleForm(BootstrapFormMixin, forms.ModelForm):
         self.fields['section'].required = True
         self.fields['issue'].empty_label = 'Online first — no issue yet'
 
+        # Typesetting has a sensible default and most edits never touch it, so a
+        # form posted without it must keep whatever the article already has
+        # rather than fail validation.
+        self.fields['typeset_mode'].required = False
+
         if self.instance.pk and self.instance.published_at:
             self.fields['publication_date'].initial = self.instance.published_at.date()
+
+    def clean_typeset_mode(self):
+        return self.cleaned_data.get('typeset_mode') or (
+            self.instance.typeset_mode or Article.TYPESET_AUTO
+        )
 
     def clean_source_file(self):
         return validate_upload(
@@ -769,11 +781,11 @@ class ImportedArticleForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Article
         fields = ['section', 'issue', 'title', 'authors', 'abstract', 'keywords',
-                  'first_page', 'last_page', 'doi']
+                  'first_page', 'last_page', 'doi', 'typeset_mode']
         widgets = {'abstract': forms.Textarea(attrs={'rows': 4})}
 
     field_order = ['title', 'authors', 'abstract', 'keywords', 'section', 'issue',
-                   'first_page', 'last_page', 'doi', 'publish']
+                   'first_page', 'last_page', 'doi', 'typeset_mode', 'publish']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -784,8 +796,17 @@ class ImportedArticleForm(BootstrapFormMixin, forms.ModelForm):
         # text on every row only pushes the short fields out of alignment.
         self.fields['issue'].help_text = ''
         self.fields['section'].help_text = ''
+        # Almost every row keeps the default; only the occasional paper that
+        # re-flows badly needs changing, so a row posted without it is fine.
+        self.fields['typeset_mode'].required = False
+        self.fields['typeset_mode'].help_text = ''
         if self.instance.pk and 'authors' not in self.initial:
             self.initial['authors'] = self.instance.author_list
+
+    def clean_typeset_mode(self):
+        return self.cleaned_data.get('typeset_mode') or (
+            self.instance.typeset_mode or Article.TYPESET_AUTO
+        )
 
     def is_publishing(self, cleaned):
         """Whether this row is being published, however the page asked.

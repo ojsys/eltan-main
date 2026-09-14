@@ -157,6 +157,12 @@ def strip_repeated_front_matter(blocks, article):
     in_byline = False
     for index, block in enumerate(blocks):
         opening = index < FRONT_MATTER_BLOCKS
+        if opening:
+            # A PDF has no paragraph marks, so its title and byline usually
+            # arrive as one run-together block: dropping it whole would take the
+            # authors with it, and keeping it whole prints the title twice.
+            # Trimming the title off the front leaves exactly the byline.
+            _trim_reprinted_title(block, title)
         if opening and _is_reprinted(block, title, abstract):
             continue
 
@@ -176,6 +182,35 @@ def strip_repeated_front_matter(blocks, article):
 
         kept.append(block)
     return kept
+
+
+def _trim_reprinted_title(block, title):
+    """Strip a repeated title from the front of a block that also carries more.
+
+    Only touches single-run blocks, which is what text read out of a PDF looks
+    like. A Word manuscript keeps its runs — and its bold and italic — intact,
+    because there the title is its own paragraph and never needs this.
+    """
+    if not title or block.kind != 'paragraph':
+        return
+    runs = getattr(block, 'runs', None)
+    if not runs or len(runs) != 1:
+        return
+
+    text = runs[0][0]
+    value = _normalise(text)
+    if value == title or not value.startswith(title):
+        return
+
+    # Cut by words rather than characters: the normalised title and the raw text
+    # have the same words in the same order, whatever the punctuation and
+    # spacing between them, so dropping as many words as the title has lands
+    # exactly at its end.
+    words = text.split()
+    remainder = ' '.join(words[len(title.split()):]).lstrip(' \t.,:;-–—')
+    if remainder:
+        block.runs = [(remainder, runs[0][1], runs[0][2])]
+        block.text = remainder
 
 
 def _is_reprinted(block, title, abstract):
@@ -496,7 +531,60 @@ def _typeset_from_manuscript(article, source):
 
 
 def _typeset_from_pdf(article, source):
-    """A cover page in the journal's design, in front of the author's own pages."""
+    """Re-set a supplied PDF in the journal's own type, or cover it if we cannot.
+
+    Every JELTAN article is meant to read as one journal: the same body face, the
+    same size, the same title block, whatever the author's own file looked like.
+    A PDF carries none of that structure, so the text is read back out and put
+    through the very same template a Word manuscript uses — that, and only that,
+    is what makes two articles from two different authors match.
+
+    The text does not always come back. A scan has none, and a paper built out of
+    equations or wide tables loses more by being re-flowed than it gains by
+    matching. Those fall back to the author's pages behind a JELTAN cover, and
+    the note says so, so an editor can see which articles did not convert.
+    """
+    mode = getattr(article, 'typeset_mode', None) or article.TYPESET_AUTO
+
+    if mode == article.TYPESET_ORIGINAL:
+        return _cover_supplied_pdf(
+            article, source,
+            "set to keep the author's own pages",
+        )
+
+    try:
+        source.open('rb')
+        try:
+            data = source.read()
+        finally:
+            source.close()
+        blocks, _ = ingest.read_pdf_blocks(io.BytesIO(data))
+        page_count = len(PdfReader(io.BytesIO(data)).pages)
+    except Exception as exc:                             # noqa: BLE001
+        logger.warning('Could not read text from the PDF for article %s: %s', article.pk, exc)
+        return _cover_supplied_pdf(article, source, f'its text could not be read ({exc})')
+
+    readable, reason = ingest.pdf_text_quality(blocks, page_count)
+    if not readable and mode != article.TYPESET_JELTAN:
+        return _cover_supplied_pdf(article, source, reason)
+
+    blocks = strip_repeated_front_matter(blocks, article)
+    body_html = blocks_to_html(blocks, {})
+    html = render_to_string(
+        'journal/pdf/article.html', render_context(article, body_html, full_text=True),
+    )
+    _store_galley(article, html_to_pdf(html))
+    article.body_html = body_html
+
+    forced = ' (forced)' if not readable else ''
+    return (
+        f'Re-set from the supplied PDF in JELTAN type{forced}: '
+        f'{len(blocks)} blocks from {page_count} page{"s" if page_count != 1 else ""}.'
+    )
+
+
+def _cover_supplied_pdf(article, source, reason):
+    """Keep the author's pages exactly as they are, behind a JELTAN cover page."""
     html = render_to_string(
         'journal/pdf/article.html', render_context(article, '', full_text=False),
     )
@@ -509,7 +597,7 @@ def _typeset_from_pdf(article, source):
     _store_galley(article, merged)
     # The body was not re-set, so there is no trustworthy full text to show.
     article.body_html = ''
-    return 'A JELTAN cover page was added to the supplied PDF; its pages are unchanged.'
+    return f"A JELTAN cover page was added and the author's pages kept: {reason}."[:300]
 
 
 def _store_galley(article, content):
