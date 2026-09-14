@@ -371,27 +371,34 @@ def dash(request):
     # Get user's SIGs
     user_sigs = Sigs.objects.filter(memberships__user=user, is_active=True).order_by('title')
 
-    # Conference certificates the member can download right now. Surfaced on the
-    # dashboard because an attendee should not have to remember which conference
-    # page to dig through to find one.
+    # Conference certificates, surfaced on the dashboard because an attendee
+    # should not have to remember which conference page to dig through to find
+    # one. Conferences whose certificates are not released yet are listed too:
+    # an absent section looks like a bug, whereas "not released yet" answers the
+    # question the attendee actually has.
+    certificate_registrations = []
+    pending_certificate_registrations = []
     try:
-        certificate_registrations = list(
+        paid_conference_registrations = list(
             EltanConferenceRegistration.objects
-            .filter(
-                user=user,
-                payment_status='completed',
-                conference__certificates_released=True,
-            )
+            .filter(user=user, payment_status='completed')
             .select_related('conference')
             .order_by('-conference__start_date')
         )
+        for registration in paid_conference_registrations:
+            if registration.conference and registration.conference.certificates_released:
+                certificate_registrations.append(registration)
+            else:
+                pending_certificate_registrations.append(registration)
     except Exception:
         certificate_registrations = []
+        pending_certificate_registrations = []
 
     context = {
         'active_subscription': active_subscription,
         'membership_progress': membership_progress,
         'certificate_registrations': certificate_registrations,
+        'pending_certificate_registrations': pending_certificate_registrations,
         'stats': stats,
         'upcoming_events': upcoming_events,
         'latest_news': latest_news,
@@ -1988,11 +1995,34 @@ def certificate_lookup(request):
         return _serve_certificate(request, registration, 'certificate_lookup')
 
     # No ticket id: email the links instead.
+    #
+    # "No conference has released certificates yet" is public information about
+    # the conference, not about this person, so it is said plainly. Staying
+    # neutral here would mean promising an email that was never going to be sent
+    # — the single most confusing thing this page could do.
+    if not conferences.exists():
+        messages.warning(
+            request,
+            "Certificates have not been released for any conference yet. They are "
+            "published after the conference ends — please try again then.",
+        )
+        return render(request, 'membership/certificate_lookup.html', context)
+
     registrations = list(_eligible_registrations_for_email(email))
     if registrations:
         ok, error = _send_certificate_link_email(request, registrations, email)
         if not ok:
-            logger.error("Certificate link email to %s failed: %s", email, error)
+            # The visitor still gets the neutral message below, so this log line
+            # is the only record that someone is owed an email they never got.
+            logger.error(
+                "Certificate link email to %s FAILED (%s registration(s)): %s",
+                email, len(registrations), error,
+            )
+        else:
+            logger.info(
+                "Certificate link email sent to %s (%s registration(s)).",
+                email, len(registrations),
+            )
     else:
         _record_lookup_miss(request)
         logger.info("Certificate link requested for %s with no eligible registration.", email)

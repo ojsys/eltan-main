@@ -290,3 +290,165 @@ class ConferenceCertificateTests(TestCase):
         blocked = self.client.post(url, {'email': 'probe@example.com', 'ticket_id': 'ELTAN-2026-NOPE'})
         self.assertContains(blocked, 'Too many attempts')
         cache.clear()
+
+
+class CertificateLookupMessagingTests(TestCase):
+    """What the lookup page says when nothing can be emailed.
+
+    Staying neutral about *this person* is right; staying neutral about whether
+    the conference has released certificates at all is just confusing, and was
+    the reason a staff member could ask for a link, be told one was sent, and
+    watch nothing arrive.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.conference = EltanConference.objects.create(
+            title='15th Annual National Conference', theme='T', description='d',
+            start_date=date(2026, 9, 1), end_date=date(2026, 9, 4), venue='Abeokuta',
+            registration_start=date(2026, 1, 1), registration_end=date(2026, 8, 25),
+            member_fee=Decimal('30000'), member_early_bird_fee=Decimal('25000'),
+            non_member_fee=Decimal('40000'), non_member_early_bird_fee=Decimal('35000'),
+            international_delegate_fee=Decimal('100000'),
+            certificates_released=False,
+        )
+        cls.registration = EltanConferenceRegistration.objects.create(
+            conference=cls.conference, registration_type='non_member',
+            amount_paid=Decimal('40000'), payment_status='completed',
+            ticket_id='ELTAN-2026-GST001',
+            email='guest@example.com', first_name='Samuel', last_name='Adeyemi',
+        )
+
+    def test_says_so_plainly_when_nothing_has_been_released(self):
+        response = self.client.post(reverse('certificate_lookup'), {
+            'email': 'guest@example.com', 'ticket_id': '',
+        }, follow=True)
+
+        self.assertContains(response, 'have not been released')
+        self.assertNotContains(response, 'we have just emailed')
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_message_does_not_depend_on_the_address_being_real(self):
+        """The unreleased notice is about the conference, so it cannot leak."""
+        known = self.client.post(reverse('certificate_lookup'), {
+            'email': 'guest@example.com', 'ticket_id': '',
+        }, follow=True)
+        unknown = self.client.post(reverse('certificate_lookup'), {
+            'email': 'nobody@example.com', 'ticket_id': '',
+        }, follow=True)
+
+        self.assertContains(known, 'have not been released')
+        self.assertContains(unknown, 'have not been released')
+
+    def test_normal_neutral_message_returns_once_released(self):
+        self.conference.certificates_released = True
+        self.conference.save()
+
+        response = self.client.post(reverse('certificate_lookup'), {
+            'email': 'guest@example.com', 'ticket_id': '',
+        }, follow=True)
+
+        self.assertContains(response, 'we have just emailed')
+        self.assertEqual(len(mail.outbox), 1)
+
+
+class DashboardCertificateTests(TestCase):
+    """The dashboard must never just go quiet about a certificate."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.conference = EltanConference.objects.create(
+            title='15th Annual National Conference', theme='T', description='d',
+            start_date=date(2026, 9, 1), end_date=date(2026, 9, 4), venue='Abeokuta',
+            registration_start=date(2026, 1, 1), registration_end=date(2026, 8, 25),
+            member_fee=Decimal('30000'), member_early_bird_fee=Decimal('25000'),
+            non_member_fee=Decimal('40000'), non_member_early_bird_fee=Decimal('35000'),
+            international_delegate_fee=Decimal('100000'),
+            certificates_released=False,
+        )
+        cls.member = User.objects.create_user(
+            email='member@example.com', password='pw12345!',
+            first_name='Ngozi', last_name='Okonkwo')
+        cls.registration = EltanConferenceRegistration.objects.create(
+            conference=cls.conference, user=cls.member, registration_type='member',
+            amount_paid=Decimal('30000'), payment_status='completed')
+
+    def test_download_button_appears_once_released(self):
+        self.conference.certificates_released = True
+        self.conference.save()
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse('dash'))
+        self.assertContains(response, reverse('conference_certificate', args=[self.registration.pk]))
+        self.assertContains(response, 'is ready')
+
+    def test_an_unreleased_certificate_is_explained_not_hidden(self):
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('dash'))
+
+        self.assertContains(response, 'not ready yet')
+        self.assertContains(response, 'not yet released')
+        self.assertNotContains(
+            response, reverse('conference_certificate', args=[self.registration.pk]))
+
+    def test_nothing_is_shown_when_the_member_never_attended(self):
+        stranger = User.objects.create_user(
+            email='stranger@example.com', password='pw12345!',
+            first_name='Chidi', last_name='Nwosu')
+        self.client.force_login(stranger)
+
+        response = self.client.get(reverse('dash'))
+        # Neither the "ready" nor the "not ready yet" notice should appear at all
+        # (the markup carries a static HTML comment naming the section, so assert
+        # on the visible copy rather than the phrase itself).
+        self.assertNotContains(response, 'is not ready yet')
+        self.assertNotContains(response, 'not yet released')
+        self.assertNotContains(response, '/certificate/')
+
+    def test_an_unpaid_registration_is_not_promised_a_certificate(self):
+        self.registration.payment_status = 'pending'
+        self.registration.save()
+        self.client.force_login(self.member)
+
+        response = self.client.get(reverse('dash'))
+        self.assertNotContains(response, 'not ready yet')
+
+
+class RegistrationDetailPageTests(TestCase):
+    """The detail page shares the public site's theme, not raw Bootstrap."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.conference = EltanConference.objects.create(
+            title='15th Annual National Conference', theme='T', description='d',
+            start_date=date(2026, 9, 1), end_date=date(2026, 9, 4), venue='Abeokuta',
+            registration_start=date(2026, 1, 1), registration_end=date(2026, 8, 25),
+            member_fee=Decimal('30000'), member_early_bird_fee=Decimal('25000'),
+            non_member_fee=Decimal('40000'), non_member_early_bird_fee=Decimal('35000'),
+            international_delegate_fee=Decimal('100000'),
+            certificates_released=True)
+        cls.member = User.objects.create_user(
+            email='member@example.com', password='pw12345!',
+            first_name='Ngozi', last_name='Okonkwo')
+        cls.registration = EltanConferenceRegistration.objects.create(
+            conference=cls.conference, user=cls.member, registration_type='member',
+            amount_paid=Decimal('30000'), payment_status='completed',
+            ticket_id='ELTAN-2026-MEM001')
+
+    def test_it_uses_the_site_theme(self):
+        self.client.force_login(self.member)
+        response = self.client.get(
+            reverse('conference_registration_detail', args=[self.registration.pk]))
+
+        self.assertContains(response, 'page-header')
+        self.assertContains(response, 'card-modern')
+        self.assertContains(response, 'public-modern.css')
+
+    def test_it_shows_the_ticket_and_certificate(self):
+        self.client.force_login(self.member)
+        response = self.client.get(
+            reverse('conference_registration_detail', args=[self.registration.pk]))
+
+        self.assertContains(response, 'ELTAN-2026-MEM001')
+        self.assertContains(response, 'Download Certificate')
+        self.assertContains(response, reverse('conference_certificate', args=[self.registration.pk]))

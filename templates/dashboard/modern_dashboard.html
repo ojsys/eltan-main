@@ -436,6 +436,16 @@
             </span>
         </p>
     </div>
+    {% elif pending_certificate_registrations %}
+    <div class="db-notice pending">
+        <span class="material-icons">workspace_premium</span>
+        <p>
+            <strong>Your Certificate of Participation is not ready yet</strong>
+            Certificates for
+            {% for registration in pending_certificate_registrations %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<em>{{ registration.conference.title }}</em>{% endfor %}
+            are released after the conference has ended. Yours will appear right here, ready to download, as soon as they are.
+        </p>
+    </div>
     {% endif %}
 
     <!-- Certificate pending/rejected notice -->
@@ -774,6 +784,22 @@
                                 <span class="material-icons">workspace_premium</span> Subscribe for Certificate
                             </a>
                         {% endif %}
+
+                        {% for registration in certificate_registrations %}
+                        <a href="{% url 'conference_certificate' registration.pk %}" class="db-tool-btn success"
+                           title="Certificate of Participation — {{ registration.conference.title }}">
+                            <span class="material-icons">workspace_premium</span>
+                            Conference Certificate {{ registration.conference.start_date|date:"Y" }}
+                        </a>
+                        {% endfor %}
+
+                        {% for registration in pending_certificate_registrations %}
+                        <div class="db-tool-btn disabled-look"
+                             title="Certificates for {{ registration.conference.title }} have not been released yet">
+                            <span class="material-icons">hourglass_top</span>
+                            Conference Certificate {{ registration.conference.start_date|date:"Y" }} &mdash; not yet released
+                        </div>
+                        {% endfor %}
 
                         <a href="https://chat.whatsapp.com/FjROkOB9wf59UGYKPkPVIB?mode=r_t" target="_blank" rel="noopener" class="db-tool-btn success">
                             <span class="material-icons">chat</span> WhatsApp Community
