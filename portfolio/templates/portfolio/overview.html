@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}My Portfolio - ELTAN{% endblock %}
+
+{% block content %}
+{% include 'portfolio/_styles.html' %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Career portfolio</p>
+        <h1>{{ request.user.first_name }} {{ request.user.last_name }}</h1>
+        <p class="description">{% if profile.headline %}{{ profile.headline }}{% else %}Your professional development, in one place{% endif %}</p>
+    </div>
+</section>
+
+<section class="content-container">
+<div class="pf-wrap">
+    {% if messages %}{% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
+    {% endfor %}{% endif %}
+
+    <!-- Period -->
+    {% if premium %}
+    <form method="get" class="card-modern" style="margin-bottom:1.25rem;">
+        <div class="card-body" style="display:flex; flex-wrap:wrap; gap:.75rem; align-items:flex-end;">
+            <div class="pf-field" style="margin:0; min-width:200px;">
+                <label for="period">Period</label>
+                <select name="period" id="period" onchange="document.getElementById('pf-custom').style.display = this.value === 'custom' ? 'flex' : 'none';">
+                    <option value="this_year" {% if period == 'this_year' %}selected{% endif %}>This ELTAN year</option>
+                    <option value="last_year" {% if period == 'last_year' %}selected{% endif %}>Last ELTAN year</option>
+                    <option value="all" {% if period == 'all' %}selected{% endif %}>All time</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Choose dates…</option>
+                </select>
+            </div>
+            <div id="pf-custom" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %}; gap:.75rem;">
+                <div class="pf-field" style="margin:0;"><label for="from">From</label><input type="date" name="from" id="from" value="{{ period_from }}"></div>
+                <div class="pf-field" style="margin:0;"><label for="to">To</label><input type="date" name="to" id="to" value="{{ period_to }}"></div>
+            </div>
+            <button type="submit" class="btn-modern btn-outline-modern">Show</button>
+            <span style="flex:1;"></span>
+            <a href="{% url 'portfolio:report' %}?{{ query }}" class="btn-modern btn-primary-modern"><span class="material-icons">picture_as_pdf</span> Download report</a>
+        </div>
+    </form>
+    {% endif %}
+
+    <!-- Summary -->
+    <div class="pf-stats">
+        <div class="pf-stat">
+            <div class="pf-stat-num">{{ summary.total_hours|floatformat:"-1" }}</div>
+            <div class="pf-stat-lbl">CPD hours · {{ period_label }}</div>
+        </div>
+        <div class="pf-stat">
+            <div class="pf-stat-num">{{ summary.entries|length }}</div>
+            <div class="pf-stat-lbl">Achievements</div>
+        </div>
+        <div class="pf-stat">
+            <div class="pf-stat-num">{{ summary.verified_hours|floatformat:"-1" }}</div>
+            <div class="pf-stat-lbl">Hours verified by ELTAN</div>
+        </div>
+        <div class="pf-stat">
+            <div class="pf-stat-num">{{ summary.self_reported_hours|floatformat:"-1" }}</div>
+            <div class="pf-stat-lbl">Hours self-reported</div>
+        </div>
+    </div>
+
+    <div class="pf-grid">
+        <!-- Record -->
+        <div class="card-modern">
+            <div class="card-body">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+                    <h2 class="card-title" style="margin:0;">Record</h2>
+                    {% if upload_allowance == 0 %}
+                        <span class="pf-tag self">Entry limit reached</span>
+                    {% else %}
+                        <a href="{% url 'portfolio:add' %}" class="btn-modern btn-primary-modern"><span class="material-icons">add</span> Add achievement</a>
+                    {% endif %}
+                </div>
+
+                {% if all_categories|length > 1 %}
+                <div class="pf-chips">
+                    <a class="pf-chip {% if not category %}on{% endif %}" href="?period={{ period }}&from={{ period_from }}&to={{ period_to }}">All</a>
+                    {% for key, label in all_categories %}
+                    <a class="pf-chip {% if category == key %}on{% endif %}" href="?period={{ period }}&from={{ period_from }}&to={{ period_to }}&category={{ key }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% for entry in entries %}
+                    {% include 'portfolio/_entry.html' with entry=entry owner=True %}
+                {% empty %}
+                <div style="text-align:center; padding:2rem 1rem; color:#757575;">
+                    <span class="material-icons" style="font-size:2.5rem; color:#E6B78A;">auto_awesome</span>
+                    <p style="margin:.5rem 0 0;">Nothing recorded for this period yet. ELTAN certificates appear here automatically; add anything else you have done with <strong>Add achievement</strong>.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Side -->
+        <div style="display:flex; flex-direction:column; gap:1.25rem;">
+            {% if summary.goal_hours %}
+            <div class="card-modern"><div class="card-body">
+                <p class="pf-stat-lbl" style="margin:0 0 .35rem;">CPD goal this ELTAN year</p>
+                <p style="margin:0 0 .6rem; font-weight:700; color:#1A1A1A;">{{ summary.total_hours|floatformat:"-1" }} of {{ summary.goal_hours|floatformat:"-1" }} hours</p>
+                <div class="pf-bar"><span style="width:{{ summary.goal_percent }}%;"></span></div>
+            </div></div>
+            {% endif %}
+
+            {% if summary.by_category %}
+            <div class="card-modern"><div class="card-body">
+                <p class="pf-stat-lbl" style="margin:0 0 .6rem;">By type</p>
+                {% for label, count in summary.by_category %}
+                <div style="display:flex; justify-content:space-between; padding:.3rem 0; font-size:.9rem;"><span>{{ label }}</span><strong>{{ count }}</strong></div>
+                {% endfor %}
+            </div></div>
+            {% endif %}
+
+            <div class="card-modern"><div class="card-body">
+                <a href="{% url 'portfolio:settings' %}" class="btn-modern btn-outline-modern" style="width:100%; justify-content:center;">
+                    <span class="material-icons">tune</span> Goal, profile &amp; sharing
+                </a>
+                {% if profile.share_enabled %}<p style="margin:.7rem 0 0; font-size:.82rem; color:#155724; text-align:center;">Your portfolio link is on.</p>{% endif %}
+            </div></div>
+
+            {% if not premium %}
+            <div class="pf-locked">
+                <strong style="display:block; margin-bottom:.3rem;">Portfolio Premium</strong>
+                Summaries for any period, a yearly CPD goal, a downloadable portfolio report, a shareable link and unlimited entries.
+                {% if upload_allowance is not None %}<br><small>{{ upload_allowance }} entr{{ upload_allowance|pluralize:"y,ies" }} left on the free plan.</small>{% endif %}
+                {% if settings_row.premium_description %}<p style="margin:.5rem 0 0;">{{ settings_row.premium_description|linebreaksbr }}</p>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</section>
+{% endblock %}

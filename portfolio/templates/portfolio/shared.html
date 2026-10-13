@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ member.first_name }} {{ member.last_name }} — Portfolio - ELTAN{% endblock %}
+
+{# Reached by a private link: keep it out of search results. #}
+{% block extra_css %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+{% include 'portfolio/_styles.html' %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Professional portfolio</p>
+        <h1>{{ member.first_name }} {{ member.last_name }}</h1>
+        {% if profile.headline %}<p class="description">{{ profile.headline }}</p>{% endif %}
+    </div>
+</section>
+
+<section class="content-container">
+<div style="max-width:860px; margin:0 auto;">
+    {% if profile.bio %}<div class="card-modern" style="margin-bottom:1.25rem;"><div class="card-body"><p style="margin:0; white-space:pre-line;">{{ profile.bio }}</p></div></div>{% endif %}
+
+    <div class="pf-stats">
+        <div class="pf-stat"><div class="pf-stat-num">{{ summary.entries|length }}</div><div class="pf-stat-lbl">Achievements</div></div>
+        <div class="pf-stat"><div class="pf-stat-num">{{ summary.total_hours|floatformat:"-1" }}</div><div class="pf-stat-lbl">CPD hours recorded</div></div>
+        <div class="pf-stat"><div class="pf-stat-num">{{ summary.verified_hours|floatformat:"-1" }}</div><div class="pf-stat-lbl">Hours verified by ELTAN</div></div>
+    </div>
+
+    <div class="card-modern"><div class="card-body">
+        {% for entry in entries %}
+            {% include 'portfolio/_entry.html' with entry=entry %}
+        {% empty %}
+            <p style="margin:0; color:#757575;">Nothing to show yet.</p>
+        {% endfor %}
+    </div></div>
+
+    <p style="color:#888; font-size:.82rem; text-align:center; margin-top:1.25rem;">
+        Entries marked <strong>Verified by ELTAN</strong> come from the English Language Teachers Association of Nigeria's own records.
+        <strong>Self-reported</strong> entries were added by the member and have not been checked by ELTAN.
+    </p>
+</div>
+</section>
+{% endblock %}

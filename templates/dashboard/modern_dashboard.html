@@ -185,7 +185,7 @@
 /* ── Quick actions ───────────────────────────────────────── */
 .db-actions {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     margin-bottom: 1.5rem;
 }
@@ -612,6 +612,13 @@
             </div>
             <h6>My Conferences</h6>
             <p>Tickets and Certificates of Participation</p>
+        </a>
+        <a href="{% url 'portfolio:overview' %}" class="db-action-card">
+            <div class="db-action-icon" style="background:#E67918;">
+                <span class="material-icons">military_tech</span>
+            </div>
+            <h6>My Portfolio</h6>
+            <p>Your CPD record, achievements and reports</p>
         </a>
         <a href="{% url 'resource' %}" class="db-action-card">
             <div class="db-action-icon" style="background:#2e7d32;">

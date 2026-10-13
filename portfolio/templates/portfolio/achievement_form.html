@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if achievement %}Edit entry{% else %}Add achievement{% endif %} - ELTAN Portfolio{% endblock %}
+
+{% block content %}
+{% include 'portfolio/_styles.html' %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Career portfolio</p>
+        <h1>{% if achievement %}Edit entry{% else %}Add an achievement{% endif %}</h1>
+        <p class="description">Record professional development done outside ELTAN. It is shown as self-reported.</p>
+    </div>
+</section>
+
+<section class="content-container">
+    <div class="card-modern" style="max-width:720px; margin:0 auto;">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                {% for field in form %}
+                <div class="pf-field">
+                    {% if field.name == 'is_public' %}
+                        <label style="display:flex; gap:.5rem; align-items:center; font-weight:400;">{{ field }} {{ field.label }}</label>
+                    {% else %}
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span style="color:#888; font-weight:400;">(optional)</span>{% endif %}</label>
+                        {{ field }}
+                    {% endif %}
+                    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+                    {{ field.errors }}
+                </div>
+                {% endfor %}
+                <div style="display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;">
+                    <button type="submit" class="btn-modern btn-primary-modern">Save</button>
+                    <a href="{% url 'portfolio:overview' %}" class="btn-modern btn-outline-modern">Cancel</a>
+                </div>
+            </form>
+            {% if achievement %}
+            <form method="post" action="{% url 'portfolio:delete' achievement.pk %}" style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid #EEE;">
+                {% csrf_token %}
+                <button type="submit" style="background:none; border:0; color:#C62828; font-weight:600; cursor:pointer; padding:0;">Remove this entry</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

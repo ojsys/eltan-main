@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+{% comment %}
+A member's portfolio report, for an appraisal file or a promotion panel.
+Rendered by xhtml2pdf through journal.typeset, so it shares the journal's
+embedded fonts — names here are as likely to carry dot-below vowels as any
+author's. Layout that matters is done with tables, as xhtml2pdf requires.
+{% endcomment %}
+<html>
+<head>
+<meta charset="utf-8">
+<title>Professional development portfolio — {{ member.first_name }} {{ member.last_name }}</title>
+<style>
+    {% for face in font_faces %}
+    @font-face { font-family: "{{ face.family }}"; src: url("{{ face.path }}"); font-weight: {{ face.weight }}; font-style: {{ face.style }}; }
+    {% endfor %}
+    @page {
+        size: a4 portrait; margin: 2cm 1.9cm 2.2cm 1.9cm;
+        @frame footer_frame { -pdf-frame-content: page-footer; left: 1.9cm; width: 17.2cm; top: 27.6cm; height: 1cm; }
+    }
+    body { font-family: "{{ body_font }}", serif; font-size: 10pt; line-height: 1.4; color: #10202f; }
+    .sans { font-family: "{{ ui_font }}", sans-serif; }
+    .eyebrow { font-family: "{{ ui_font }}", sans-serif; font-size: 7.5pt; font-weight: bold; letter-spacing: 1pt; color: #B45309; margin: 0 0 3pt; }
+    h1 { font-size: 19pt; margin: 0 0 2pt; }
+    .headline { color: #35485c; margin: 0; }
+    table.rule { width: 100%; margin: 8pt 0 12pt; }
+    table.rule td { background-color: #E67918; font-size: 2pt; line-height: 2pt; }
+    table.stats { width: 100%; margin-bottom: 12pt; }
+    table.stats td { background-color: #f6f8fa; padding: 8pt 10pt; width: 25%; vertical-align: top; }
+    .num { font-family: "{{ ui_font }}", sans-serif; font-size: 16pt; font-weight: bold; margin: 0; padding: 0; }
+    .lbl { font-family: "{{ ui_font }}", sans-serif; font-size: 7.5pt; color: #64788a; margin: 0; padding: 2pt 0 0; }
+    table.entries { width: 100%; }
+    table.entries th { font-family: "{{ ui_font }}", sans-serif; font-size: 7.5pt; text-align: left; color: #64788a; border-bottom: .75pt solid #10202f; padding: 3pt 4pt; }
+    table.entries td { font-size: 8.8pt; padding: 5pt 4pt; border-bottom: .5pt solid #e4e9ee; vertical-align: top; }
+    .title { font-weight: bold; }
+    .muted { color: #64788a; font-size: 8pt; }
+    .verified { font-family: "{{ ui_font }}", sans-serif; font-size: 7pt; font-weight: bold; color: #B45309; }
+    .self { font-family: "{{ ui_font }}", sans-serif; font-size: 7pt; font-weight: bold; color: #607D8B; }
+    .note { font-size: 8pt; color: #64788a; margin-top: 12pt; }
+    #page-footer { font-family: "{{ ui_font }}", sans-serif; font-size: 7pt; color: #8c9cab; border-top: .5pt solid #e4e9ee; padding-top: 4pt; }
+</style>
+</head>
+<body>
+<div id="page-footer">
+    <table width="100%"><tr>
+        <td>ELTAN professional development portfolio · {{ member.first_name }} {{ member.last_name }}</td>
+        <td align="right">Generated {{ generated_at|date:"j F Y" }} · page <pdf:pagenumber> of <pdf:pagecount></td>
+    </tr></table>
+</div>
+
+<p class="eyebrow">ENGLISH LANGUAGE TEACHERS ASSOCIATION OF NIGERIA · PROFESSIONAL DEVELOPMENT PORTFOLIO</p>
+<h1>{{ member.first_name }} {{ member.last_name }}</h1>
+{% if profile.headline %}<p class="headline">{{ profile.headline }}</p>{% endif %}
+<p class="muted" style="margin:3pt 0 0;">{% if member.eltan_number %}ELTAN member no. {{ member.eltan_number }} · {% endif %}{{ period_label }}</p>
+<table class="rule"><tr><td>&nbsp;</td></tr></table>
+
+<table class="stats"><tr>
+    <td><p class="num">{{ summary.total_hours|floatformat:"-1" }}</p><p class="lbl">CPD hours</p></td>
+    <td><p class="num">{{ summary.entries|length }}</p><p class="lbl">Achievements</p></td>
+    <td><p class="num">{{ summary.verified_hours|floatformat:"-1" }}</p><p class="lbl">Hours verified by ELTAN</p></td>
+    <td><p class="num">{% if summary.goal_hours %}{{ summary.goal_percent }}%{% else %}{{ summary.self_reported_hours|floatformat:"-1" }}{% endif %}</p>
+        <p class="lbl">{% if summary.goal_hours %}of {{ summary.goal_hours|floatformat:"-1" }}-hour yearly goal{% else %}Hours self-reported{% endif %}</p></td>
+</tr></table>
+
+{% if summary.by_category %}
+<p class="muted" style="margin:0 0 10pt;">
+    {% for label, count in summary.by_category %}{{ label }}: {{ count }}{% if not forloop.last %} · {% endif %}{% endfor %}
+</p>
+{% endif %}
+
+<table class="entries" repeat="1">
+    <tr><th width="15%">Date</th><th>Achievement</th><th width="18%">Type</th><th width="8%" align="right">CPD h</th><th width="15%">Status</th></tr>
+    {% for entry in summary.entries %}
+    <tr>
+        <td>{{ entry.when|date:"j M Y" }}</td>
+        <td><span class="title">{{ entry.title }}</span>{% if entry.provider %}<br><span class="muted">{{ entry.provider }}</span>{% endif %}</td>
+        <td>{{ entry.category_label }}</td>
+        <td align="right">{% if entry.cpd_hours %}{{ entry.cpd_hours|floatformat:"-1" }}{% else %}—{% endif %}</td>
+        <td>{% if entry.verified %}<span class="verified">VERIFIED</span>{% else %}<span class="self">SELF-REPORTED</span>{% endif %}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" class="muted">Nothing recorded in this period.</td></tr>
+    {% endfor %}
+</table>
+
+<p class="note">
+    <strong>Verified</strong> entries are drawn from ELTAN's own records — event and conference
+    certificates (each with a certificate ID that can be checked on ELTAN's website), membership and JELTAN
+    publications. <strong>Self-reported</strong> entries were recorded by the member with their own evidence
+    and have not been checked by ELTAN.
+    {% if share_url %}<br>The member's current portfolio: {{ share_url }}{% endif %}
+</p>
+</body>
+</html>

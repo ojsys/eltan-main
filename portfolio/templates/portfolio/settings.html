@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Portfolio settings - ELTAN{% endblock %}
+
+{% block content %}
+{% include 'portfolio/_styles.html' %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Career portfolio</p>
+        <h1>Goal, profile and sharing</h1>
+    </div>
+</section>
+
+<section class="content-container">
+<div style="max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:1.25rem;">
+    {% if messages %}{% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
+    {% endfor %}{% endif %}
+
+    <div class="card-modern"><div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="pf-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span style="color:#888; font-weight:400;">(optional)</span>{% endif %}</label>
+                {{ field }}
+                {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+                {{ field.errors }}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn-modern btn-primary-modern">Save</button>
+            <a href="{% url 'portfolio:overview' %}" class="btn-modern btn-outline-modern">Back to portfolio</a>
+        </form>
+    </div></div>
+
+    <div class="card-modern"><div class="card-body">
+        <h2 class="card-title" style="margin:0 0 .4rem;">Share your portfolio</h2>
+        <p style="color:#616161; margin:0 0 1rem;">A read-only page for an employer, a promotion panel or a referee. It lists your entries — never your evidence files — and you can hide individual entries.</p>
+        {% if not premium %}
+            <div class="pf-locked">Sharing is part of Portfolio Premium.</div>
+        {% elif profile.share_enabled %}
+            <div class="pf-field">
+                <label for="share-url">Your link</label>
+                <input type="text" id="share-url" value="{{ share_url }}" readonly onclick="this.select();">
+            </div>
+            <form method="post" action="{% url 'portfolio:sharing' %}" style="display:flex; gap:.6rem; flex-wrap:wrap;">
+                {% csrf_token %}
+                <button name="action" value="disable" class="btn-modern btn-outline-modern">Turn off</button>
+                <button name="action" value="regenerate" class="btn-modern btn-outline-modern">Make a new link</button>
+            </form>
+        {% else %}
+            <form method="post" action="{% url 'portfolio:sharing' %}">
+                {% csrf_token %}
+                <button name="action" value="enable" class="btn-modern btn-primary-modern"><span class="material-icons">link</span> Turn on my link</button>
+            </form>
+        {% endif %}
+    </div></div>
+</div>
+</section>
+{% endblock %}

@@ -1,0 +1,23 @@
+{# One line of the record. `owner` shows edit links; the shared page leaves it off. #}
+<div class="pf-entry">
+    <div class="pf-entry-icon {% if entry.verified %}verified{% else %}self{% endif %}">
+        <span class="material-icons">{% if entry.category == 'publication' %}menu_book{% elif entry.category == 'conference' %}groups{% elif entry.category == 'membership' %}card_membership{% elif entry.category == 'qualification' %}school{% elif entry.category == 'award' %}emoji_events{% elif entry.category == 'presentation' %}co_present{% elif entry.category == 'course' %}auto_stories{% else %}workspace_premium{% endif %}</span>
+    </div>
+    <div style="min-width:0; flex:1;">
+        <p class="pf-entry-title">{{ entry.title }}</p>
+        <p class="pf-entry-meta">
+            {% if entry.verified %}<span class="pf-tag verified"><span class="material-icons">verified</span> Verified by ELTAN</span>
+            {% else %}<span class="pf-tag self"><span class="material-icons">person</span> Self-reported</span>{% endif %}
+            {{ entry.category_label }} · {{ entry.when|date:"j M Y" }}{% if entry.provider %} · {{ entry.provider }}{% endif %}{% if entry.cpd_hours %} · <strong>{{ entry.cpd_hours|floatformat:"-1" }} CPD h</strong>{% endif %}
+        </p>
+        {% if entry.description %}<p class="pf-entry-meta" style="color:#555;">{{ entry.description|truncatechars:220 }}</p>{% endif %}
+        <div class="pf-actions">
+            {% if entry.link %}<a href="{{ entry.link }}" target="_blank" rel="noopener">{% if entry.verified %}Verify{% else %}Credential link{% endif %}</a>{% endif %}
+            {% if owner and entry.achievement %}
+                {% if entry.achievement.evidence %}<a href="{% url 'portfolio:evidence' entry.achievement.pk %}">Evidence</a>{% endif %}
+                <a href="{% url 'portfolio:edit' entry.achievement.pk %}">Edit</a>
+                {% if not entry.is_public %}<span style="color:#888;">Hidden from shared portfolio</span>{% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>

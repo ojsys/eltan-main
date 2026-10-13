@@ -3,6 +3,9 @@
 
 {% block title %}Your registration — {{ event.event_title }} - ELTAN{% endblock %}
 
+{# Reached by a private link: keep it out of search results. #}
+{% block extra_css %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
 {% block content %}
 {% include 'events/_styles.html' %}
 <section class="page-header">

@@ -1,0 +1,33 @@
+<style>
+    .pf-wrap { max-width:1100px; margin:0 auto; }
+    .pf-grid { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:1.5rem; align-items:start; }
+    @media (max-width: 900px) { .pf-grid { grid-template-columns:1fr; } }
+    .pf-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .pf-stat { background:#fff; border-radius:14px; padding:1rem 1.2rem; box-shadow:0 2px 10px rgba(0,0,0,.05); }
+    .pf-stat-num { font-size:1.7rem; font-weight:700; color:#1A1A1A; line-height:1.1; }
+    .pf-stat-lbl { color:#757575; font-size:.8rem; margin-top:.2rem; }
+    .pf-entry { display:flex; gap:1rem; padding:1rem 0; border-top:1px solid #EEE; }
+    .pf-entry:first-child { border-top:0; }
+    .pf-entry-icon { flex-shrink:0; width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; }
+    .pf-entry-icon.verified { background:#E67918; }
+    .pf-entry-icon.self { background:#607D8B; }
+    .pf-entry-title { font-weight:600; color:#1A1A1A; margin:0; line-height:1.35; }
+    .pf-entry-meta { color:#757575; font-size:.84rem; margin:.2rem 0 0; }
+    .pf-tag { display:inline-flex; align-items:center; gap:.2rem; padding:.12rem .55rem; border-radius:999px; font-size:.72rem; font-weight:600; vertical-align:middle; }
+    .pf-tag.verified { background:#FFF0E0; color:#B45309; }
+    .pf-tag.self { background:#ECEFF1; color:#455A64; }
+    .pf-tag .material-icons { font-size:13px; }
+    .pf-actions { display:flex; flex-wrap:wrap; gap:.3rem .9rem; margin-top:.45rem; font-size:.82rem; }
+    .pf-actions a, .pf-actions button { color:#E67918; font-weight:600; text-decoration:none; background:none; border:0; padding:0; cursor:pointer; font-size:inherit; }
+    .pf-bar { height:10px; background:#F1E6DA; border-radius:999px; overflow:hidden; }
+    .pf-bar > span { display:block; height:100%; background:linear-gradient(90deg,#E67918,#C5630C); }
+    .pf-chips { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem; }
+    .pf-chip { padding:.35rem .8rem; border-radius:999px; border:1px solid #DDD; font-size:.82rem; color:#333; text-decoration:none; background:#fff; }
+    .pf-chip.on { background:#1A1A1A; color:#fff; border-color:#1A1A1A; }
+    .pf-field { margin-bottom:1rem; }
+    .pf-field label { display:block; font-weight:600; color:#1A1A1A; margin-bottom:.35rem; font-size:.9rem; }
+    .pf-field input:not([type=checkbox]), .pf-field select, .pf-field textarea { width:100%; padding:11px 13px; border:1px solid #DDD; border-radius:10px; font-size:1rem; font-family:inherit; background:#fff; }
+    .pf-field .help { color:#888; font-size:.8rem; display:block; margin-top:.25rem; }
+    .pf-field .errorlist { color:#C62828; font-size:.85rem; list-style:none; padding:0; margin:.3rem 0 0; }
+    .pf-locked { background:#FFFAF4; border:1px dashed #E6B78A; border-radius:14px; padding:1rem 1.2rem; color:#5c4a3a; font-size:.9rem; }
+</style>

@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'core',
     'journal',
     'events',
+    'portfolio',
 ]
 
 MIDDLEWARE = [
@@ -167,6 +168,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # out only by a view that checks the requester, so that a title page cannot be
 # reached by guessing a URL and double-blind review actually holds.
 JOURNAL_PRIVATE_ROOT = BASE_DIR / 'private_media' / 'journal'
+# Members' portfolio evidence: kept out of MEDIA_ROOT, served only to its owner.
+PORTFOLIO_PRIVATE_ROOT = BASE_DIR / 'private_media' / 'portfolio'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
