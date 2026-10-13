@@ -1,0 +1,24 @@
+<style>
+    .evt-grid { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:1.5rem; align-items:start; }
+    @media (max-width: 900px) { .evt-grid { grid-template-columns:1fr; } }
+    .evt-meta { display:flex; flex-wrap:wrap; gap:.6rem 1.4rem; color:#616161; font-size:.9rem; margin:0 0 1.2rem; }
+    .evt-meta span { display:inline-flex; align-items:center; gap:.35rem; }
+    .evt-meta .material-icons { font-size:18px; color:#E67918; }
+    .evt-label { color:#757575; font-size:.78rem; margin:0 0 .2rem; text-transform:uppercase; letter-spacing:.04em; }
+    .evt-value { font-weight:600; color:#1A1A1A; margin:0; }
+    .evt-field { margin-bottom:1rem; }
+    .evt-field label { display:block; font-weight:600; color:#1A1A1A; margin-bottom:.35rem; font-size:.9rem; }
+    .evt-field input[type=text], .evt-field input[type=email], .evt-field input[type=tel], .evt-field textarea {
+        width:100%; padding:11px 13px; border:1px solid #DDD; border-radius:10px; font-size:1rem; font-family:inherit;
+    }
+    .evt-field ul { list-style:none; padding:0; margin:0; display:flex; flex-wrap:wrap; gap:.5rem; }
+    .evt-field ul label { font-weight:400; display:inline-flex; align-items:center; gap:.35rem; border:1px solid #DDD; border-radius:999px; padding:.35rem .8rem; cursor:pointer; }
+    .evt-field .help { color:#888; font-size:.8rem; }
+    .evt-field .errorlist { color:#C62828; font-size:.85rem; list-style:none; padding:0; margin:.3rem 0 0; display:block; }
+    .evt-status { display:inline-flex; align-items:center; gap:.35rem; padding:.3rem .75rem; border-radius:999px; font-size:.8rem; font-weight:600; }
+    .evt-status.good { background:#D4EDDA; color:#155724; }
+    .evt-status.warn { background:#FFF3CD; color:#856404; }
+    .evt-status.muted { background:#EEE; color:#555; }
+    .evt-ticket { font-family:'Courier New',monospace; font-size:1.2rem; letter-spacing:2px; font-weight:700; color:#1A1A1A; }
+    .evt-stack > * + * { margin-top:1.25rem; }
+</style>

@@ -1,0 +1,8 @@
+{% extends 'events/emails/base.html' %}
+{% block subject %}Get your certificate{% endblock %}
+{% block heading %}Thank you for attending{% endblock %}
+{% block body %}
+<p style="margin:0 0 16px;">The post-event activity for <strong>{{ event.event_title }}</strong> is now open. It takes a few minutes{% if setup.issues_certificates %}, and your certificate is issued as soon as you submit it{% endif %}.</p>
+{% if setup.attendance_code %}<p style="margin:0 0 16px;">Have the attendance code that was announced during the session ready.</p>{% endif %}
+{% endblock %}
+{% block button %}Complete the activity{% endblock %}

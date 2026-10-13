@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('account.urls')),
     path('jeltan/', include('journal.urls')),
+    path('events/', include('events.urls')),
     path('', include('membership.urls')),
     path('ckeditor/', include('ckeditor_uploader.urls')),
     #path('summernote/', include('django_summernote.urls')),

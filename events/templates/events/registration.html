@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Your registration — {{ event.event_title }} - ELTAN{% endblock %}
+
+{% block content %}
+{% include 'events/_styles.html' %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Your registration</p>
+        <h1>{{ event.event_title }}</h1>
+        <p class="description">
+            {% if setup and setup.starts_at %}{{ setup.starts_at|date:"l j F Y, g:i A" }}{% else %}{{ event.event_date|date:"l j F Y" }}{% endif %}
+            · {{ event.event_location }}
+        </p>
+    </div>
+</section>
+
+<section class="content-container">
+    <div style="max-width:760px; margin:0 auto;" class="evt-stack">
+        {% if messages %}{% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
+        {% endfor %}{% endif %}
+
+        <!-- Ticket -->
+        <div class="card-modern" style="border-top:4px solid #E67918;">
+            <div class="card-body">
+                {% if registration.is_confirmed %}
+                    <span class="evt-status good"><span class="material-icons" style="font-size:16px;">check_circle</span> Confirmed</span>
+                {% elif registration.status == 'pending' %}
+                    <span class="evt-status warn"><span class="material-icons" style="font-size:16px;">schedule</span> Awaiting payment</span>
+                {% else %}
+                    <span class="evt-status muted">{{ registration.get_status_display }}</span>
+                {% endif %}
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.1rem; margin-top:1.2rem;">
+                    <div><p class="evt-label">Name</p><p class="evt-value">{{ registration.full_name }}</p></div>
+                    {% if registration.ticket_id %}<div><p class="evt-label">Ticket ID</p><p class="evt-ticket">{{ registration.ticket_id }}</p></div>{% endif %}
+                    {% if registration.amount %}<div><p class="evt-label">Fee</p><p class="evt-value">₦{{ registration.amount|floatformat:"-2" }}{% if registration.paid_at %} · paid{% endif %}</p></div>{% endif %}
+                </div>
+
+                {% if registration.status == 'pending' %}
+                <form method="post" action="{% url 'events:pay' registration.token %}" style="margin-top:1.4rem;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-modern btn-primary-modern"><span class="material-icons">payments</span> Complete payment</button>
+                    <p style="color:#616161; font-size:.85rem; margin:.6rem 0 0;">Already paid? Confirmation can take a minute — refresh this page.</p>
+                </form>
+                {% endif %}
+
+                {% if registration.is_confirmed and setup %}
+                    {% if setup.join_link or setup.joining_instructions %}
+                    <div style="margin-top:1.4rem; padding-top:1.2rem; border-top:1px solid #EEE;">
+                        <p class="evt-label">Joining details</p>
+                        {% if setup.join_link %}
+                        <a href="{{ setup.join_link }}" target="_blank" rel="noopener" class="btn-modern btn-primary-modern" style="margin:.4rem 0 .6rem;">
+                            <span class="material-icons">videocam</span> Join the session
+                        </a>
+                        {% endif %}
+                        {% if setup.joining_instructions %}<p style="margin:0; color:#333; white-space:pre-line;">{{ setup.joining_instructions }}</p>{% endif %}
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Certificate -->
+        {% if certificate %}
+        <div class="card-modern">
+            <div class="card-body">
+                <h2 class="card-title" style="margin:0 0 1.1rem;">Your certificate</h2>
+                {% include 'events/_badge.html' with certificate=certificate %}
+                <p style="color:#616161; font-size:.85rem; margin:1rem 0;">Certificate ID <strong>{{ certificate.certificate_id }}</strong> · issued {{ certificate.issued_at|date:"j F Y" }}</p>
+                <div style="display:flex; flex-wrap:wrap; gap:.6rem;">
+                    <a href="{% url 'events:download_certificate' registration.token %}" class="btn-modern btn-primary-modern">
+                        <span class="material-icons">download</span> Download certificate
+                    </a>
+                    <a href="{{ linkedin_url }}" target="_blank" rel="noopener" class="btn-modern btn-outline-modern">
+                        <span class="material-icons">add_circle</span> Add to LinkedIn profile
+                    </a>
+                    <a href="{{ verify_url }}" target="_blank" class="btn-modern btn-outline-modern">
+                        <span class="material-icons">verified</span> Verification page
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% elif revoked %}
+        <div class="card-modern"><div class="card-body">
+            <p style="margin:0; color:#721c24;">The certificate for this registration has been withdrawn. Please contact ELTAN if you need help.</p>
+        </div></div>
+
+        <!-- Activity -->
+        {% elif registration.is_confirmed and setup %}
+        <div class="card-modern">
+            <div class="card-body">
+                <h2 class="card-title" style="margin:0 0 .4rem;">Post-event activity</h2>
+                {% if registration.has_completed_activity %}
+                    <p style="margin:0; color:#155724;">Thank you — your responses were recorded on {{ registration.response.submitted_at|date:"j F Y" }}.</p>
+                {% elif form %}
+                    <p style="color:#616161; margin:0 0 1.3rem;">
+                        {% if setup.activity_intro %}{{ setup.activity_intro|linebreaksbr }}{% else %}Complete this short activity to {% if setup.issues_certificates %}receive your certificate{% else %}record your attendance{% endif %}.{% endif %}
+                    </p>
+                    <form method="post" action="{% url 'events:submit_activity' registration.token %}" novalidate>
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                        {% if form.attendance_code %}
+                        <div class="evt-field">
+                            <label for="{{ form.attendance_code.id_for_label }}">{{ form.attendance_code.label }}</label>
+                            {{ form.attendance_code }}
+                            <span class="help">{{ form.attendance_code.help_text }}</span>
+                            {{ form.attendance_code.errors }}
+                        </div>
+                        {% endif %}
+                        {% for field in form.question_fields %}
+                        <div class="evt-field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span style="color:#888; font-weight:400;">(optional)</span>{% endif %}</label>
+                            {{ field }}
+                            {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+                            {{ field.errors }}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn-modern btn-primary-modern">
+                            <span class="material-icons">send</span> Submit{% if setup.issues_certificates %} and get my certificate{% endif %}
+                        </button>
+                    </form>
+                {% else %}
+                    <p style="margin:0; color:#616161;">
+                        {% if setup.issues_certificates %}After the session, a short activity will open here. Complete it to receive your certificate.{% else %}The post-event activity is not open.{% endif %}
+                        We will email you when it opens.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <p style="color:#888; font-size:.85rem; text-align:center;">
+            Keep this page's link — it is how you get back to your ticket and certificate.
+            <a href="{% url 'events:detail' event.pk %}" style="color:#E67918;">Event details</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

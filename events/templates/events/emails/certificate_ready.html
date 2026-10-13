@@ -1,0 +1,8 @@
+{% extends 'events/emails/base.html' %}
+{% block subject %}Your certificate{% endblock %}
+{% block heading %}Your certificate is ready{% endblock %}
+{% block body %}
+<p style="margin:0 0 16px;">Thank you for completing the activity. Your <strong>{{ certificate.certificate_title }}</strong> for {{ certificate.event_title }} is ready to download.</p>
+<p style="margin:0 0 16px;">Certificate ID: <strong>{{ certificate.certificate_id }}</strong>. Anyone can confirm it is genuine on ELTAN's verification page, and you can add it to your LinkedIn profile from your registration page.</p>
+{% endblock %}
+{% block button %}Download my certificate{% endblock %}

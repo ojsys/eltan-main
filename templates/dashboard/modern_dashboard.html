@@ -292,6 +292,11 @@
     font-weight: 500;
 }
 
+.db-badges { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1rem; padding:1rem 1.25rem; }
+.db-badge { border:1px solid #F3D9BD; background:#FFFAF4; border-radius:14px; padding:1rem; }
+.db-badge-actions { display:flex; flex-wrap:wrap; gap:.4rem .9rem; margin-top:.8rem; }
+.db-badge-actions a { display:inline-flex; align-items:center; gap:.25rem; font-size:.8rem; font-weight:600; color:var(--primary-color); text-decoration:none; }
+.db-badge-actions .material-icons { font-size:1rem; }
 .db-empty {
     padding: 2rem 1.25rem;
     text-align: center;
@@ -447,6 +452,20 @@
         </p>
     </div>
     {% endif %}
+
+    <!-- Event activity waiting: the step between attending and the certificate -->
+    {% for registration in event_activities_due %}
+    <div class="db-notice ready">
+        <span class="material-icons">assignment</span>
+        <p>
+            <strong>Get your certificate for {{ registration.event.event_title }}</strong>
+            Complete the short post-event activity — you will need the attendance code announced during the session.
+            <span class="db-notice-actions">
+                <a href="{{ registration.get_absolute_url }}"><span class="material-icons">arrow_forward</span> Complete the activity</a>
+            </span>
+        </p>
+    </div>
+    {% endfor %}
 
     <!-- Certificate pending/rejected notice -->
     {% if latest_subscription and latest_subscription.payment_status == 'paid' and latest_subscription.certificate_status != 'approved' %}
@@ -672,6 +691,41 @@
         {% endif %}
     {% endif %}
 
+    <!-- My events and badges -->
+    {% if my_event_registrations %}
+    <div class="db-panel" data-aos="fade-up" style="margin-bottom:1.5rem;">
+        <div class="db-panel-head">
+            <h5><span class="material-icons">military_tech</span> My Events &amp; Badges</h5>
+            <a href="{% url 'events' %}">Find events</a>
+        </div>
+        {% if event_badges %}
+        <div class="db-badges">
+            {% for certificate in event_badges %}
+            <div class="db-badge">
+                {% include 'events/_badge.html' with certificate=certificate size=64 %}
+                <div class="db-badge-actions">
+                    <a href="{% url 'events:download_certificate' certificate.registration.token %}"><span class="material-icons">download</span> Certificate</a>
+                    <a href="{{ certificate.linkedin_url }}" target="_blank" rel="noopener"><span class="material-icons">add_circle</span> LinkedIn</a>
+                    <a href="{{ certificate.get_verify_url }}" target="_blank"><span class="material-icons">verified</span> Verify</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% for registration in my_event_registrations %}{% if not registration.certificate %}
+        <div class="db-item">
+            <div class="db-item-icon" style="background:#E67918;">
+                <span class="material-icons">confirmation_number</span>
+            </div>
+            <div class="db-item-body">
+                <strong><a href="{{ registration.get_absolute_url }}" style="color:inherit;">{{ registration.event.event_title }}</a></strong>
+                <span>{{ registration.event.event_date|date:"M d, Y" }} · Ticket {{ registration.ticket_id }}{% if registration.has_completed_activity %} · Activity done{% elif registration in event_activities_due %} · Activity open{% endif %}</span>
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Two-column grid -->
     <div class="db-grid" data-aos="fade-up">
 
@@ -688,7 +742,7 @@
                         <span class="material-icons">event</span>
                     </div>
                     <div class="db-item-body">
-                        <strong>{{ event.event_title }}</strong>
+                        <strong><a href="{% url 'events:detail' event.pk %}" style="color:inherit;">{{ event.event_title }}</a></strong>
                         <span>{{ event.event_date|date:"M d, Y" }}</span>
                     </div>
                 </div>

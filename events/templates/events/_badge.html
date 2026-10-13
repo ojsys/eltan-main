@@ -1,0 +1,16 @@
+{# A digital badge: the certificate as something to show, on a dashboard or a verification page. #}
+<div style="display:flex; align-items:center; gap:1rem;">
+    <div style="flex-shrink:0; width:{{ size|default:84 }}px; height:{{ size|default:84 }}px; border-radius:50%;
+                background:radial-gradient(circle at 30% 25%, #F5A04A 0%, #E67918 45%, #B45309 100%);
+                box-shadow:0 0 0 4px #fff, 0 0 0 6px #E67918; display:flex; flex-direction:column;
+                align-items:center; justify-content:center; color:#fff; text-align:center;">
+        <span class="material-icons" style="font-size:{% if size and size < 70 %}22{% else %}30{% endif %}px;">workspace_premium</span>
+        <span style="font-size:.6rem; font-weight:700; letter-spacing:.08em;">ELTAN {{ certificate.issued_at|date:"Y" }}</span>
+    </div>
+    <div style="min-width:0;">
+        <p style="margin:0; font-weight:700; color:#1A1A1A; line-height:1.3;">{{ certificate.event_title }}</p>
+        <p style="margin:.15rem 0 0; color:#616161; font-size:.85rem;">
+            {{ certificate.certificate_title }}{% if certificate.cpd_hours %} · {{ certificate.cpd_hours|floatformat:"-1" }} CPD hour{{ certificate.cpd_hours|pluralize }}{% endif %}
+        </p>
+    </div>
+</div>

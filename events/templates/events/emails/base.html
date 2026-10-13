@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block subject %}{% endblock %}</title>
+    <style>
+        body { margin:0 !important; padding:0 !important; width:100% !important; }
+        @media screen and (max-width: 600px) {
+            .ev-card { width:100% !important; }
+            .ev-pad { padding-left:22px !important; padding-right:22px !important; }
+        }
+    </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f1f2f4; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f2f4;">
+        <tr><td align="center" style="padding:32px 16px;">
+            <table role="presentation" class="ev-card" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:16px; overflow:hidden;">
+                <tr>
+                    <td class="ev-pad" style="background-color:#1A1A1A; background-image:linear-gradient(120deg,#1A1A1A 0%,#2b2b2b 45%,#C5630C 100%); padding:32px 40px 28px;">
+                        <span style="display:inline-block; background-color:#E67918; color:#ffffff; font-size:15px; font-weight:700; letter-spacing:3px; padding:8px 14px; border-radius:8px;">ELTAN</span>
+                        <h1 style="margin:20px 0 6px; color:#ffffff; font-size:24px; font-weight:700; line-height:1.3;">{% block heading %}{% endblock %}</h1>
+                        <p style="margin:0; color:#e6c4a3; font-size:14px;">{{ event.event_title }}</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="ev-pad" style="padding:30px 40px 10px; color:#333333; font-size:15px; line-height:1.65;">
+                        <p style="margin:0 0 16px;">Hello {{ registration.first_name }},</p>
+                        {% block body %}{% endblock %}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="ev-pad" style="padding:8px 40px 32px;">
+                        <a href="{{ registration_url }}" style="display:inline-block; background-color:#E67918; color:#ffffff; font-size:15px; font-weight:700; text-decoration:none; padding:13px 26px; border-radius:999px;">{% block button %}Open my registration{% endblock %}</a>
+                        <p style="margin:18px 0 0; color:#888888; font-size:12px; line-height:1.5;">Keep this email: the button above is how you get back to your ticket and certificate.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background-color:#fafafa; padding:18px 40px; color:#999999; font-size:12px;" class="ev-pad">
+                        &copy; {{ year }} English Language Teachers Association of Nigeria
+                    </td>
+                </tr>
+            </table>
+        </td></tr>
+    </table>
+</body>
+</html>

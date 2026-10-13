@@ -160,20 +160,27 @@
                         </div>
                     </div>
 
-                    <h3 class="card-title" style="font-size: 1.25rem;">{{ event.event_title }}</h3>
+                    <h3 class="card-title" style="font-size: 1.25rem;"><a href="{% url 'events:detail' event.pk %}" style="color:inherit; text-decoration:none;">{{ event.event_title }}</a></h3>
 
                     {% if event.short_description %}
                     <p class="card-text" style="font-size: 0.9rem;">{{ event.short_description }}</p>
                     {% endif %}
 
-                    {% if event.registration_link %}
-                    <div style="margin-top: 1.5rem;">
+                    <div style="margin-top: 1.5rem; display:flex; flex-wrap:wrap; gap:.5rem;">
+                        {% if event.setup.accepts_registrations %}
+                        {# Registration on this site: the event page has the form, fees and certificate details. #}
+                        <a href="{% url 'events:detail' event.pk %}" class="btn-modern btn-primary-modern">
+                            <span>Register</span>
+                            <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
+                        </a>
+                        {% elif event.registration_link %}
                         <a href="{{ event.registration_link }}" target="_blank" class="btn-modern btn-primary-modern">
                             <span>Register</span>
                             <span class="material-icons" style="font-size: 18px;">arrow_forward</span>
                         </a>
+                        {% endif %}
+                        <a href="{% url 'events:detail' event.pk %}" class="btn-modern btn-outline-modern">Details</a>
                     </div>
-                    {% endif %}
                 </div>
             </div>
             {% endfor %}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Certificate - ELTAN{% endblock %}
+
+{% block content %}
+{% include 'events/_styles.html' %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Verification</p>
+        <h1>Event certificate</h1>
+        <p class="description">Checking certificate {{ certificate_id }}</p>
+    </div>
+</section>
+
+<section class="content-container">
+    <div class="card-modern" style="max-width:720px; margin:0 auto;">
+        <div class="card-body">
+            {% if certificate and not certificate.is_revoked %}
+                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.6rem;">
+                    <div style="width:56px; height:56px; background:#D4EDDA; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <span class="material-icons" style="color:#155724; font-size:32px;">verified</span>
+                    </div>
+                    <div>
+                        <h2 class="card-title" style="margin:0 0 .2rem;">Genuine certificate</h2>
+                        <p style="color:#155724; margin:0; font-weight:600;">Issued by ELTAN</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:1.6rem;">{% include 'events/_badge.html' with certificate=certificate %}</div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1.2rem;">
+                    <div><p class="evt-label">Issued to</p><p class="evt-value">{{ certificate.participant_name }}</p></div>
+                    <div><p class="evt-label">Certificate ID</p><p class="evt-value">{{ certificate.certificate_id }}</p></div>
+                    <div><p class="evt-label">Event</p><p class="evt-value">{{ certificate.event_title }}</p></div>
+                    <div><p class="evt-label">Held</p><p class="evt-value">{{ certificate.event.event_date|date:"j F Y" }}</p></div>
+                    {% if certificate.cpd_hours %}<div><p class="evt-label">CPD hours</p><p class="evt-value">{{ certificate.cpd_hours|floatformat:"-1" }}</p></div>{% endif %}
+                    <div><p class="evt-label">Issued on</p><p class="evt-value">{{ certificate.issued_at|date:"j F Y" }}</p></div>
+                </div>
+                <p style="color:#616161; font-size:.85rem; margin:1.4rem 0 0;">
+                    Issued after the participant attended and completed the event's post-event activity.
+                </p>
+            {% elif certificate %}
+                <h2 class="card-title" style="color:#721c24;">This certificate has been withdrawn</h2>
+                <p style="margin:0;">Certificate {{ certificate.certificate_id }} was issued by ELTAN but is no longer valid.</p>
+            {% else %}
+                <h2 class="card-title">No certificate found</h2>
+                <p style="margin:0;">There is no ELTAN event certificate with the id <strong>{{ certificate_id }}</strong>. Check it was typed exactly as printed.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

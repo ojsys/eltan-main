@@ -358,6 +358,39 @@ def dash(request):
     except Exception:
         certificates_earned = 0
 
+    # Events registered for on the site: tickets, open post-event activities,
+    # and the certificates and badges they earned. Matched on the account and on
+    # the email address, since someone may have registered as a guest before
+    # they joined.
+    my_event_registrations = []
+    event_activities_due = []
+    event_badges = []
+    try:
+        from events import certificates as event_certificates
+        from events.models import EventRegistration
+
+        my_event_registrations = list(
+            EventRegistration.objects
+            .filter(models.Q(user=user) | models.Q(email=(user.email or '').lower()),
+                    status=EventRegistration.CONFIRMED)
+            .select_related('event', 'event__setup', 'certificate', 'response')
+            .order_by('-event__event_date')
+        )
+        for registration in my_event_registrations:
+            certificate = getattr(registration, 'certificate', None)
+            setup = getattr(registration.event, 'setup', None)
+            if certificate and not certificate.is_revoked:
+                verify_url = request.build_absolute_uri(certificate.get_verify_url())
+                certificate.linkedin_url = event_certificates.linkedin_url(certificate, verify_url)
+                certificate.registration_url = registration.get_absolute_url()
+                event_badges.append(certificate)
+            elif setup and setup.activity_available and not registration.has_completed_activity:
+                event_activities_due.append(registration)
+        events_attended += sum(1 for r in my_event_registrations if r.has_completed_activity)
+        certificates_earned += len(event_badges)
+    except Exception:
+        logger.exception('Could not load event registrations for the dashboard')
+
     stats = {
         'events_attended': events_attended,
         'resources_downloaded': resources_downloaded,
@@ -365,7 +398,7 @@ def dash(request):
     }
 
     # Sidebar items: upcoming events and latest news for the dashboard
-    upcoming_events = Events.objects.filter(event_date__gte=today).order_by('event_date')[:3]
+    upcoming_events = Events.objects.filter(event_date__gte=today, is_published=True).order_by('event_date')[:3]
     latest_news = News.objects.filter(is_published=True).order_by('-date_added')[:3]
 
     # Get user's SIGs
@@ -403,6 +436,9 @@ def dash(request):
         'upcoming_events': upcoming_events,
         'latest_news': latest_news,
         'user_sigs': user_sigs,
+        'my_event_registrations': my_event_registrations,
+        'event_activities_due': event_activities_due,
+        'event_badges': event_badges,
         'current_date': today,
         # most-recent subscription regardless of payment, so we can show cert-pending notice
         'latest_subscription': subscription,
@@ -1432,6 +1468,14 @@ def paystack_webhook(request):
             if event['event'] == 'charge.success':
                 data = event['data']
                 metadata = data.get('metadata') or {}
+
+                # Paystack sends every charge on the account to this one URL, so
+                # event registrations arrive here too. They are handed to the
+                # events app before anything below looks for a conference.
+                from events import services as event_services
+                if event_services.is_event_payment(data):
+                    event_services.apply_paystack_charge(data)
+                    return HttpResponse(status=200)
 
                 # The transaction reference we send to Paystack IS the registration's
                 # payment_reference. This used to read metadata['internal_ref'], a key

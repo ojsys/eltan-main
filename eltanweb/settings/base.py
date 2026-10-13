@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'membership',
     'core',
     'journal',
+    'events',
 ]
 
 MIDDLEWARE = [

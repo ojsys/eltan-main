@@ -1,0 +1,18 @@
+{% extends 'events/emails/base.html' %}
+{% block subject %}Registration confirmed{% endblock %}
+{% block heading %}Your place is confirmed{% endblock %}
+{% block body %}
+<p style="margin:0 0 16px;">You are registered for <strong>{{ event.event_title }}</strong>.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FFF5EB; border:1px solid #F3D9BD; border-radius:14px; margin:0 0 18px;">
+    <tr><td style="padding:18px 22px; font-size:14px; color:#333;">
+        <p style="margin:0 0 6px;">Ticket ID: <strong style="font-family:'Courier New',monospace; letter-spacing:1px;">{{ registration.ticket_id }}</strong></p>
+        <p style="margin:0 0 6px;">When: <strong>{{ setup.start|date:"l j F Y, g:i A" }}</strong></p>
+        <p style="margin:0;">Where: <strong>{{ event.event_location }}</strong></p>
+        {% if setup.join_link %}<p style="margin:10px 0 0;">Join link: <a href="{{ setup.join_link }}" style="color:#C5630C;">{{ setup.join_link }}</a></p>{% endif %}
+    </td></tr>
+</table>
+{% if setup.joining_instructions %}<p style="margin:0 0 16px; white-space:pre-line;">{{ setup.joining_instructions }}</p>{% endif %}
+{% if setup.issues_certificates %}
+<p style="margin:0 0 16px;">After the session, complete a short activity on your registration page to receive your certificate. You will need the attendance code announced during the session.</p>
+{% endif %}
+{% endblock %}

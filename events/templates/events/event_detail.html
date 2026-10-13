@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ event.event_title }} - ELTAN Events{% endblock %}
+
+{% block content %}
+{% include 'events/_styles.html' %}
+<section class="page-header">
+    <div class="container">
+        <p class="subtitle">Event</p>
+        <h1>{{ event.event_title }}</h1>
+        {% if event.short_description %}<p class="description">{{ event.short_description }}</p>{% endif %}
+    </div>
+</section>
+
+<section class="content-container">
+    {% if messages %}{% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}" style="max-width:1100px; margin:0 auto 1rem;">{{ message }}</div>
+    {% endfor %}{% endif %}
+
+    <div class="evt-grid" style="max-width:1100px; margin:0 auto;">
+        <div class="card-modern">
+            {% if event.event_image %}
+            <img src="{{ event.event_image.url }}" alt="" style="width:100%; max-height:340px; object-fit:cover; display:block; border-radius:16px 16px 0 0;">
+            {% endif %}
+            <div class="card-body">
+                <p class="evt-meta">
+                    <span><span class="material-icons">event</span>
+                        {% if setup and setup.starts_at %}{{ setup.starts_at|date:"l j F Y, g:i A" }}{% else %}{{ event.event_date|date:"l j F Y" }}{% endif %}{% if event.event_end_date and event.event_end_date != event.event_date %} – {{ event.event_end_date|date:"j F Y" }}{% endif %}
+                    </span>
+                    <span><span class="material-icons">place</span>{{ event.event_location }}</span>
+                    {% if setup and setup.cpd_hours %}<span><span class="material-icons">school</span>{{ setup.cpd_hours|floatformat:"-1" }} CPD hour{{ setup.cpd_hours|pluralize }}</span>{% endif %}
+                </p>
+                <div class="evt-description">{{ event.event_desc|safe }}</div>
+
+                {% if setup and setup.issues_certificates %}
+                <div style="margin-top:1.5rem; padding:1rem 1.2rem; background:#FFF5EB; border-radius:12px; border:1px solid #F3D9BD;">
+                    <strong style="color:#8a4a0a;"><span class="material-icons" style="vertical-align:middle; font-size:20px;">workspace_premium</span> Certificate of participation</strong>
+                    <p style="margin:.4rem 0 0; color:#5c4a3a; font-size:.9rem;">
+                        Attend the session and complete a short post-event activity to receive a verifiable certificate{% if setup.cpd_hours %} for {{ setup.cpd_hours|floatformat:"-1" }} CPD hour{{ setup.cpd_hours|pluralize }}{% endif %}.
+                        ELTAN members also get a badge on their dashboard.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="evt-stack">
+            <div class="card-modern" style="border-top:4px solid #E67918;">
+                <div class="card-body">
+                    {% if my_registration and my_registration.is_confirmed %}
+                        <span class="evt-status good"><span class="material-icons" style="font-size:16px;">check_circle</span> You are registered</span>
+                        <p class="evt-label" style="margin-top:1rem;">Ticket ID</p>
+                        <p class="evt-ticket">{{ my_registration.ticket_id }}</p>
+                        <a href="{{ my_registration.get_absolute_url }}" class="btn-modern btn-primary-modern" style="width:100%; justify-content:center; margin-top:1rem;">
+                            <span class="material-icons">confirmation_number</span> My registration
+                        </a>
+
+                    {% elif setup and setup.accepts_registrations %}
+                        <h2 class="card-title" style="margin:0 0 .3rem;">Register</h2>
+                        <p style="margin:0 0 1rem; color:#616161;">
+                            {% if setup.is_free %}Free to attend.
+                            {% else %}
+                                {% if is_member %}Member rate: <strong>₦{{ my_fee|floatformat:"-2" }}</strong>{% if not my_fee %} (free){% endif %}
+                                {% else %}Fee: <strong>₦{{ setup.guest_fee|floatformat:"-2" }}</strong>{% if setup.member_fee < setup.guest_fee %}<br><small>ELTAN members pay ₦{{ setup.member_fee|floatformat:"-2" }} — <a href="{% url 'login' %}?next={{ request.path|urlencode }}">sign in</a> to use the member rate.</small>{% endif %}
+                                {% endif %}
+                            {% endif %}
+                        </p>
+
+                        {% if closed_reason %}
+                            <p class="evt-status muted">{{ closed_reason }}</p>
+                        {% else %}
+                        <form method="post" action="{% url 'events:register' event.pk %}" novalidate>
+                            {% csrf_token %}
+                            {% for field in form %}
+                            <div class="evt-field">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span style="color:#888; font-weight:400;">(optional)</span>{% endif %}</label>
+                                {{ field }}
+                            </div>
+                            {% endfor %}
+                            <button type="submit" class="btn-modern btn-primary-modern" style="width:100%; justify-content:center;">
+                                {% if my_fee %}<span class="material-icons">payments</span> Register and pay{% else %}<span class="material-icons">how_to_reg</span> Register{% endif %}
+                            </button>
+                            {% if my_registration and not my_registration.is_confirmed %}
+                            <p style="color:#856404; font-size:.85rem; margin:.75rem 0 0;">You started registering but the payment was not completed. Register again to retry it.</p>
+                            {% endif %}
+                        </form>
+                        {% endif %}
+
+                    {% elif event.registration_link %}
+                        <h2 class="card-title" style="margin:0 0 1rem;">Register</h2>
+                        <a href="{{ event.registration_link }}" target="_blank" rel="noopener" class="btn-modern btn-primary-modern" style="width:100%; justify-content:center;">
+                            Register <span class="material-icons">open_in_new</span>
+                        </a>
+                    {% else %}
+                        <p style="margin:0; color:#616161;">Registration details will be announced.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if setup and setup.accepts_registrations %}
+            <div class="card-modern">
+                <div class="card-body">
+                    <details>
+                        <summary style="cursor:pointer; font-weight:600; color:#1A1A1A;">Already registered? Get your link again</summary>
+                        <form method="post" action="{% url 'events:resend_link' event.pk %}" style="margin-top:1rem;" novalidate>
+                            {% csrf_token %}
+                            <div class="evt-field">
+                                <label for="{{ resend_form.email.id_for_label }}">{{ resend_form.email.label }}</label>
+                                {{ resend_form.email }}
+                            </div>
+                            <button type="submit" class="btn-modern btn-outline-modern" style="width:100%; justify-content:center;">
+                                <span class="material-icons">mail</span> Email me my link
+                            </button>
+                        </form>
+                    </details>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
