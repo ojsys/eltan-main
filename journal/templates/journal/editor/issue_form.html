@@ -18,19 +18,74 @@
 
 {% if issue %}
 <div class="jeltan-card">
-    <h3 class="jeltan-h2">Articles in this issue</h3>
-    {% for article in articles %}
-    <div style="padding:.7rem 0; border-top:1px solid var(--jeltan-line);">
-        <strong style="color:var(--jeltan-ink);">{{ article.title }}</strong>
-        <div class="jeltan-muted" style="font-size:.84rem;">
-            {{ article.author_list }}{% if article.page_range %} · pp. {{ article.page_range }}{% endif %}
-            {% if not article.is_published %} · <span class="jeltan-badge jeltan-badge-warn">Not published</span>{% endif %}
-        </div>
+    <h3 class="jeltan-h2">Issue booklet</h3>
+    <p class="jeltan-muted">
+        The whole issue as one PDF: cover, title page, imprint, aims and scope, editorial board,
+        contents, editorial, then every published article in the order below. Building it also
+        {% if issue.paginate_automatically %}numbers the pages through the issue in that order,
+        re-rendering any article whose page range changes.{% else %}prints the page numbers typed in
+        for each article on its PDF (automatic pagination is off for this issue).{% endif %}
+    </p>
+
+    {% if issue.booklet %}
+    <p style="margin:.8rem 0;">
+        {% if issue.booklet_is_stale %}
+            <span class="jeltan-badge jeltan-badge-warn">Out of date</span>
+            An article has changed since this booklet was built.
+        {% else %}
+            <span class="jeltan-badge jeltan-badge-good">Built</span>
+        {% endif %}
+        {{ issue.booklet_built_at|date:"j M Y, H:i" }} · {{ issue.booklet_note }}
+        · downloaded {{ issue.booklet_download_count }} time{{ issue.booklet_download_count|pluralize }}
+    </p>
+    {% else %}
+    <p style="margin:.8rem 0;"><span class="jeltan-badge jeltan-badge-info">Not built yet</span></p>
+    {% endif %}
+
+    <div class="jeltan-btn-row">
+        {% if is_journal_chief %}
+        <form method="post" action="{% url 'journal:issue_build_booklet' issue.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="jeltan-btn">{% if issue.booklet %}Rebuild booklet{% else %}Build booklet{% endif %}</button>
+        </form>
+        {% endif %}
+        {% if issue.booklet %}
+        <a href="{% url 'journal:issue_booklet_preview' issue.pk %}" class="jeltan-btn-ghost" target="_blank">Open booklet</a>
+        {% endif %}
     </div>
-    {% empty %}
+    {% if not is_journal_chief %}
+    <p class="jeltan-muted" style="font-size:.84rem; margin-top:.6rem;">Building the booklet can change published page numbers, so it is done by the Editor-in-Chief.</p>
+    {% endif %}
+    <p class="jeltan-muted" style="font-size:.84rem; margin-top:.6rem;">
+        {% if issue.cover_image %}The uploaded cover image is used as the front cover.{% else %}No cover image is uploaded, so a JELTAN cover is generated. Upload an A4 portrait image above to use your own.{% endif %}
+    </p>
+</div>
+
+<div class="jeltan-card">
+    <h3 class="jeltan-h2">Articles in this issue</h3>
+    {% if articles %}
+    <p class="jeltan-muted">Change the numbers to reorder, then save. Pages follow this order when the booklet is built. Only published articles go into the booklet.</p>
+    <form method="post" action="{% url 'journal:issue_order' issue.pk %}">
+        {% csrf_token %}
+        {% for article in articles %}
+        <div style="display:flex; gap:.9rem; align-items:flex-start; padding:.7rem 0; border-top:1px solid var(--jeltan-line);">
+            <input type="number" min="1" name="order_{{ article.pk }}" value="{{ article.issue_order|default:forloop.counter }}"
+                   aria-label="Position of {{ article.title }}" class="form-control" style="width:4.5rem; flex-shrink:0;">
+            <div>
+                <strong style="color:var(--jeltan-ink);">{{ article.title }}</strong>
+                <div class="jeltan-muted" style="font-size:.84rem;">
+                    {% if article.section %}{{ article.section.name }} · {% endif %}{{ article.author_list }}{% if article.page_range %} · pp. {{ article.page_range }}{% endif %}
+                    {% if not article.is_published %} · <span class="jeltan-badge jeltan-badge-warn">Not published — left out of the booklet</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        <button type="submit" class="jeltan-btn-ghost" style="margin-top:.6rem;">Save order</button>
+    </form>
+    {% else %}
     <p class="jeltan-muted">No articles have been assigned to this issue yet. Assign them from each accepted
     manuscript's publish page.</p>
-    {% endfor %}
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

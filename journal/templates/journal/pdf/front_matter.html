@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+{% comment %}
+The issue booklet's preliminary pages. One template, one part at a time — the
+`part` variable picks which — because journal/booklet.py renders each part on
+its own to learn how long it is before the contents page is laid out.
+
+Same constraints as pdf/article.html: this is xhtml2pdf, not a browser, so
+layout that matters is done with tables. Page numbers are printed afterwards
+(roman, see stamp_page_numbers), so the footer leaves a gap for them.
+{% endcomment %}
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ journal.name }} — {{ issue.label }}</title>
+<style>
+    {% for face in font_faces %}
+    @font-face {
+        font-family: "{{ face.family }}";
+        src: url("{{ face.path }}");
+        font-weight: {{ face.weight }};
+        font-style: {{ face.style }};
+    }
+    {% endfor %}
+
+    @page {
+        size: a4 portrait;
+        margin: 2.4cm 2.1cm 2.2cm 2.1cm;
+        {% if part != 'title' %}
+        @frame footer_frame {
+            -pdf-frame-content: page-footer;
+            left: 2.1cm; width: 17cm; top: 27.4cm; height: 1cm;
+        }
+        {% endif %}
+    }
+
+    body {
+        font-family: "{{ body_font }}", "Times-Roman", serif;
+        font-size: 10.5pt; line-height: 1.45; color: #10202f;
+    }
+    .sans { font-family: "{{ ui_font }}", "Helvetica", sans-serif; }
+
+    table.rule { width: 100%; margin: 4pt 0 16pt; }
+    table.rule td { background-color: #E67918; font-size: 2pt; line-height: 2pt; }
+    table.rule-short { width: 2.2cm; margin: 0 0 14pt; }
+    table.rule-short td { background-color: #E67918; font-size: 2pt; line-height: 2pt; }
+
+    /* Capitals are set in the markup: xhtml2pdf ignores text-transform. */
+    .eyebrow {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 7.5pt; font-weight: bold; letter-spacing: 1pt;
+        text-transform: uppercase; color: #B45309; margin: 0 0 4pt;
+    }
+    h1.part-title { font-size: 20pt; line-height: 1.2; font-weight: bold; margin: 0; }
+    .prose p { margin: 0 0 7pt; text-align: justify; }
+    .prose h2, .prose h3 {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 10.5pt; font-weight: bold; margin: 12pt 0 5pt;
+    }
+    .prose ul, .prose ol { margin: 0 0 8pt 14pt; }
+    .muted { color: #64788a; }
+
+    /* --- title page -------------------------------------------------- */
+    .title-short {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 40pt; font-weight: bold; letter-spacing: 1pt;
+        margin: 6cm 0 4pt; text-align: center;
+    }
+    .title-name { font-size: 16pt; text-align: center; margin: 0 0 4pt; }
+    .title-tagline { font-size: 10.5pt; font-style: italic; text-align: center; color: #35485c; margin: 0; }
+    .title-issue {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 11pt; font-weight: bold; letter-spacing: 1.5pt;
+        text-align: center; color: #B45309; margin: 1.4cm 0 6pt;
+    }
+    .title-theme { font-size: 17pt; font-weight: bold; text-align: center; margin: 0 1cm; }
+    .title-publisher {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 9.5pt; text-align: center; color: #35485c; margin: 4.5cm 0 0;
+    }
+
+    /* --- imprint ----------------------------------------------------- */
+    .imprint-table { width: 100%; font-size: 9pt; margin-bottom: 16pt; }
+    .imprint-table td { padding: 3pt 0; vertical-align: top; }
+    .imprint-label {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 7.5pt; color: #64788a; width: 4.2cm;
+    }
+    .imprint-prose p { font-size: 8.5pt; line-height: 1.45; margin: 0 0 6pt; }
+    .imprint-heading {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 7.5pt; font-weight: bold; letter-spacing: 1pt;
+        text-transform: uppercase; color: #64788a; margin: 12pt 0 4pt;
+    }
+
+    /* --- editorial board --------------------------------------------- */
+    .board-position {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 7.5pt; font-weight: bold; letter-spacing: .8pt;
+        text-transform: uppercase; color: #B45309; margin: 12pt 0 3pt;
+    }
+    .board-name { font-size: 10.5pt; font-weight: bold; margin: 0 0 1pt; }
+    .board-affiliation { font-size: 8.5pt; color: #35485c; margin: 0 0 5pt; }
+
+    /* --- contents ---------------------------------------------------- */
+    table.toc { width: 100%; }
+    table.toc td { vertical-align: top; }
+    .toc-section {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 7.5pt; font-weight: bold; letter-spacing: 1pt;
+        text-transform: uppercase; color: #B45309; padding: 12pt 0 4pt;
+    }
+    .toc-title { font-size: 10.5pt; line-height: 1.3; padding: 4pt 0 1pt; }
+    .toc-authors { font-size: 8.5pt; color: #35485c; font-style: italic; padding: 0 0 6pt; }
+    .toc-page {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 9.5pt; font-weight: bold; text-align: right; width: 1.4cm; padding: 4pt 0 0;
+    }
+
+    /* --- editorial --------------------------------------------------- */
+    .editorial p { margin: 0 0 8pt; text-align: justify; }
+
+    #page-footer {
+        font-family: "{{ ui_font }}", "Helvetica", sans-serif;
+        font-size: 7.5pt; color: #8c9cab;
+        border-top: .5pt solid #e4e9ee; padding-top: 4pt;
+    }
+</style>
+</head>
+<body>
+
+{% if part != 'title' %}
+<div id="page-footer">
+    <table width="100%"><tr>
+        <td>{{ journal.short_name|default:journal.name }} · {{ issue.label }}</td>
+        <td width="0.8cm">&nbsp;</td>
+    </tr></table>
+</div>
+{% endif %}
+
+{% if part == 'title' %}
+    <p class="title-short">{{ journal.short_name|default:"JELTAN" }}</p>
+    <p class="title-name">{{ journal.name }}</p>
+    {% if journal.tagline %}<p class="title-tagline">{{ journal.tagline }}</p>{% endif %}
+    <p class="title-issue">VOLUME {{ issue.volume }} · NUMBER {{ issue.number }} · {{ issue.year }}</p>
+    {% if issue.title %}<p class="title-theme">{{ issue.title }}</p>{% endif %}
+    <p class="title-publisher">{{ journal.publisher|default:"English Language Teachers Association of Nigeria" }}</p>
+
+{% elif part == 'imprint' %}
+    <p class="eyebrow">ABOUT THIS ISSUE</p>
+    <h1 class="part-title">{{ journal.name }}</h1>
+    <table class="rule"><tr><td>&nbsp;</td></tr></table>
+
+    <table class="imprint-table">
+        <tr><td class="imprint-label">Issue</td>
+            <td>{{ issue.label }}{% if issue.title %} — {{ issue.title }}{% endif %}</td></tr>
+        {% if issue.published_at %}
+        <tr><td class="imprint-label">Published</td><td>{{ issue.published_at|date:"F Y" }}</td></tr>
+        {% endif %}
+        <tr><td class="imprint-label">Publisher</td>
+            <td>{{ journal.publisher|default:"English Language Teachers Association of Nigeria" }}</td></tr>
+        {% if journal.issn_print %}<tr><td class="imprint-label">ISSN (print)</td><td>{{ journal.issn_print }}</td></tr>{% endif %}
+        {% if journal.issn_online %}<tr><td class="imprint-label">ISSN (online)</td><td>{{ journal.issn_online }}</td></tr>{% endif %}
+        {% if journal.contact_email %}<tr><td class="imprint-label">Contact</td><td>{{ journal.contact_email }}</td></tr>{% endif %}
+    </table>
+
+    {% if journal.copyright_notice %}
+    <p class="imprint-heading">Copyright</p>
+    <div class="imprint-prose">{{ journal.copyright_notice|safe }}</div>
+    {% endif %}
+    {% if journal.open_access_policy %}
+    <p class="imprint-heading">Open access</p>
+    <div class="imprint-prose">{{ journal.open_access_policy|safe }}</div>
+    {% endif %}
+    {% if journal.peer_review_policy %}
+    <p class="imprint-heading">Peer review</p>
+    <div class="imprint-prose">{{ journal.peer_review_policy|safe }}</div>
+    {% endif %}
+
+{% elif part == 'aims' %}
+    <p class="eyebrow">ABOUT THE JOURNAL</p>
+    <h1 class="part-title">Aims and scope</h1>
+    <table class="rule"><tr><td>&nbsp;</td></tr></table>
+    <div class="prose">{{ journal.aims_and_scope|safe }}</div>
+
+{% elif part == 'board' %}
+    <p class="eyebrow">ABOUT THE JOURNAL</p>
+    <h1 class="part-title">Editorial board</h1>
+    <table class="rule"><tr><td>&nbsp;</td></tr></table>
+    {% regroup board by position as positions %}
+    {% for position in positions %}
+        <p class="board-position">{{ position.grouper|upper }}</p>
+        {% for member in position.list %}
+        <p class="board-name">{{ member.name }}</p>
+        {% if member.affiliation or member.country %}
+        <p class="board-affiliation">{{ member.affiliation }}{% if member.affiliation and member.country %}, {% endif %}{{ member.country }}</p>
+        {% endif %}
+        {% endfor %}
+    {% endfor %}
+
+{% elif part == 'contents' %}
+    <p class="eyebrow">{{ issue.label|upper }}</p>
+    <h1 class="part-title">Contents</h1>
+    <table class="rule"><tr><td>&nbsp;</td></tr></table>
+    {% if issue.title %}<p class="muted" style="margin:-6pt 0 10pt;">{{ issue.title }}</p>{% endif %}
+
+    <table class="toc">
+        {% if editorial_page %}
+        <tr>
+            <td class="toc-title">Editorial</td>
+            <td class="toc-page">{{ editorial_page }}</td>
+        </tr>
+        {% endif %}
+        {% for article in articles %}
+            {% ifchanged article.section_id %}{% if article.section %}
+            <tr><td class="toc-section" colspan="2">{{ article.section.name|upper }}</td></tr>
+            {% endif %}{% endifchanged %}
+            <tr>
+                <td class="toc-title">{{ article.title }}</td>
+                <td class="toc-page" rowspan="2">{{ article.first_page|default:"" }}</td>
+            </tr>
+            <tr><td class="toc-authors">{{ article.author_list }}</td></tr>
+        {% endfor %}
+    </table>
+
+{% elif part == 'editorial' %}
+    <p class="eyebrow">{{ issue.label|upper }}</p>
+    <h1 class="part-title">Editorial</h1>
+    <table class="rule"><tr><td>&nbsp;</td></tr></table>
+    <div class="prose editorial">{{ issue.editorial|safe }}</div>
+{% endif %}
+
+</body>
+</html>

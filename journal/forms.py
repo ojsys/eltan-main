@@ -521,7 +521,11 @@ class DecisionForm(BootstrapFormMixin, forms.ModelForm):
 class IssueForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Issue
-        fields = ['volume', 'number', 'year', 'title', 'description', 'cover_image', 'is_published']
+        fields = [
+            'volume', 'number', 'year', 'title', 'description', 'cover_image',
+            'editorial', 'paginate_automatically', 'is_published',
+        ]
+        labels = {'cover_image': 'Cover image'}
 
 
 class PublishArticleForm(BootstrapFormMixin, forms.ModelForm):

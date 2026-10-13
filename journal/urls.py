@@ -26,6 +26,7 @@ urlpatterns += [
     path('policies/', views.policies, name='policies'),
     path('issues/', views.issue_list, name='issue_list'),
     path('issues/<slug:slug>/', views.issue_detail, name='issue_detail'),
+    path('issues/<slug:slug>/pdf/', views.issue_booklet, name='issue_booklet'),
     path('articles/<slug:slug>/', views.article_detail, name='article_detail'),
     path('articles/<slug:slug>/pdf/', views.article_pdf, name='article_pdf'),
     re_path(r'^articles/(?P<slug>[-\w]+)/cite\.(?P<fmt>bib|ris)$',
@@ -84,4 +85,9 @@ urlpatterns += [
     path('editor/issues/', editor_views.issue_list, name='editor_issues'),
     path('editor/issues/new/', editor_views.issue_create, name='issue_create'),
     path('editor/issues/<int:pk>/', editor_views.issue_edit, name='issue_edit'),
+    path('editor/issues/<int:pk>/order/', editor_views.issue_order, name='issue_order'),
+    path('editor/issues/<int:pk>/booklet/build/', editor_views.issue_build_booklet,
+         name='issue_build_booklet'),
+    path('editor/issues/<int:pk>/booklet/', editor_views.issue_booklet_preview,
+         name='issue_booklet_preview'),
 ]

@@ -47,6 +47,16 @@
                 <img src="{{ issue.cover_image.url }}" alt="Cover of {{ issue.label }}" style="width:100%; display:block;">
             </div>
             {% endif %}
+            {% if issue.booklet %}
+            <div class="jeltan-card">
+                <a class="jeltan-btn jeltan-btn-block" href="{% url 'journal:issue_booklet' issue.slug %}">
+                    Download full issue (PDF)
+                </a>
+                <p class="jeltan-muted" style="font-size:.82rem; margin:.6rem 0 0;">
+                    The complete issue as one booklet: cover, editorial board, contents and every article.
+                </p>
+            </div>
+            {% endif %}
             <div class="jeltan-card">
                 <h2 class="jeltan-h3">Issue details</h2>
                 <table class="jeltan-deflist">

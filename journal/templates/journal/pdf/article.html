@@ -178,7 +178,10 @@ deliberately conservative for that reason.
 <div id="page-footer">
     <table width="100%"><tr>
         <td>{{ journal.short_name|default:journal.name }}{% if article.issue %} · {{ article.issue.label }}{% endif %}</td>
-        <td align="right">{{ article.title|truncatechars:58 }} · <pdf:pagenumber></td>
+        <td align="right">{{ article.title|truncatechars:58 }}</td>
+        {# Left empty for the page number, which is printed afterwards so it can #}
+        {# continue from the article before — see stamp_page_numbers().          #}
+        <td width="0.8cm">&nbsp;</td>
     </tr></table>
 </div>
 

@@ -276,13 +276,27 @@ class ReviewAssignmentAdmin(admin.ModelAdmin):
 
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
-    list_display = ('label', 'title', 'is_published', 'published_at', 'article_count')
+    list_display = ('label', 'title', 'is_published', 'published_at', 'article_count',
+                    'booklet_built_at')
     list_filter = ('is_published', 'year')
     search_fields = ('title', 'description')
+    readonly_fields = ('booklet', 'booklet_built_at', 'booklet_note', 'booklet_download_count')
+    actions = ['build_booklets']
 
     def article_count(self, obj):
         return obj.articles.count()
     article_count.short_description = 'Articles'
+
+    def build_booklets(self, request, queryset):
+        from . import booklet
+        for issue in queryset:
+            try:
+                note = booklet.build(issue)
+            except booklet.BookletError as exc:
+                self.message_user(request, f'{issue.label}: {exc}', messages.ERROR)
+            else:
+                self.message_user(request, f'{issue.label}: {note}', messages.SUCCESS)
+    build_booklets.short_description = 'Build the issue booklet (re-paginates the issue)'
 
 
 class ArticleAuthorInline(admin.TabularInline):
@@ -298,8 +312,8 @@ class ArticleAdmin(admin.ModelAdmin):
     issues published before this system existed — gets into the archive.
     """
 
-    list_display = ('title', 'issue', 'author_list', 'typeset_state', 'is_published',
-                    'published_at', 'view_count', 'download_count')
+    list_display = ('title', 'issue', 'issue_order', 'author_list', 'typeset_state',
+                    'is_published', 'published_at', 'view_count', 'download_count')
     list_filter = ('is_published', 'issue', 'section', 'typeset_mode')
     search_fields = ('title', 'abstract', 'keywords', 'doi', 'authors__last_name')
     prepopulated_fields = {'slug': ('title',)}

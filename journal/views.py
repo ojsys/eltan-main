@@ -139,6 +139,19 @@ def article_pdf(request, slug):
     )
 
 
+def issue_booklet(request, slug):
+    """Serve a published issue's booklet — the whole issue as one PDF."""
+    issue = get_object_or_404(Issue, slug=slug, is_published=True)
+    if not issue.booklet:
+        raise Http404('This issue has no booklet yet.')
+    Issue.objects.filter(pk=issue.pk).update(
+        booklet_download_count=issue.booklet_download_count + 1,
+    )
+    return FileResponse(
+        issue.booklet.open('rb'), as_attachment=True, filename=issue.booklet_filename,
+    )
+
+
 def article_citation(request, slug, fmt):
     """Download an article's citation for a reference manager.
 

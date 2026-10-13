@@ -420,6 +420,99 @@ def render_context(article, body_html='', full_text=True):
     }
 
 
+# --- page numbers ----------------------------------------------------------
+
+# Where the folio sits: the bottom right corner, inside the right margin and on
+# the footer's baseline. Offsets are from the page's own edges, so the number
+# lands in the same place on an author's US Letter page as on a JELTAN A4 one.
+FOLIO_RIGHT = 2.1 * 28.3465        # pt — the galley's right margin
+FOLIO_BASELINE = 1.73 * 28.3465    # pt above the bottom edge — the footer line
+FOLIO_SIZE = 7.5
+FOLIO_COLOUR = (0x8c / 255, 0x9c / 255, 0xab / 255)
+FOLIO_FONT = 'JeltanFolio'
+
+ROMAN = [
+    (1000, 'm'), (900, 'cm'), (500, 'd'), (400, 'cd'), (100, 'c'), (90, 'xc'),
+    (50, 'l'), (40, 'xl'), (10, 'x'), (9, 'ix'), (5, 'v'), (4, 'iv'), (1, 'i'),
+]
+
+
+def roman(number):
+    """Lower-case roman numerals — the front matter's page numbers."""
+    out = []
+    for value, letters in ROMAN:
+        while number >= value:
+            out.append(letters)
+            number -= value
+    return ''.join(out)
+
+
+def _folio_font():
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    if FOLIO_FONT not in pdfmetrics.getRegisteredFontNames():
+        path = os.path.join(FONT_DIRECTORY, 'NotoSans-Regular.ttf')
+        if not os.path.isfile(path):
+            return 'Helvetica'
+        pdfmetrics.registerFont(TTFont(FOLIO_FONT, path))
+    return FOLIO_FONT
+
+
+def stamp_page_numbers(pdf_bytes, start=1, numbering='arabic', unnumbered=()):
+    """Print page numbers onto a finished PDF, counting from `start`.
+
+    xhtml2pdf's own page counter always begins at 1, and an issue needs its
+    second article to begin where the first one ended. Numbering after the fact
+    is also the only way to number pages this code did not lay out — an
+    author's own PDF kept behind a JELTAN cover — so every galley is numbered
+    the same way, whatever produced it.
+
+    Each number sits on a small white ground. On a JELTAN page that is
+    invisible; on an author's page it keeps the number legible over whatever
+    they had there, and when a galley is numbered again after its articles are
+    reordered, it covers the number it carried before.
+
+    `unnumbered` holds 0-based page indexes that are counted but left blank,
+    as a book leaves its title page.
+    """
+    from reportlab.pdfgen import canvas as pdf_canvas
+
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    writer = PdfWriter()
+    font = _folio_font()
+
+    for index, page in enumerate(reader.pages):
+        if index not in unnumbered:
+            number = start + index
+            label = roman(number) if numbering == 'roman' else str(number)
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+
+            overlay = io.BytesIO()
+            sheet = pdf_canvas.Canvas(overlay, pagesize=(width, height))
+            text_width = sheet.stringWidth(label, font, FOLIO_SIZE)
+            right = float(page.mediabox.left) + width - FOLIO_RIGHT
+            baseline = float(page.mediabox.bottom) + FOLIO_BASELINE
+            sheet.setFillColorRGB(1, 1, 1)
+            sheet.rect(right - text_width - 3, baseline - 3, text_width + 5, FOLIO_SIZE + 5,
+                       stroke=0, fill=1)
+            sheet.setFillColorRGB(*FOLIO_COLOUR)
+            sheet.setFont(font, FOLIO_SIZE)
+            sheet.drawRightString(right, baseline, label)
+            sheet.save()
+            page.merge_page(PdfReader(io.BytesIO(overlay.getvalue())).pages[0])
+        writer.add_page(page)
+
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+def page_count(pdf_bytes):
+    return len(PdfReader(io.BytesIO(pdf_bytes)).pages)
+
+
 # --- putting a cover on somebody else's PDF --------------------------------
 
 def prepend_cover(cover_pdf, source_pdf):
@@ -470,7 +563,7 @@ def typeset(article, save=True):
         article.typeset_note = f'Could not typeset: {exc}'[:300]
         if save:
             article.save(update_fields=[
-                'pdf', 'typeset_at', 'typeset_note', 'updated_at',
+                'pdf', 'typeset_at', 'typeset_note', 'galley_numbered_from', 'updated_at',
             ])
         return False
 
@@ -481,7 +574,9 @@ def typeset(article, save=True):
     return True
 
 
-RESULT_FIELDS = ['pdf', 'body_html', 'typeset_at', 'typeset_note', 'updated_at']
+RESULT_FIELDS = [
+    'pdf', 'body_html', 'typeset_at', 'typeset_note', 'galley_numbered_from', 'updated_at',
+]
 
 
 def _save_result(article):
@@ -601,12 +696,90 @@ def _cover_supplied_pdf(article, source, reason):
 
 
 def _store_galley(article, content):
+    # Numbered from the article's first page in its issue, so the galley a
+    # reader downloads on its own carries the same page numbers as the issue
+    # booklet and the citation printed inside it.
+    article.galley_numbered_from = article.first_page or 1
+    content = stamp_page_numbers(content, start=article.galley_numbered_from)
+    old = article.pdf.name if article.pdf else ''
     name = f'{article.slug or "article"}-jeltan.pdf'
     article.pdf.save(name, ContentFile(content), save=False)
+    _discard_previous_galley(article, old)
+
+
+def _discard_previous_galley(article, old):
+    """Delete the galley the new one replaced, when it was ours to delete.
+
+    Paginating an issue re-renders its galleys, and every render would otherwise
+    leave the last one on disk. Only a file this code generated goes, and only
+    while the source is kept separately — a PDF that *is* the author's original
+    is never removed here. Called after the new file is saved, so a failed save
+    never leaves the article pointing at nothing.
+    """
+    if not old or old == article.pdf.name or not article.source_file:
+        return
+    if old == article.source_file.name or '-jeltan' not in old.rsplit('/', 1)[-1]:
+        return
+    try:
+        article.pdf.storage.delete(old)
+    except Exception:                                    # noqa: BLE001
+        logger.warning('Could not delete the previous galley %s', old)
+
+
+def refresh_galley(article):
+    """Bring a galley up to date with its page numbers, as cheaply as possible.
+
+    Called when an issue is paginated. The page range is printed in two places
+    on a galley — the locator line and the citation — and on every page's folio,
+    so all three have to follow when an article moves. In order of preference:
+
+    1. Full text already extracted: render it again from `body_html`. No parsing.
+    2. The supplied file is still on record: typeset it again from that.
+    3. Neither (a back-issue PDF loaded before sources were kept): number the
+       pages it has. Its front page may still show the old range; the note says
+       so, and re-uploading the source is the fix.
+
+    Saves the article. Returns the galley's page count, or None if it has no PDF.
+    """
+    if article.body_html:
+        html = render_to_string(
+            'journal/pdf/article.html',
+            render_context(article, article.body_html, full_text=True),
+        )
+        _store_galley(article, html_to_pdf(html))
+        article.save(update_fields=['pdf', 'galley_numbered_from', 'updated_at'])
+    elif article.source_file:
+        typeset(article)
+        article.refresh_from_db()
+    elif article.pdf and article.galley_extension == '.pdf':
+        old = article.pdf.name
+        article.galley_numbered_from = article.first_page or 1
+        content = stamp_page_numbers(_read(article.pdf), start=article.galley_numbered_from)
+        article.pdf.save(old.rsplit('/', 1)[-1], ContentFile(content), save=False)
+        if article.pdf.name != old and '-jeltan' in old.rsplit('/', 1)[-1]:
+            article.pdf.storage.delete(old)
+        article.typeset_note = (
+            'Page numbers were printed on the existing PDF. Its first page may still show '
+            'the old page range: upload the source file again to re-set it.'
+        )
+        article.save(update_fields=['pdf', 'typeset_note', 'galley_numbered_from', 'updated_at'])
+
+    if not article.pdf or article.galley_extension != '.pdf':
+        return None
+    return page_count(_read(article.pdf))
+
+
+def _read(field):
+    field.open('rb')
+    try:
+        return field.read()
+    finally:
+        field.close()
 
 
 def _fall_back_to_source(article, source):
     """Publish what we were given rather than nothing at all."""
+    article.galley_numbered_from = None
     try:
         source.open('rb')
         try:

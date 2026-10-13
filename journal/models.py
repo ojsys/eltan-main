@@ -1087,10 +1087,39 @@ class Issue(models.Model):
     title = models.CharField(max_length=250, blank=True, help_text='Optional theme, e.g. "Special Issue on Multilingual Classrooms".')
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     description = RichTextField(blank=True)
-    cover_image = models.ImageField(upload_to='journal/issues/', blank=True, null=True)
+    cover_image = models.ImageField(
+        upload_to='journal/issues/', blank=True, null=True,
+        help_text=(
+            'The front cover of the issue booklet, as an A4 portrait image. '
+            'Leave blank and a JELTAN cover is generated for you.'
+        ),
+    )
+    editorial = RichTextField(
+        blank=True,
+        help_text="The editor's introduction to this issue, printed before the first article. Optional.",
+    )
+    # Page numbers run on through an issue: the second article starts where the
+    # first one ended. That is worked out from the article order when the
+    # booklet is built — unless an editor is loading a back issue whose printed
+    # page numbers have to be kept exactly as they were.
+    paginate_automatically = models.BooleanField(
+        default=True,
+        help_text=(
+            'Number the pages through the issue in article order when the booklet is built. '
+            'Untick to keep page numbers typed in by hand, e.g. for a back issue.'
+        ),
+    )
     is_published = models.BooleanField(default=False)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # The whole issue as one PDF: cover, front matter, contents and every
+    # article. Built on request rather than per download — it means rendering
+    # every page of the issue — and kept until the next build replaces it.
+    booklet = models.FileField(upload_to='journal/booklets/', blank=True)
+    booklet_built_at = models.DateTimeField(null=True, blank=True)
+    booklet_note = models.CharField(max_length=500, blank=True)
+    booklet_download_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['-year', '-volume', '-number']
@@ -1117,6 +1146,18 @@ class Issue(models.Model):
     def public_articles(self):
         return self.articles.filter(is_published=True)
 
+    @property
+    def booklet_is_stale(self):
+        """True when an article in the issue has changed since the booklet was built."""
+        if not self.booklet or not self.booklet_built_at:
+            return False
+        return self.articles.filter(updated_at__gt=self.booklet_built_at).exists()
+
+    @property
+    def booklet_filename(self):
+        short = slugify(JournalSettings.load().short_name or 'journal')
+        return f'{short}-vol-{self.volume}-no-{self.number}-{self.year}.pdf'
+
 
 class Article(models.Model):
     """A published paper.
@@ -1139,6 +1180,12 @@ class Article(models.Model):
         help_text='Leave blank to publish online first, ahead of an issue.',
     )
     section = models.ForeignKey(Section, on_delete=models.SET_NULL, null=True, blank=True, related_name='articles')
+    # Where the article sits in its issue. Page numbers follow from it, so it is
+    # the one ordering an editor sets; first_page is derived.
+    issue_order = models.PositiveIntegerField(
+        'Order in issue', default=0,
+        help_text='Position in the issue. Page numbers follow this order when the booklet is built.',
+    )
 
     title = models.CharField(max_length=500)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
@@ -1192,6 +1239,10 @@ class Article(models.Model):
     )
     first_page = models.PositiveIntegerField(null=True, blank=True)
     last_page = models.PositiveIntegerField(null=True, blank=True)
+    # The page number the stored galley's pages are printed from. When it differs
+    # from first_page the galley is out of date and the next booklet build
+    # re-renders it. Blank for a galley that carries no JELTAN page numbers.
+    galley_numbered_from = models.PositiveIntegerField(null=True, blank=True, editable=False)
     doi = models.CharField('DOI', max_length=120, blank=True)
     licence = models.CharField(
         max_length=120,
@@ -1218,7 +1269,7 @@ class Article(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['issue', 'first_page', 'title']
+        ordering = ['issue', 'issue_order', 'first_page', 'title']
 
     def __str__(self):
         return self.title[:80]
@@ -1235,6 +1286,15 @@ class Article(models.Model):
             self.slug = self._unique_slug()
         if self.is_published and not self.published_at:
             self.published_at = timezone.now()
+        # An article joining an issue goes to the end of it, not the front.
+        if self.issue_id and not self.issue_order:
+            last = (
+                Article.objects.filter(issue_id=self.issue_id).exclude(pk=self.pk)
+                .aggregate(models.Max('issue_order'))['issue_order__max']
+            )
+            self.issue_order = (last or 0) + 1
+            if kwargs.get('update_fields') is not None:
+                kwargs['update_fields'] = list(kwargs['update_fields']) + ['issue_order']
         super().save(*args, **kwargs)
 
     @staticmethod

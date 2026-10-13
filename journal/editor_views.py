@@ -17,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import urlencode
 
-from . import emails, ingest, typeset
+from . import booklet, emails, ingest, typeset
 from .forms import (
     ArticleAuthorFormSet,
     ArticleImportForm,
@@ -600,11 +600,93 @@ def issue_edit(request, pk):
     form = IssueForm(request.POST or None, request.FILES or None, instance=issue)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        messages.success(request, f'{issue.label} updated.')
-        return redirect('journal:editor_issues')
+        if issue.booklet:
+            messages.success(
+                request, f'{issue.label} updated. Rebuild the booklet to include the changes.',
+            )
+        else:
+            messages.success(request, f'{issue.label} updated.')
+        return redirect('journal:issue_edit', pk=issue.pk)
     return render(request, 'journal/editor/issue_form.html', journal_context(
-        form=form, issue=issue, articles=issue.articles.all(),
+        form=form, issue=issue,
+        articles=issue.articles.select_related('section').prefetch_related('authors'),
     ))
+
+
+@editor_required
+def issue_order(request, pk):
+    """Save the order of an issue's articles — the order its pages will follow.
+
+    Each article gets a position box; whatever numbers the editor types, they
+    are read as a ranking and stored as 1, 2, 3… so a later insertion never has
+    to find room between two equal numbers.
+    """
+    issue = get_object_or_404(Issue, pk=pk)
+    if request.method != 'POST':
+        return redirect('journal:issue_edit', pk=pk)
+
+    articles = list(issue.articles.all())
+    current = {article.pk: index for index, article in enumerate(articles)}
+
+    def position(article):
+        raw = request.POST.get(f'order_{article.pk}', '').strip()
+        try:
+            return (int(raw), current[article.pk])
+        except ValueError:
+            return (10 ** 6, current[article.pk])
+
+    changed = 0
+    for rank, article in enumerate(sorted(articles, key=position), start=1):
+        if article.issue_order != rank:
+            Article.objects.filter(pk=article.pk).update(
+                issue_order=rank, updated_at=timezone.now(),
+            )
+            changed += 1
+
+    if changed:
+        messages.success(
+            request,
+            'Article order saved. Build the booklet to number the pages in this order.',
+        )
+    else:
+        messages.info(request, 'The order was unchanged.')
+    return redirect('journal:issue_edit', pk=pk)
+
+
+@chief_required
+def issue_build_booklet(request, pk):
+    """Paginate the issue and bind its booklet.
+
+    Can rewrite the page numbers of published articles, so it is the chief's
+    action, and a POST.
+    """
+    issue = get_object_or_404(Issue, pk=pk)
+    if request.method != 'POST':
+        return redirect('journal:issue_edit', pk=pk)
+
+    try:
+        note = booklet.build(issue)
+    except booklet.BookletError as exc:
+        messages.error(request, str(exc))
+    except Exception:                                    # noqa: BLE001
+        logger.exception('Building the booklet for issue %s failed', issue.pk)
+        messages.error(
+            request,
+            'The booklet could not be built. The error has been logged; '
+            'try `manage.py build_issue_booklet` for the full message.',
+        )
+    else:
+        messages.success(request, f'Booklet built: {note}')
+    return redirect('journal:issue_edit', pk=pk)
+
+
+@editor_required
+def issue_booklet_preview(request, pk):
+    """The stored booklet, for editors — before the issue is public, too."""
+    issue = get_object_or_404(Issue, pk=pk)
+    if not issue.booklet:
+        raise Http404('This issue has no booklet yet.')
+    return FileResponse(issue.booklet.open('rb'), filename=issue.booklet_filename)
 
 
 # ------------------------------------------------------------------ portal

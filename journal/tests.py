@@ -3488,3 +3488,364 @@ class ArticleTitleStyleTests(JournalTestCase):
         article.refresh_from_db()
         self.assertEqual(article.title, 'Task Repetition and Oral Fluency')
         self.assertEqual(article.slug, slug_before)
+
+
+# --- issue booklets and continuous pagination --------------------------------
+
+LONG_PARAGRAPH = (
+    'Fluency has long been treated as a by-product of practice rather than something '
+    'that a teacher plans for directly. '
+) * 14
+
+
+def a_long_manuscript(title, sections=3):
+    rows = [(title, 'Title', False)]
+    for number in range(sections):
+        rows += [
+            (f'Section {number + 1}', 'Heading1', False),
+            (LONG_PARAGRAPH, None, False),
+            (LONG_PARAGRAPH, None, False),
+        ]
+    return SimpleUploadedFile(
+        'paper.docx', a_structured_docx(rows),
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+
+
+def pdf_pages_text(field_or_bytes):
+    from pypdf import PdfReader
+
+    if isinstance(field_or_bytes, bytes):
+        data = field_or_bytes
+    else:
+        field_or_bytes.open('rb')
+        try:
+            data = field_or_bytes.read()
+        finally:
+            field_or_bytes.close()
+    return [page.extract_text() or '' for page in PdfReader(io.BytesIO(data)).pages]
+
+
+class BookletTestCase(JournalTestCase):
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        super().setUp()
+        media = tempfile.mkdtemp(prefix='jeltan-booklet-tests-')
+        self.addCleanup(shutil.rmtree, media, ignore_errors=True)
+        override = override_settings(MEDIA_ROOT=media)
+        override.enable()
+        self.addCleanup(override.disable)
+
+        self.issue = Issue.objects.create(volume=4, number=1, year=2026, is_published=True)
+
+    def add_article(self, title, sections=3, typeset_it=True, **fields):
+        from journal import typeset
+
+        values = {
+            'title': title, 'abstract': 'An abstract.', 'section': self.section,
+            'issue': self.issue, 'is_published': True,
+            'source_file': a_long_manuscript(title, sections),
+        }
+        values.update(fields)
+        article = Article.objects.create(**values)
+        ArticleAuthor.objects.create(article=article, first_name='Ada', last_name='Obi', order=0)
+        if typeset_it:
+            typeset.typeset(article)
+            article.refresh_from_db()
+        return article
+
+
+class PageNumberStampTests(SimpleTestCase):
+    def test_roman_numerals(self):
+        from journal.typeset import roman
+        self.assertEqual([roman(n) for n in (1, 4, 9, 14, 40)], ['i', 'iv', 'ix', 'xiv', 'xl'])
+
+    def test_pages_are_numbered_from_the_given_start(self):
+        from journal.typeset import stamp_page_numbers
+
+        source = a_real_pdf(['one'])
+        from pypdf import PdfReader, PdfWriter
+        writer = PdfWriter()
+        for _ in range(3):
+            writer.add_page(PdfReader(io.BytesIO(source)).pages[0])
+        out = io.BytesIO()
+        writer.write(out)
+
+        pages = pdf_pages_text(stamp_page_numbers(out.getvalue(), start=15))
+        self.assertIn('15', pages[0])
+        self.assertIn('17', pages[2])
+
+    def test_an_unnumbered_page_is_counted_but_left_blank(self):
+        from journal.typeset import stamp_page_numbers
+
+        pages = pdf_pages_text(stamp_page_numbers(
+            a_real_pdf(['x']), start=1, numbering='roman', unnumbered={0},
+        ))
+        self.assertNotIn('i', pages[0].replace('x', ''))
+
+
+class PaginationTests(BookletTestCase):
+    """Page numbers run on through an issue instead of restarting per article."""
+
+    def test_a_galley_is_numbered_from_its_first_page(self):
+        article = self.add_article('Task repetition and oral fluency', first_page=31)
+        self.assertEqual(article.galley_numbered_from, 31)
+        pages = pdf_pages_text(article.pdf)
+        self.assertIn('31', pages[0])
+        self.assertIn(str(31 + len(pages) - 1), pages[-1])
+
+    def test_the_second_article_starts_where_the_first_ended(self):
+        from journal import booklet
+
+        first = self.add_article('Task repetition and oral fluency')
+        second = self.add_article('Code-switching in primary classrooms')
+        booklet.paginate(self.issue)
+
+        first.refresh_from_db()
+        second.refresh_from_db()
+        first_length = len(pdf_pages_text(first.pdf))
+        self.assertEqual((first.first_page, first.last_page), (1, first_length))
+        self.assertEqual(second.first_page, first_length + 1)
+        self.assertEqual(second.galley_numbered_from, second.first_page)
+        # The range printed in the galley and its citation follow the move.
+        self.assertIn(f'pp. {second.page_range}', pdf_pages_text(second.pdf)[0])
+
+    def test_pages_follow_the_order_the_editor_sets(self):
+        from journal import booklet
+
+        first = self.add_article('Task repetition and oral fluency')
+        second = self.add_article('Code-switching in primary classrooms')
+        Article.objects.filter(pk=first.pk).update(issue_order=2)
+        Article.objects.filter(pk=second.pk).update(issue_order=1)
+        booklet.paginate(self.issue)
+
+        second.refresh_from_db()
+        self.assertEqual(second.first_page, 1)
+
+    def test_an_unpublished_article_is_left_out(self):
+        from journal import booklet
+
+        self.add_article('Task repetition and oral fluency')
+        draft = self.add_article('Still being corrected', is_published=False)
+        booklet.paginate(self.issue)
+
+        draft.refresh_from_db()
+        self.assertIsNone(draft.first_page)
+
+    def test_an_article_joining_an_issue_goes_to_the_end(self):
+        self.add_article('First', typeset_it=False)
+        later = self.add_article('Second', typeset_it=False)
+        self.assertEqual(later.issue_order, 2)
+
+    def test_hand_entered_page_numbers_are_kept_when_asked(self):
+        from journal import booklet
+
+        self.issue.paginate_automatically = False
+        self.issue.save()
+        article = self.add_article('A back-issue paper', first_page=101)
+        booklet.build(self.issue)
+
+        article.refresh_from_db()
+        self.assertEqual(article.first_page, 101)
+        self.assertEqual(article.galley_numbered_from, 101)
+
+    def test_hand_pagination_needs_a_first_page_for_every_article(self):
+        from journal import booklet
+
+        self.issue.paginate_automatically = False
+        self.issue.save()
+        self.add_article('No page numbers yet')
+        with self.assertRaises(booklet.BookletError):
+            booklet.build(self.issue)
+
+    def test_an_authors_own_pdf_is_numbered_too(self):
+        from journal import booklet
+
+        self.add_article('Task repetition and oral fluency')
+        review = self.add_article(
+            'A book review', typeset_mode=Article.TYPESET_ORIGINAL,
+            source_file=SimpleUploadedFile('review.pdf', a_real_pdf(['The review as set by its author.'])),
+        )
+        booklet.paginate(self.issue)
+
+        review.refresh_from_db()
+        pages = pdf_pages_text(review.pdf)
+        # A JELTAN cover page, then the author's page, both carrying issue page numbers.
+        self.assertIn(str(review.last_page), pages[-1])
+        self.assertIn('The review as set by its author.', pages[-1])
+
+
+class BookletBuildTests(BookletTestCase):
+    def setUp(self):
+        super().setUp()
+        self.journal.issn_online = '2006-5678'
+        self.journal.aims_and_scope = '<p>JELTAN publishes research on English teaching.</p>'
+        self.journal.save()
+        from journal.models import EditorialBoardMember
+        EditorialBoardMember.objects.create(name='Prof. Ngozi Okafor', position='Editor-in-Chief')
+
+    def test_the_booklet_holds_front_matter_contents_and_every_article(self):
+        from pypdf import PdfReader
+        from journal import booklet
+
+        first = self.add_article('Task repetition and oral fluency')
+        second = self.add_article('Code-switching in primary classrooms')
+        self.issue.editorial = '<p>Welcome to this issue.</p>'
+        self.issue.save()
+        booklet.build(self.issue)
+
+        self.issue.refresh_from_db()
+        self.assertTrue(self.issue.booklet)
+        self.assertIsNotNone(self.issue.booklet_built_at)
+
+        self.issue.booklet.open('rb')
+        try:
+            reader = PdfReader(io.BytesIO(self.issue.booklet.read()))
+        finally:
+            self.issue.booklet.close()
+        first.refresh_from_db()
+        second.refresh_from_db()
+
+        outline = [item.title for item in reader.outline]
+        for heading in ('Cover', 'Title page', 'Aims and scope', 'Editorial board',
+                        'Contents', 'Editorial', first.title, second.title):
+            self.assertIn(heading, outline)
+
+        text = '\n'.join(page.extract_text() or '' for page in reader.pages)
+        self.assertIn('Prof. Ngozi Okafor', text)
+        self.assertIn('Welcome to this issue.', text)
+
+        # The page box in a PDF reader shows the printed numbers.
+        labels = reader.page_labels
+        self.assertEqual(labels[0], 'Cover')
+        self.assertEqual(labels[1], 'i')
+        self.assertIn(str(second.first_page), labels)
+        self.assertEqual(labels[-1], str(second.last_page))
+
+    def test_the_contents_page_gives_each_articles_first_page(self):
+        from journal import booklet
+
+        self.add_article('Task repetition and oral fluency')
+        second = self.add_article('Code-switching in primary classrooms')
+        booklet.build(self.issue)
+        second.refresh_from_db()
+
+        front, parts = booklet.render_front_matter(
+            self.issue, JournalSettings.load(), booklet.booklet_articles(self.issue),
+        )
+        contents_index = dict(parts)['Contents']
+        contents = pdf_pages_text(front)[contents_index]
+        self.assertIn('Code-Switching in Primary Classrooms', contents)
+        self.assertIn(str(second.first_page), contents)
+
+    def test_an_uploaded_cover_replaces_the_generated_one(self):
+        from PIL import Image
+        from journal import booklet
+
+        image = io.BytesIO()
+        Image.new('RGB', (595, 842), (200, 30, 30)).save(image, format='PNG')
+        self.issue.cover_image = SimpleUploadedFile('cover.png', image.getvalue(), content_type='image/png')
+        self.issue.save()
+        article = self.add_article('Task repetition and oral fluency')
+
+        cover = booklet.render_cover(self.issue, JournalSettings.load(), [article])
+        self.assertNotIn('IN THIS ISSUE', pdf_pages_text(cover)[0])
+
+        self.issue.cover_image = None
+        generated = booklet.render_cover(self.issue, JournalSettings.load(), [article])
+        self.assertIn('IN THIS ISSUE', pdf_pages_text(generated)[0])
+
+    def test_an_issue_with_no_published_articles_has_no_booklet(self):
+        from journal import booklet
+
+        self.add_article('Draft', is_published=False, typeset_it=False)
+        with self.assertRaises(booklet.BookletError):
+            booklet.build(self.issue)
+
+    def test_a_changed_article_marks_the_booklet_out_of_date(self):
+        from journal import booklet
+
+        article = self.add_article('Task repetition and oral fluency')
+        booklet.build(self.issue)
+        self.issue.refresh_from_db()
+        self.assertFalse(self.issue.booklet_is_stale)
+
+        article.abstract = 'A corrected abstract.'
+        article.save()
+        self.assertTrue(self.issue.booklet_is_stale)
+
+
+class BookletViewTests(BookletTestCase):
+    def test_readers_download_the_booklet_of_a_published_issue(self):
+        from journal import booklet
+
+        self.add_article('Task repetition and oral fluency')
+        booklet.build(self.issue)
+
+        page = self.client.get(reverse('journal:issue_detail', args=[self.issue.slug]))
+        self.assertContains(page, 'Download full issue (PDF)')
+
+        response = self.client.get(reverse('journal:issue_booklet', args=[self.issue.slug]))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('jeltan-vol-4-no-1-2026.pdf', response['Content-Disposition'])
+        b''.join(response.streaming_content)
+        self.issue.refresh_from_db()
+        self.assertEqual(self.issue.booklet_download_count, 1)
+
+    def test_an_unpublished_issue_has_no_public_booklet(self):
+        from journal import booklet
+
+        self.add_article('Task repetition and oral fluency')
+        booklet.build(self.issue)
+        Issue.objects.filter(pk=self.issue.pk).update(is_published=False)
+
+        response = self.client.get(reverse('journal:issue_booklet', args=[self.issue.slug]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_the_chief_builds_the_booklet_from_the_issue_page(self):
+        self.add_article('Task repetition and oral fluency')
+        self.client.force_login(self.editor_user)
+
+        response = self.client.post(reverse('journal:issue_build_booklet', args=[self.issue.pk]))
+        self.assertRedirects(response, reverse('journal:issue_edit', args=[self.issue.pk]))
+        self.issue.refresh_from_db()
+        self.assertTrue(self.issue.booklet)
+
+    def test_an_author_cannot_build_a_booklet(self):
+        self.add_article('Task repetition and oral fluency', typeset_it=False)
+        self.client.force_login(self.author)
+
+        self.client.post(reverse('journal:issue_build_booklet', args=[self.issue.pk]))
+        self.issue.refresh_from_db()
+        self.assertFalse(self.issue.booklet)
+
+    def test_the_editor_reorders_the_articles(self):
+        first = self.add_article('First', typeset_it=False)
+        second = self.add_article('Second', typeset_it=False)
+        self.client.force_login(self.editor_user)
+
+        self.client.post(reverse('journal:issue_order', args=[self.issue.pk]), {
+            f'order_{first.pk}': '5', f'order_{second.pk}': '1',
+        })
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual((second.issue_order, first.issue_order), (1, 2))
+
+    def test_the_command_builds_a_booklet(self):
+        from django.core.management import call_command
+
+        self.add_article('Task repetition and oral fluency')
+        call_command('build_issue_booklet', self.issue.slug, stdout=io.StringIO())
+        self.issue.refresh_from_db()
+        self.assertTrue(self.issue.booklet)
+
+    def test_the_issue_page_shows_the_booklet_tools(self):
+        self.add_article('Task repetition and oral fluency', typeset_it=False)
+        self.client.force_login(self.editor_user)
+
+        page = self.client.get(reverse('journal:issue_edit', args=[self.issue.pk]))
+        self.assertContains(page, 'Build booklet')
+        self.assertContains(page, 'Save order')
+        self.assertContains(page, 'a JELTAN cover is generated')
