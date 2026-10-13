@@ -1942,11 +1942,22 @@ def _send_certificate_link_email(request, registrations, email):
 
 
 def certificate_lookup(request):
-    """Public page where a non-member finds their Certificate of Participation.
+    """Public page where anyone who attended finds their Certificate of Participation.
 
-    Two ways in: email plus ticket id downloads straight away, while email alone
-    sends a signed link. The response is deliberately identical whether or not
-    the address is on file, so the form cannot be used to discover who attended.
+    Built for the people who have no dashboard to find it on: non-members who
+    paid, attended, and were sent a ticket id. Members can use it too, though
+    theirs is already waiting on their dashboard.
+
+    The ticket id alone is the key. It is a unique, unguessable reference the
+    attendee was emailed when their payment was confirmed, and asking for an
+    email address alongside it turned a two-second job into a support ticket for
+    everyone who registered under a colleague's address or misremembered which
+    one they used. Failed lookups are rate-limited, which is what stops the id
+    space being swept; see CERTIFICATE_LOOKUP_MAX_MISSES.
+
+    Whoever has lost their ticket id can give an email address instead and be
+    sent a signed link. That branch answers identically whether or not the
+    address is on file, so it cannot be used to discover who attended.
     """
     conferences = EltanConference.objects.filter(certificates_released=True).order_by('-start_date')
     context = {
@@ -1963,8 +1974,12 @@ def certificate_lookup(request):
     context['email'] = email
     context['ticket_id'] = ticket_id
 
-    if not email:
-        messages.error(request, "Please enter the email address you registered with.")
+    if not ticket_id and not email:
+        messages.error(
+            request,
+            "Enter your ticket ID to download your certificate. If you no longer "
+            "have it, enter your email address instead and we will send you a link.",
+        )
         return render(request, 'membership/certificate_lookup.html', context)
 
     if _lookup_throttled(request):
@@ -1975,21 +1990,28 @@ def certificate_lookup(request):
         return render(request, 'membership/certificate_lookup.html', context)
 
     if ticket_id:
-        registration = (
-            EltanConferenceRegistration.objects
-            .select_related('conference', 'user')
-            .filter(
+        # The ticket id is the credential. An email address, if one was typed as
+        # well, narrows the match but is never required — someone who still has
+        # their ticket should never be turned away for misremembering which
+        # address they registered under.
+        matches = EltanConferenceRegistration.objects.select_related(
+            'conference', 'user',
+        ).filter(ticket_id__iexact=ticket_id)
+        if email:
+            narrowed = matches.filter(
                 models.Q(email__iexact=email) | models.Q(user__email__iexact=email),
-                ticket_id__iexact=ticket_id,
             )
-            .first()
-        )
+            matches = narrowed or matches
+
+        registration = matches.first()
         if not registration:
             _record_lookup_miss(request)
             messages.error(
                 request,
-                "We could not find a registration with that ticket ID and email address. "
-                "Check both, or leave the ticket ID blank and we will email you a link.",
+                f"No registration found for ticket ID {ticket_id}. Check it against "
+                "your registration email — it looks like ELTAN-2026-A1B2C3. If you no "
+                "longer have it, enter your email address instead and leave the ticket "
+                "ID blank.",
             )
             return render(request, 'membership/certificate_lookup.html', context)
         return _serve_certificate(request, registration, 'certificate_lookup')

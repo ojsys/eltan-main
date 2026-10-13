@@ -148,9 +148,14 @@ class ConferenceCertificateTests(TestCase):
 
     # -- Non-member lookup --------------------------------------------------
 
-    def test_guest_downloads_with_email_and_ticket_id(self):
+    def test_the_ticket_id_alone_is_enough(self):
+        """The whole point of the page: a non-member has no dashboard.
+
+        Requiring an email address as well turned a two-second job into a
+        support ticket for anyone who registered under a colleague's address or
+        misremembered which one they used.
+        """
         response = self.client.post(reverse('certificate_lookup'), {
-            'email': 'guest@example.com',
             'ticket_id': 'ELTAN-2026-GST001',
         })
 
@@ -159,22 +164,50 @@ class ConferenceCertificateTests(TestCase):
         certificate = ConferenceCertificate.objects.get(registration=self.guest_registration)
         self.assertEqual(certificate.participant_name, 'Samuel Adeyemi')
 
-    def test_guest_lookup_ignores_case(self):
+    def test_the_ticket_id_is_not_case_sensitive(self):
+        """Nobody retypes a ticket id in the case it was printed in."""
         response = self.client.post(reverse('certificate_lookup'), {
-            'email': 'GUEST@Example.COM',
             'ticket_id': 'eltan-2026-gst001',
         })
         self.assertEqual(response['Content-Type'], 'application/pdf')
 
-    def test_ticket_id_must_belong_to_the_email(self):
-        """Knowing a ticket id alone must not hand over someone else's certificate."""
+    def test_a_ticket_id_still_works_when_the_email_does_not_match(self):
+        """The id is the credential; a mistyped address must not block it."""
         response = self.client.post(reverse('certificate_lookup'), {
-            'email': 'stranger@example.com',
+            'email': 'someone.else@example.com',
             'ticket_id': 'ELTAN-2026-GST001',
+        })
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+    def test_an_unknown_ticket_id_is_refused(self):
+        response = self.client.post(reverse('certificate_lookup'), {
+            'ticket_id': 'ELTAN-2026-NOPE99',
         })
 
         self.assertEqual(response.status_code, 200)
         self.assertNotEqual(response.get('Content-Type'), 'application/pdf')
+        self.assertContains(response, 'No registration found')
+        self.assertEqual(ConferenceCertificate.objects.count(), 0)
+
+    def test_an_empty_form_asks_for_one_or_the_other(self):
+        response = self.client.post(reverse('certificate_lookup'), {})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Enter your ticket ID')
+
+    def test_a_ticket_id_for_an_unconfirmed_payment_is_still_refused(self):
+        """The id opens the page, not the certificate — the rules still apply."""
+        unpaid = EltanConferenceRegistration.objects.create(
+            conference=self.conference, registration_type='non_member',
+            amount_paid=Decimal('40000'), payment_status='pending',
+            ticket_id='ELTAN-2026-UNPAID', email='unpaid@example.com',
+            first_name='Bola', last_name='Ade',
+        )
+        response = self.client.post(reverse('certificate_lookup'), {
+            'ticket_id': unpaid.ticket_id,
+        })
+
+        self.assertEqual(response.status_code, 302)
         self.assertEqual(ConferenceCertificate.objects.count(), 0)
 
     def test_email_only_lookup_sends_a_working_link(self):

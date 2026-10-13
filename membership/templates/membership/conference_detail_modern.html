@@ -590,6 +590,14 @@
                 {% else %}
                     <span class="btn btn-secondary btn-pill" style="opacity:.8;cursor:not-allowed;">Registration Closed</span>
                 {% endif %}
+                {% if conference.certificates_released %}
+                    {# Once the conference is over, the thing attendees come back #}
+                    {# to this page for is their certificate — so it leads here.  #}
+                    <a href="{% url 'certificate_lookup' %}" class="btn btn-primary btn-pill">
+                        <span class="material-icons" style="font-size:18px; vertical-align:middle;">workspace_premium</span>
+                        Download my certificate
+                    </a>
+                {% endif %}
             </div>
         </div>
     </section>

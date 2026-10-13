@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Get Your Certificate of Participation - ELTAN{% endblock %}
+{% block title %}Download Your Conference Certificate - ELTAN{% endblock %}
 
 {% block content %}
 <section class="page-header">
     <div class="container">
         <p class="subtitle">Conference</p>
-        <h1>Certificate of Participation</h1>
+        <h1>Download Your Certificate</h1>
         <p class="description">
-            Download the certificate for a conference you attended &mdash; no ELTAN account needed
+            Enter your ticket ID to get your Certificate of Participation &mdash; no account needed
         </p>
     </div>
 </section>
@@ -23,109 +23,133 @@
         {% endfor %}
     {% endif %}
 
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem; align-items:start;">
-
-        <!-- Lookup form -->
-        <div class="card-modern">
-            <div class="card-body">
-                <div style="display:flex; align-items:center; gap:.75rem; margin-bottom:1rem;">
-                    <div style="width:44px; height:44px; background:linear-gradient(135deg,#E67918 0%,#C5630C 100%); border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                        <span class="material-icons" style="color:#fff;">workspace_premium</span>
-                    </div>
-                    <h2 class="card-title" style="margin:0;">Find your certificate</h2>
+    <!-- Primary route: the ticket ID, on its own -->
+    <div class="card-modern" style="max-width:640px; margin:0 auto 1.5rem; border-top:4px solid #E67918;">
+        <div class="card-body" style="padding:2rem;">
+            <div style="text-align:center; margin-bottom:1.75rem;">
+                <div style="width:60px; height:60px; margin:0 auto 1rem; background:linear-gradient(135deg,#E67918 0%,#C5630C 100%); border-radius:16px; display:flex; align-items:center; justify-content:center;">
+                    <span class="material-icons" style="color:#fff; font-size:32px;">workspace_premium</span>
                 </div>
-
-                <p style="color:#616161; font-size:.9rem; margin-bottom:1.5rem;">
-                    Enter the email address you registered with. If you still have your
-                    <strong>ticket ID</strong> &mdash; it looks like <code>ELTAN-2026-A1B2C3</code> and
-                    is on your registration receipt &mdash; add it and your certificate downloads
-                    straight away. Without it, we will email you a secure download link instead.
+                <h2 class="card-title" style="margin:0 0 .4rem;">Enter your ticket ID</h2>
+                <p style="color:#616161; font-size:.9rem; margin:0;">
+                    It is on the registration receipt we emailed when your payment was confirmed.
                 </p>
+            </div>
 
-                <form method="post" novalidate>
-                    {% csrf_token %}
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-                    <div style="margin-bottom:1.15rem;">
+                <label for="id_ticket_id" style="display:block; font-weight:600; color:#1A1A1A; margin-bottom:.5rem; font-size:.9rem;">
+                    Ticket ID
+                </label>
+                <input type="text" name="ticket_id" id="id_ticket_id"
+                       value="{{ ticket_id }}" placeholder="ELTAN-2026-A1B2C3"
+                       autocomplete="off" autocapitalize="characters" spellcheck="false"
+                       style="width:100%; padding:16px 18px; border:2px solid #E0E0E0; border-radius:12px;
+                              font-size:1.15rem; font-family:'Courier New',monospace; letter-spacing:2px;
+                              text-align:center; text-transform:uppercase;">
+
+                <button type="submit" class="btn-modern btn-primary-modern"
+                        style="width:100%; justify-content:center; margin-top:1.25rem; padding:14px 24px; font-size:1rem;">
+                    <span class="material-icons">download</span> Download my certificate
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Fallback: lost the ticket ID -->
+    <div class="card-modern" style="max-width:640px; margin:0 auto 1.5rem;">
+        <div class="card-body">
+            <details {% if email and not ticket_id %}open{% endif %}>
+                <summary style="cursor:pointer; font-weight:600; color:#1A1A1A; font-size:.95rem; list-style:none;">
+                    <span class="material-icons" style="vertical-align:middle; color:#E67918; font-size:20px;">help_outline</span>
+                    I no longer have my ticket ID
+                </summary>
+
+                <div style="padding-top:1.15rem;">
+                    <p style="color:#616161; font-size:.9rem; line-height:1.6; margin:0 0 1.15rem;">
+                        Enter the email address you registered with and we will send you a
+                        secure download link. It works for seven days.
+                    </p>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
                         <label for="id_email" style="display:block; font-weight:600; color:#1A1A1A; margin-bottom:.4rem; font-size:.9rem;">
-                            Email address <span style="color:#C62828;">*</span>
+                            Email address
                         </label>
-                        <input type="email" name="email" id="id_email" required
+                        <input type="email" name="email" id="id_email"
                                value="{{ email }}" autocomplete="email"
                                placeholder="you@example.com"
                                style="width:100%; padding:12px 14px; border:1px solid #DDD; border-radius:10px; font-size:1rem;">
-                        <small style="color:#888;">The address you used when registering for the conference.</small>
-                    </div>
-
-                    <div style="margin-bottom:1.5rem;">
-                        <label for="id_ticket_id" style="display:block; font-weight:600; color:#1A1A1A; margin-bottom:.4rem; font-size:.9rem;">
-                            Ticket ID <span style="color:#888; font-weight:400;">(optional)</span>
-                        </label>
-                        <input type="text" name="ticket_id" id="id_ticket_id"
-                               value="{{ ticket_id }}" placeholder="ELTAN-2026-A1B2C3"
-                               style="width:100%; padding:12px 14px; border:1px solid #DDD; border-radius:10px; font-size:1rem; text-transform:uppercase;">
-                        <small style="color:#888;">Leave blank and we will email your download link.</small>
-                    </div>
-
-                    <button type="submit" class="btn-modern btn-primary-modern" style="width:100%; justify-content:center;">
-                        <span class="material-icons">download</span> Get my certificate
-                    </button>
-                </form>
-            </div>
+                        <button type="submit" class="btn-modern btn-outline-modern"
+                                style="width:100%; justify-content:center; margin-top:1rem;">
+                            <span class="material-icons">mail</span> Email me a download link
+                        </button>
+                    </form>
+                </div>
+            </details>
         </div>
+    </div>
 
-        <!-- Help panel -->
-        <div class="card-modern">
-            <div class="card-body">
-                <h2 class="card-title" style="margin-bottom:1rem;">Good to know</h2>
+    <!-- Context -->
+    <div class="card-modern" style="max-width:640px; margin:0 auto;">
+        <div class="card-body">
+            <h2 class="card-title" style="font-size:1rem; margin-bottom:1.15rem;">Good to know</h2>
 
-                <div style="display:flex; gap:.75rem; margin-bottom:1.15rem;">
-                    <span class="material-icons" style="color:#E67918;">verified</span>
-                    <div>
-                        <strong style="display:block; color:#1A1A1A; font-size:.95rem;">Confirmed payments only</strong>
-                        <span style="color:#616161; font-size:.875rem;">
-                            Certificates are issued to attendees whose conference payment has been confirmed.
-                        </span>
-                    </div>
+            <div style="display:flex; gap:.75rem; margin-bottom:1.15rem;">
+                <span class="material-icons" style="color:#E67918; flex-shrink:0;">verified</span>
+                <div>
+                    <strong style="display:block; color:#1A1A1A; font-size:.9rem;">Confirmed payments only</strong>
+                    <span style="color:#616161; font-size:.875rem;">
+                        Certificates are issued to attendees whose conference payment has been confirmed.
+                    </span>
                 </div>
+            </div>
 
-                <div style="display:flex; gap:.75rem; margin-bottom:1.15rem;">
-                    <span class="material-icons" style="color:#E67918;">schedule</span>
-                    <div>
-                        <strong style="display:block; color:#1A1A1A; font-size:.95rem;">Released after the conference</strong>
-                        <span style="color:#616161; font-size:.875rem;">
-                            {% if conferences %}
-                                Certificates are currently available for:
-                                {% for conference in conferences %}<br><em>{{ conference.title }}</em>{% endfor %}
-                            {% else %}
-                                No conference certificates have been released yet. Please check back after the event.
-                            {% endif %}
-                        </span>
-                    </div>
+            <div style="display:flex; gap:.75rem; margin-bottom:1.15rem;">
+                <span class="material-icons" style="color:#E67918; flex-shrink:0;">schedule</span>
+                <div>
+                    <strong style="display:block; color:#1A1A1A; font-size:.9rem;">Released after the conference</strong>
+                    <span style="color:#616161; font-size:.875rem;">
+                        {% if conferences %}
+                            Certificates are currently available for:
+                            {% for conference in conferences %}<br><em>{{ conference.title }}</em>{% endfor %}
+                        {% else %}
+                            No conference certificates have been released yet. Please check back after the event.
+                        {% endif %}
+                    </span>
                 </div>
+            </div>
 
-                <div style="display:flex; gap:.75rem; margin-bottom:1.15rem;">
-                    <span class="material-icons" style="color:#E67918;">badge</span>
-                    <div>
-                        <strong style="display:block; color:#1A1A1A; font-size:.95rem;">ELTAN members</strong>
-                        <span style="color:#616161; font-size:.875rem;">
-                            If you have an account, your certificate is already waiting on your
-                            <a href="{% url 'my_conferences' %}" style="color:#E67918; font-weight:600;">conferences page</a>.
-                        </span>
-                    </div>
+            <div style="display:flex; gap:.75rem; margin-bottom:1.15rem;">
+                <span class="material-icons" style="color:#E67918; flex-shrink:0;">badge</span>
+                <div>
+                    <strong style="display:block; color:#1A1A1A; font-size:.9rem;">ELTAN members</strong>
+                    <span style="color:#616161; font-size:.875rem;">
+                        If you have an account, your certificate is already waiting on your
+                        <a href="{% url 'my_conferences' %}" style="color:#E67918; font-weight:600;">conferences page</a>
+                        &mdash; no ticket ID needed.
+                    </span>
                 </div>
+            </div>
 
-                <div style="display:flex; gap:.75rem;">
-                    <span class="material-icons" style="color:#E67918;">support_agent</span>
-                    <div>
-                        <strong style="display:block; color:#1A1A1A; font-size:.95rem;">Still stuck?</strong>
-                        <span style="color:#616161; font-size:.875rem;">
-                            Email <a href="mailto:info@eltanigeria.org" style="color:#E67918;">info@eltanigeria.org</a>
-                            with the name and email you registered under.
-                        </span>
-                    </div>
+            <div style="display:flex; gap:.75rem;">
+                <span class="material-icons" style="color:#E67918; flex-shrink:0;">support_agent</span>
+                <div>
+                    <strong style="display:block; color:#1A1A1A; font-size:.9rem;">Still stuck?</strong>
+                    <span style="color:#616161; font-size:.875rem;">
+                        Email <a href="mailto:info@eltanigeria.org" style="color:#E67918;">info@eltanigeria.org</a>
+                        with the name and email you registered under.
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+<style>
+    /* The disclosure arrow is drawn by the summary's own icon, not the browser's. */
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] > summary { margin-bottom: 0; }
+    #id_ticket_id:focus { outline: none; border-color: #E67918; }
+</style>
 {% endblock %}
