@@ -57,15 +57,45 @@ def _galley_bytes(article):
     return typeset._read(article.pdf)
 
 
+def _has_pdf_galley(article):
+    return bool(article.pdf) and article.galley_extension == '.pdf'
+
+
+def prepare_galleys(articles):
+    """Typeset any article that has no PDF galley yet, if there is anything to set.
+
+    An article published with only a Word file — uploaded as the galley, or left
+    there when typesetting fell back to the source — would otherwise stop the
+    whole booklet. Its Word file is kept as the source before it is set, so the
+    original is never lost to the new galley.
+    """
+    for article in articles:
+        if _has_pdf_galley(article):
+            continue
+        if not article.source_file and article.pdf:
+            article.source_file.name = article.pdf.name
+            article.save(update_fields=['source_file', 'updated_at'])
+        if article.body_html or article.source_file:
+            typeset.refresh_galley(article)
+            article.refresh_from_db()
+
+
 def check_galleys(articles):
     """Every article must have a PDF galley — a Word file cannot be bound in."""
-    missing = [
-        article.title for article in articles
-        if not article.pdf or article.galley_extension != '.pdf'
-    ]
+    prepare_galleys(articles)
+    missing = []
+    for article in articles:
+        if _has_pdf_galley(article):
+            continue
+        if not article.pdf and not article.source_file:
+            reason = 'no file uploaded'
+        else:
+            reason = article.typeset_note or 'its file could not be typeset'
+        missing.append(f'"{article.title}" ({reason})')
     if missing:
         raise BookletError(
-            'These articles have no PDF to include, so the booklet cannot be built: '
+            'These articles have no PDF to include, so the booklet cannot be built. '
+            'Upload a PDF or a readable Word file for each, then build again: '
             + '; '.join(missing)
         )
 

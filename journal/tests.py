@@ -3764,6 +3764,39 @@ class BookletBuildTests(BookletTestCase):
         with self.assertRaises(booklet.BookletError):
             booklet.build(self.issue)
 
+    def test_an_article_never_typeset_is_typeset_for_the_booklet(self):
+        from journal import booklet
+
+        article = self.add_article('Task repetition and oral fluency', typeset_it=False)
+        booklet.build(self.issue)
+        article.refresh_from_db()
+        self.assertEqual(article.galley_extension, '.pdf')
+        self.assertTrue(self.issue.__class__.objects.get(pk=self.issue.pk).booklet)
+
+    def test_a_word_galley_is_typeset_and_kept_as_the_source(self):
+        from journal import booklet
+
+        article = self.add_article(
+            'Task repetition and oral fluency', typeset_it=False,
+            source_file=None, pdf=a_long_manuscript('Task repetition and oral fluency'),
+        )
+        word_file = article.pdf.name
+        booklet.build(self.issue)
+        article.refresh_from_db()
+        self.assertEqual(article.galley_extension, '.pdf')
+        self.assertEqual(article.source_file.name, word_file)
+
+    def test_an_unreadable_file_is_named_with_its_reason(self):
+        from journal import booklet
+
+        self.add_article(
+            'Task repetition and oral fluency', typeset_it=False,
+            source_file=SimpleUploadedFile('paper.docx', b'this is not a zip'),
+        )
+        with self.assertRaises(booklet.BookletError) as raised:
+            booklet.build(self.issue)
+        self.assertIn('(Could not typeset: File is not a zip file)', str(raised.exception))
+
     def test_a_changed_article_marks_the_booklet_out_of_date(self):
         from journal import booklet
 
