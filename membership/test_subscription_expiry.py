@@ -344,8 +344,14 @@ class SubscriptionPageTests(TestCase):
     """The member-facing subscription form offers the configured years."""
 
     def setUp(self):
+        # Pin the current year. Migration 0062 seeds the year rows and marks
+        # whichever one covers *today* as current, so left alone these tests
+        # changed meaning on 1 September 2026 — and the form always offers the
+        # current year, hidden or not.
         ELTANYearSetting.objects.get_or_create(eltan_year='2025-2026')
         ELTANYearSetting.objects.get_or_create(eltan_year='2026-2027')
+        ELTANYearSetting.objects.update(is_active=False)
+        ELTANYearSetting.objects.filter(eltan_year='2025-2026').update(is_active=True)
         self.user = CustomUser.objects.create_user(
             email='page@example.com', password='pw-for-tests-only',
         )
@@ -368,6 +374,15 @@ class SubscriptionPageTests(TestCase):
 
         self.assertIn('<option value="2025-2026"', html)
         self.assertNotIn('<option value="2026-2027"', html)
+
+    def test_the_current_year_is_offered_even_if_hidden(self):
+        """Unticking 'selectable' on the running year must not lock members out of it."""
+        ELTANYearSetting.objects.filter(eltan_year='2025-2026').update(is_selectable=False)
+        self.client.force_login(self.user)
+
+        html = self.client.get('/subscribe/').content.decode()
+
+        self.assertIn('<option value="2025-2026"', html)
 
 
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
